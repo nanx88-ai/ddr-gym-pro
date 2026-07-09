@@ -21,6 +21,7 @@ const NAV_GROUPS: NavGroup[] = [
     label: "Appuntamenti",
     items: [
       { href: "/admin", label: "Prenotazioni" },
+      { href: "/admin/agenda", label: "Agenda" },
       { href: "/admin/calendar", label: "Calendario" },
       { href: "/admin/reschedule", label: "Spostamenti" },
       { href: "/admin/schedule", label: "Orario settimanale" },
