@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import ThemeToggle from "@/components/ThemeToggle";
+import NotificationBell from "@/components/NotificationBell";
+import PwaRegister from "@/components/PwaRegister";
 
 interface NavItem {
   href: string;
@@ -37,7 +39,10 @@ const NAV_GROUPS: NavGroup[] = [
   },
   {
     label: "Impostazioni",
-    items: [{ href: "/admin/settings", label: "Impostazioni" }],
+    items: [
+      { href: "/admin/stats", label: "Statistiche" },
+      { href: "/admin/settings", label: "Impostazioni" },
+    ],
   },
 ];
 
@@ -79,10 +84,21 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const router = useRouter();
   const isLogin = pathname === "/admin/login";
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const settingsRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     setMobileNavOpen(false);
+    setSettingsOpen(false);
   }, [pathname]);
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (settingsRef.current && !settingsRef.current.contains(e.target as Node)) setSettingsOpen(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
 
   async function handleLogout() {
     await fetch("/api/auth/logout", { method: "POST" });
@@ -96,6 +112,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
+      <PwaRegister />
       <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
         <div className="flex items-center justify-between px-3 py-3 sm:px-4">
           <div className="flex items-center gap-2">
@@ -112,14 +129,38 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               Palestra <span className="text-yellow-500 dark:text-yellow-400">Admin</span>
             </Link>
           </div>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <ThemeToggle />
-            <button
-              onClick={handleLogout}
-              className="text-sm text-neutral-500 hover:text-red-500 hover:underline dark:text-neutral-400 dark:hover:text-red-400"
-            >
-              Esci
-            </button>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <NotificationBell />
+            <div className="relative" ref={settingsRef}>
+              <button
+                onClick={() => setSettingsOpen((o) => !o)}
+                aria-label="Impostazioni account"
+                className="flex h-9 w-9 items-center justify-center rounded-md text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
+                  <circle cx="12" cy="12" r="3" />
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+                  />
+                </svg>
+              </button>
+
+              {settingsOpen && (
+                <div className="absolute right-0 z-50 mt-2 w-48 overflow-hidden rounded-lg border border-neutral-200 bg-white p-2 shadow-lg dark:border-neutral-800 dark:bg-neutral-900">
+                  <div className="px-1 pb-2">
+                    <ThemeToggle />
+                  </div>
+                  <button
+                    onClick={handleLogout}
+                    className="w-full rounded-md px-2 py-1.5 text-left text-sm text-red-500 hover:bg-neutral-100 dark:text-red-400 dark:hover:bg-neutral-800"
+                  >
+                    Esci
+                  </button>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </header>

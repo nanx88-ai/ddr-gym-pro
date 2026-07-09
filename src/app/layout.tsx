@@ -16,6 +16,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Palestra - Prenotazioni",
   description: "Sistema prenotazioni palestra con personal trainer (motore Koalendar + layer custom)",
+  manifest: "/manifest.webmanifest",
 };
 
 export default function RootLayout({

@@ -1,8 +1,21 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatDateTime, STATUS_COLORS, STATUS_LABELS } from "@/lib/format";
-import { btnDanger, btnNeutral, btnPositive, pageSubtitle, pageTitle, tableHeadBg, tableWrap, td, th, trBorder } from "@/lib/ui";
+import {
+  btnDanger,
+  btnNeutral,
+  btnPositive,
+  card,
+  input,
+  pageSubtitle,
+  pageTitle,
+  tableHeadBg,
+  tableWrap,
+  td,
+  th,
+  trBorder,
+} from "@/lib/ui";
 
 interface Booking {
   id: string;
@@ -11,22 +24,33 @@ interface Booking {
   status: string;
   isRecurring: boolean;
   source: string;
+  attended: boolean | null;
   client: { firstName: string; lastName: string; email: string; status: string };
   appointmentType: { name: string };
 }
 
-const FILTERS = [
-  { value: "", label: "Tutte" },
+const STATUS_OPTIONS = [
+  { value: "", label: "Tutti gli stati" },
   { value: "PENDING_APPROVAL", label: "In attesa" },
   { value: "APPROVED", label: "Confermate" },
   { value: "REJECTED", label: "Rifiutate" },
   { value: "CANCELLED", label: "Annullate" },
 ];
 
+type SortBy = "date" | "status";
+type SortDir = "asc" | "desc";
+
+const filterField = `${input} w-full`;
+
 export default function AdminBookingsPage() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filter, setFilter] = useState("");
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [sortBy, setSortBy] = useState<SortBy>("date");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [pendingFirst, setPendingFirst] = useState(true);
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   async function load() {
     setLoading(true);
@@ -37,9 +61,41 @@ export default function AdminBookingsPage() {
   }
 
   useEffect(() => {
+    const status = new URLSearchParams(window.location.search).get("status");
+    if (status) {
+      setFilter(status);
+      setFiltersOpen(true);
+    }
+  }, []);
+
+  useEffect(() => {
     load();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
+
+  const visibleBookings = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const filtered = q
+      ? bookings.filter((b) =>
+          `${b.client.firstName} ${b.client.lastName} ${b.client.email}`.toLowerCase().includes(q)
+        )
+      : bookings;
+
+    return [...filtered].sort((a, b) => {
+      if (pendingFirst) {
+        const ap = a.status === "PENDING_APPROVAL" ? 0 : 1;
+        const bp = b.status === "PENDING_APPROVAL" ? 0 : 1;
+        if (ap !== bp) return ap - bp;
+      }
+      const dir = sortDir === "asc" ? 1 : -1;
+      if (sortBy === "date") {
+        return dir * (new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+      }
+      return dir * a.status.localeCompare(b.status);
+    });
+  }, [bookings, search, sortBy, sortDir, pendingFirst]);
+
+  const activeFilterCount = (filter ? 1 : 0) + (sortBy !== "date" ? 1 : 0) + (sortDir !== "asc" ? 1 : 0) + (!pendingFirst ? 1 : 0);
 
   async function updateStatus(id: string, status: string) {
     await fetch(`/api/admin/bookings/${id}`, {
@@ -50,88 +106,193 @@ export default function AdminBookingsPage() {
     load();
   }
 
+  async function markAttendance(id: string, attended: boolean | null) {
+    await fetch(`/api/admin/bookings/${id}/attendance`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ attended }),
+    });
+    load();
+  }
+
+  function Actions({ b }: { b: Booking }) {
+    const isPast = new Date(b.startTime) < new Date();
+    return (
+      <div className="flex flex-wrap gap-2">
+        {b.status === "PENDING_APPROVAL" && (
+          <>
+            <button onClick={() => updateStatus(b.id, "APPROVED")} className={btnPositive}>
+              Approva
+            </button>
+            <button onClick={() => updateStatus(b.id, "REJECTED")} className={btnDanger}>
+              Rifiuta
+            </button>
+          </>
+        )}
+        {["APPROVED", "RESCHEDULED"].includes(b.status) && (
+          <button onClick={() => updateStatus(b.id, "CANCELLED")} className={btnNeutral}>
+            Annulla
+          </button>
+        )}
+        {["APPROVED", "RESCHEDULED"].includes(b.status) && isPast && (
+          <button
+            onClick={() => markAttendance(b.id, b.attended === false ? null : false)}
+            className={b.attended === false ? btnDanger : btnNeutral}
+          >
+            {b.attended === false ? "Assente ✓" : "Segna assente"}
+          </button>
+        )}
+      </div>
+    );
+  }
+
   return (
     <div>
       <h1 className={pageTitle}>Prenotazioni</h1>
       <p className={pageSubtitle}>Approva, rifiuta o annulla le richieste ricevute.</p>
 
-      <div className="mb-4 flex flex-wrap gap-2">
-        {FILTERS.map((f) => (
-          <button
-            key={f.value}
-            onClick={() => setFilter(f.value)}
-            className={
-              filter === f.value
-                ? "rounded-full bg-yellow-400 px-3 py-1 text-xs font-medium text-neutral-900"
-                : "rounded-full border border-neutral-300 bg-neutral-100 px-3 py-1 text-xs font-medium text-neutral-600 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-300 dark:hover:bg-neutral-700"
-            }
+      <div className="mb-3 flex flex-wrap items-center gap-2">
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Cerca per nome, cognome o email..."
+          className={`${input} flex-1 sm:max-w-xs`}
+        />
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((o) => !o)}
+          className="flex items-center gap-1.5 rounded-md border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+        >
+          Filtri
+          {activeFilterCount > 0 && (
+            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-yellow-400 px-1 text-[10px] font-semibold text-neutral-900">
+              {activeFilterCount}
+            </span>
+          )}
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className={`h-3.5 w-3.5 transition-transform ${filtersOpen ? "rotate-180" : ""}`}
           >
-            {f.label}
-          </button>
-        ))}
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
       </div>
+
+      {filtersOpen && (
+        <div className={`${card} mb-4 grid grid-cols-2 gap-2 p-3 sm:grid-cols-4`}>
+          <select value={filter} onChange={(e) => setFilter(e.target.value)} className={filterField}>
+            {STATUS_OPTIONS.map((f) => (
+              <option key={f.value} value={f.value}>
+                {f.label}
+              </option>
+            ))}
+          </select>
+
+          <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)} className={filterField}>
+            <option value="date">Ordina per data</option>
+            <option value="status">Ordina per stato</option>
+          </select>
+
+          <button
+            type="button"
+            onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+            className={`${filterField} flex items-center justify-center gap-1.5 border border-neutral-300 bg-neutral-100 font-medium text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700`}
+          >
+            {sortDir === "asc" ? "↑ Crescente" : "↓ Decrescente"}
+          </button>
+
+          <label
+            className={`${filterField} flex items-center gap-2 border border-neutral-300 bg-neutral-100 font-medium text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200`}
+          >
+            <input type="checkbox" checked={pendingFirst} onChange={(e) => setPendingFirst(e.target.checked)} />
+            In attesa in cima
+          </label>
+        </div>
+      )}
 
       {loading && <p className="text-sm text-neutral-500">Caricamento...</p>}
 
-      <div className={tableWrap}>
-        <table className="w-full text-sm">
-          <thead className={tableHeadBg}>
-            <tr>
-              <th className={th}>Cliente</th>
-              <th className={th}>Servizio</th>
-              <th className={th}>Orario</th>
-              <th className={th}>Stato</th>
-              <th className={th}>Azioni</th>
-            </tr>
-          </thead>
-          <tbody>
-            {bookings.map((b) => (
-              <tr key={b.id} className={trBorder}>
-                <td className={td}>
+      {!loading && visibleBookings.length === 0 && (
+        <p className={`${card} px-4 py-8 text-center text-sm text-neutral-500 dark:text-neutral-400`}>
+          Nessuna prenotazione.
+        </p>
+      )}
+
+      {/* Mobile: schede, una per prenotazione (una tabella qui e' illeggibile su schermi stretti) */}
+      {!loading && visibleBookings.length > 0 && (
+        <div className="space-y-3 sm:hidden">
+          {visibleBookings.map((b) => (
+            <div key={b.id} className={`${card} p-4`}>
+              <div className="flex items-start justify-between gap-2">
+                <div>
                   <div className="font-medium text-neutral-900 dark:text-white">
                     {b.client.firstName} {b.client.lastName}
                   </div>
                   <div className="text-xs text-neutral-500 dark:text-neutral-400">{b.client.email}</div>
-                  {b.client.status === "PAUSED" && <span className="text-xs text-yellow-400">Cliente in pausa</span>}
-                </td>
-                <td className={td}>{b.appointmentType.name}</td>
-                <td className={`${td} capitalize`}>{formatDateTime(b.startTime)}</td>
-                <td className={td}>
-                  <span className={`rounded-full px-2 py-1 text-xs font-medium ${STATUS_COLORS[b.status]}`}>
-                    {STATUS_LABELS[b.status] ?? b.status}
-                  </span>
-                </td>
-                <td className={td}>
-                  <div className="flex gap-2">
-                    {b.status === "PENDING_APPROVAL" && (
-                      <>
-                        <button onClick={() => updateStatus(b.id, "APPROVED")} className={btnPositive}>
-                          Approva
-                        </button>
-                        <button onClick={() => updateStatus(b.id, "REJECTED")} className={btnDanger}>
-                          Rifiuta
-                        </button>
-                      </>
-                    )}
-                    {["APPROVED", "RESCHEDULED"].includes(b.status) && (
-                      <button onClick={() => updateStatus(b.id, "CANCELLED")} className={btnNeutral}>
-                        Annulla
-                      </button>
-                    )}
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {!loading && bookings.length === 0 && (
+                  {b.client.status === "PAUSED" && (
+                    <span className="text-xs text-yellow-500 dark:text-yellow-400">Cliente in pausa</span>
+                  )}
+                </div>
+                <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium ${STATUS_COLORS[b.status]}`}>
+                  {STATUS_LABELS[b.status] ?? b.status}
+                </span>
+              </div>
+
+              <div className="mt-3 flex items-center justify-between text-sm">
+                <span className="text-neutral-700 dark:text-neutral-200">{b.appointmentType.name}</span>
+                <span className="capitalize text-neutral-500 dark:text-neutral-400">{formatDateTime(b.startTime)}</span>
+              </div>
+
+              <div className="mt-3 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+                <Actions b={b} />
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Desktop/tablet: tabella */}
+      {!loading && visibleBookings.length > 0 && (
+        <div className={`hidden sm:block ${tableWrap}`}>
+          <table className="w-full text-sm">
+            <thead className={tableHeadBg}>
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-sm text-neutral-500">
-                  Nessuna prenotazione.
-                </td>
+                <th className={th}>Cliente</th>
+                <th className={th}>Servizio</th>
+                <th className={th}>Orario</th>
+                <th className={th}>Stato</th>
+                <th className={th}>Azioni</th>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {visibleBookings.map((b) => (
+                <tr key={b.id} className={trBorder}>
+                  <td className={td}>
+                    <div className="font-medium text-neutral-900 dark:text-white">
+                      {b.client.firstName} {b.client.lastName}
+                    </div>
+                    <div className="text-xs text-neutral-500 dark:text-neutral-400">{b.client.email}</div>
+                    {b.client.status === "PAUSED" && <span className="text-xs text-yellow-400">Cliente in pausa</span>}
+                  </td>
+                  <td className={td}>{b.appointmentType.name}</td>
+                  <td className={`${td} capitalize`}>{formatDateTime(b.startTime)}</td>
+                  <td className={td}>
+                    <span className={`rounded-full px-2 py-1 text-xs font-medium ${STATUS_COLORS[b.status]}`}>
+                      {STATUS_LABELS[b.status] ?? b.status}
+                    </span>
+                  </td>
+                  <td className={td}>
+                    <Actions b={b} />
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

@@ -107,7 +107,7 @@ export async function createCustomBooking(input: CreateBookingInput) {
     ? BOOKING_STATUS.PENDING_APPROVAL
     : BOOKING_STATUS.APPROVED;
 
-  return prisma.booking.create({
+  const booking = await prisma.booking.create({
     data: {
       clientId: input.clientId,
       appointmentTypeId: input.appointmentTypeId,
@@ -121,4 +121,13 @@ export async function createCustomBooking(input: CreateBookingInput) {
     },
     include: { client: true, appointmentType: true },
   });
+
+  // Se il servizio non richiede approvazione, la prenotazione nasce gia' confermata:
+  // l'email di conferma va inviata subito, la transizione via admin non avverra' mai.
+  if (initialStatus === BOOKING_STATUS.APPROVED) {
+    const { sendBookingConfirmationEmail } = await import("@/lib/mailer");
+    sendBookingConfirmationEmail(booking).catch((err) => console.error("[booking-rules] invio email fallito:", err));
+  }
+
+  return booking;
 }

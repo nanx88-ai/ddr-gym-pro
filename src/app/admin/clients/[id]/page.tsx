@@ -5,6 +5,42 @@ import Link from "next/link";
 import { formatCurrency, formatDateTime, STATUS_COLORS, STATUS_LABELS } from "@/lib/format";
 import { btnDanger, btnNeutral, btnPositive, btnPrimary, card, input, label, pageSubtitle, pageTitle } from "@/lib/ui";
 
+/**
+ * Affidabilita' del cliente: quota di prenotazioni concluse (confermate,
+ * spostate, annullate, non presentato) che si sono chiuse bene (confermata e
+ * presenza non segnata come assente), rispetto al totale. Le richieste
+ * ancora in attesa non contano ne' a favore ne' contro.
+ */
+function ReliabilityBadge({ bookings }: { bookings: Booking[] }) {
+  const finalized = bookings.filter((b) => ["APPROVED", "RESCHEDULED", "REJECTED", "CANCELLED"].includes(b.status));
+  if (finalized.length === 0) return null;
+
+  const rescheduled = finalized.filter((b) => b.status === "RESCHEDULED").length;
+  const cancelled = finalized.filter((b) => b.status === "CANCELLED").length;
+  const noShow = finalized.filter((b) => b.attended === false).length;
+  const negative = rescheduled + cancelled + noShow;
+  const rate = Math.round(100 * (1 - negative / finalized.length));
+
+  const color =
+    rate >= 80
+      ? "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-400"
+      : rate >= 50
+        ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-400/15 dark:text-yellow-300"
+        : "bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-400";
+
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
+      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${color}`}>Affidabilita': {rate}%</span>
+      <span className="text-xs text-neutral-500 dark:text-neutral-400">
+        su {finalized.length} prenotazion{finalized.length === 1 ? "e" : "i"} concluse
+        {rescheduled > 0 && ` · ${rescheduled} spostat${rescheduled === 1 ? "a" : "e"}`}
+        {cancelled > 0 && ` · ${cancelled} annullat${cancelled === 1 ? "a" : "e"}`}
+        {noShow > 0 && ` · ${noShow} assenz${noShow === 1 ? "a" : "e"}`}
+      </span>
+    </div>
+  );
+}
+
 interface PriceListItem {
   id: string;
   name: string;
@@ -220,6 +256,8 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
       <p className={pageSubtitle}>
         {client.email} {client.phone ? `· ${client.phone}` : ""}
       </p>
+
+      <ReliabilityBadge bookings={client.bookings} />
 
       {error && (
         <div className="mb-4 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300">

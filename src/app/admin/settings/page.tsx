@@ -16,6 +16,71 @@ import {
 } from "@/lib/ui";
 import ThemeToggle from "@/components/ThemeToggle";
 
+/**
+ * Sync calendario admin (Google/Apple) via feed ICS sottoscrivibile, senza
+ * OAuth: Google Calendar -> "Aggiungi calendario" -> "Da URL"; Apple Calendar
+ * -> "Nuovo abbonamento calendario". L'app di calendario ricontrolla l'URL
+ * periodicamente (di solito ogni poche ore), quindi non e' realtime.
+ */
+function CalendarSyncSection() {
+  const [urls, setUrls] = useState<{ httpsUrl: string; webcalUrl: string } | null>(null);
+  const [copied, setCopied] = useState(false);
+  const [regenerating, setRegenerating] = useState(false);
+
+  async function load() {
+    const res = await fetch("/api/admin/calendar-feed");
+    setUrls(await res.json());
+  }
+
+  useEffect(() => {
+    load();
+  }, []);
+
+  async function regenerate() {
+    setRegenerating(true);
+    await fetch("/api/admin/calendar-feed", { method: "POST" });
+    await load();
+    setRegenerating(false);
+  }
+
+  async function copy() {
+    if (!urls) return;
+    await navigator.clipboard.writeText(urls.httpsUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <section className={`${card} mb-6 p-4`}>
+      <h2 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">Sincronizza calendario</h2>
+      <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
+        Sottoscrivi questo link in Google Calendar (&quot;Aggiungi calendario&quot; &rarr; &quot;Da URL&quot;) o Apple
+        Calendar (&quot;Nuovo abbonamento calendario&quot;) per vedere gli appuntamenti confermati. L&apos;aggiornamento
+        non e&apos; istantaneo: dipende da quanto spesso l&apos;app di calendario ricontrolla il link.
+      </p>
+
+      {urls && (
+        <div className="space-y-2">
+          <div className="flex flex-wrap gap-2">
+            <input readOnly value={urls.httpsUrl} className={`${input} flex-1`} onFocus={(e) => e.target.select()} />
+            <button type="button" onClick={copy} className={btnNeutral}>
+              {copied ? "Copiato!" : "Copia link"}
+            </button>
+          </div>
+          <div className="flex flex-wrap gap-3 text-xs">
+            <a href={urls.webcalUrl} className="text-yellow-600 hover:underline dark:text-yellow-400">
+              Apri in Apple Calendar (webcal)
+            </a>
+            <button type="button" onClick={regenerate} disabled={regenerating} className="text-red-500 hover:underline disabled:opacity-50">
+              Rigenera link (invalida quello vecchio)
+            </button>
+          </div>
+        </div>
+      )}
+    </section>
+  );
+}
+
 interface Integration {
   id: string;
   name: string;
@@ -118,6 +183,8 @@ export default function AdminSettingsPage() {
           <ThemeToggle />
         </div>
       </section>
+
+      <CalendarSyncSection />
 
       <section className={`${card} mb-6 p-4`}>
         <h2 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">API e integrazioni</h2>
