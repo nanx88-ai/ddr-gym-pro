@@ -16,6 +16,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
         include: { appointmentType: true },
       },
       invoices: { orderBy: { issueDate: "desc" } },
+      reminders: { orderBy: { dueDate: "asc" } },
     },
   });
 

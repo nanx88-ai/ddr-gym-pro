@@ -50,6 +50,25 @@ model Client {
   bookings        Booking[]
   billingProfile  BillingProfile?
   invoices        Invoice[]
+  reminders       Reminder[]
+}
+
+// Scadenza libera definita dall'admin per un cliente (es. fine abbonamento,
+// certificato medico in scadenza): titolo e descrizione a scelta dell'admin,
+// non tipizzate, cosi' puo' crearne per qualunque cosa vada ricordata. Un
+// cron giornaliero (vedi /api/cron/reminders) controlla quali hanno
+// raggiunto la soglia di preavviso e invia una mail ad admin e cliente,
+// una sola volta per scadenza (notifiedAt).
+model Reminder {
+  id               String    @id @default(cuid())
+  clientId         String
+  client           Client    @relation(fields: [clientId], references: [id])
+  title            String
+  description      String?
+  dueDate          DateTime
+  notifyDaysBefore Int       @default(7)
+  notifiedAt       DateTime?
+  createdAt        DateTime  @default(now())
 }
 
 model AppointmentType {

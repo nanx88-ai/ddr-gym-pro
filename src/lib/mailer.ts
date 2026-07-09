@@ -22,6 +22,30 @@ async function getSmtpConfig(): Promise<SmtpConfig | null> {
   }
 }
 
+/**
+ * Invio email generico (usato per i reminder di scadenza, e riusabile per
+ * altre notifiche future). Ritorna sent:false senza lanciare se l'SMTP non
+ * e' configurato, cosi' il chiamante puo' loggare/continuare senza rompersi.
+ */
+export async function sendPlainEmail(to: string, subject: string, text: string) {
+  const smtp = await getSmtpConfig();
+  if (!smtp) {
+    console.warn("[mailer] Nessuna integrazione SMTP attiva: email non inviata.", { to, subject });
+    return { sent: false, reason: "smtp_not_configured" as const };
+  }
+
+  const nodemailer = await import("nodemailer");
+  const transporter = nodemailer.createTransport({
+    host: smtp.host,
+    port: Number(smtp.port) || 587,
+    secure: Number(smtp.port) === 465,
+    auth: { user: smtp.user, pass: smtp.password },
+  });
+
+  await transporter.sendMail({ from: smtp.from || smtp.user, to, subject, text });
+  return { sent: true as const };
+}
+
 interface BookingForEmail {
   id: string;
   startTime: Date;

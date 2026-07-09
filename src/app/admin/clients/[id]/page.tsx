@@ -75,6 +75,15 @@ interface Invoice {
   total: number;
 }
 
+interface Reminder {
+  id: string;
+  title: string;
+  description: string | null;
+  dueDate: string;
+  notifyDaysBefore: number;
+  notifiedAt: string | null;
+}
+
 interface ClientDetail {
   id: string;
   firstName: string;
@@ -97,6 +106,7 @@ interface ClientDetail {
   billingProfile: BillingProfile | null;
   bookings: Booking[];
   invoices: Invoice[];
+  reminders: Reminder[];
 }
 
 export default function AdminClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
@@ -109,6 +119,12 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
+
+  const [reminderTitle, setReminderTitle] = useState("");
+  const [reminderDescription, setReminderDescription] = useState("");
+  const [reminderDueDate, setReminderDueDate] = useState("");
+  const [reminderNotifyDays, setReminderNotifyDays] = useState(7);
+  const [addingReminder, setAddingReminder] = useState(false);
 
   const [fiscal, setFiscal] = useState({
     clientKind: "PRIVATO",
@@ -219,6 +235,34 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ attended }),
     });
+    load();
+  }
+
+  async function addReminder(e: React.FormEvent) {
+    e.preventDefault();
+    if (!reminderDueDate) return;
+    setAddingReminder(true);
+    await fetch(`/api/admin/clients/${id}/reminders`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        title: reminderTitle,
+        description: reminderDescription || undefined,
+        dueDate: reminderDueDate,
+        notifyDaysBefore: reminderNotifyDays,
+      }),
+    });
+    setReminderTitle("");
+    setReminderDescription("");
+    setReminderDueDate("");
+    setReminderNotifyDays(7);
+    setAddingReminder(false);
+    load();
+  }
+
+  async function deleteReminder(reminderId: string) {
+    if (!window.confirm("Eliminare questa scadenza?")) return;
+    await fetch(`/api/admin/reminders/${reminderId}`, { method: "DELETE" });
     load();
   }
 
@@ -453,6 +497,95 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
             </div>
           ))}
           {client.bookings.length === 0 && <p className="text-sm text-neutral-500">Nessuna prenotazione.</p>}
+        </div>
+      </section>
+
+      <section className={`${card} mb-6 p-4`}>
+        <h2 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">Scadenze</h2>
+        <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
+          Es. fine abbonamento, certificato medico: titolo e descrizione a scelta. Un cron giornaliero avvisa te e il
+          cliente via email quando manca il numero di giorni indicato.
+        </p>
+
+        <form onSubmit={addReminder} className="mb-4 grid grid-cols-2 gap-3 rounded-md border border-neutral-200 p-3 dark:border-neutral-800 sm:grid-cols-4">
+          <label className="col-span-2 block sm:col-span-1">
+            <span className={label}>Titolo</span>
+            <input
+              required
+              placeholder="es. Certificato medico"
+              value={reminderTitle}
+              onChange={(e) => setReminderTitle(e.target.value)}
+              className={input}
+            />
+          </label>
+          <label className="col-span-2 block sm:col-span-1">
+            <span className={label}>Scadenza</span>
+            <input
+              required
+              type="date"
+              value={reminderDueDate}
+              onChange={(e) => setReminderDueDate(e.target.value)}
+              className={input}
+            />
+          </label>
+          <label className="block">
+            <span className={label}>Avvisa (giorni prima)</span>
+            <input
+              type="number"
+              min={0}
+              max={90}
+              value={reminderNotifyDays}
+              onChange={(e) => setReminderNotifyDays(Number(e.target.value) || 0)}
+              className={input}
+            />
+          </label>
+          <label className="col-span-2 block sm:col-span-1">
+            <span className={label}>Descrizione (facoltativa)</span>
+            <input
+              value={reminderDescription}
+              onChange={(e) => setReminderDescription(e.target.value)}
+              className={input}
+            />
+          </label>
+          <div className="col-span-2 sm:col-span-4">
+            <button type="submit" disabled={addingReminder} className={btnPositive}>
+              {addingReminder ? "Aggiunta..." : "Aggiungi scadenza"}
+            </button>
+          </div>
+        </form>
+
+        <div className="space-y-1">
+          {client.reminders.map((r) => (
+            <div
+              key={r.id}
+              className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 py-2 last:border-0 dark:border-neutral-800"
+            >
+              <div>
+                <span className="text-sm font-medium text-neutral-900 dark:text-white">{r.title}</span>{" "}
+                <span className="text-xs text-neutral-500 dark:text-neutral-400">
+                  scade il {new Date(r.dueDate).toLocaleDateString("it-IT")} · avviso {r.notifyDaysBefore}g prima
+                </span>
+                {r.description && (
+                  <div className="text-xs text-neutral-500 dark:text-neutral-400">{r.description}</div>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                {r.notifiedAt ? (
+                  <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-xs font-medium text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300">
+                    Notificata
+                  </span>
+                ) : (
+                  <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-400/15 dark:text-yellow-300">
+                    In attesa
+                  </span>
+                )}
+                <button onClick={() => deleteReminder(r.id)} className={btnDanger}>
+                  Elimina
+                </button>
+              </div>
+            </div>
+          ))}
+          {client.reminders.length === 0 && <p className="text-sm text-neutral-500">Nessuna scadenza impostata.</p>}
         </div>
       </section>
 
