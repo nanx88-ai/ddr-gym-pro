@@ -84,12 +84,18 @@ export default function HomePage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [result, setResult] = useState<{ created: number; failed: number } | null>(null);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [loadingTypes, setLoadingTypes] = useState(true);
 
   const selectedType = types.find((t) => t.id === selectedTypeId) ?? null;
 
   useEffect(() => {
     fetch(`/api/availability?date=${todayIso()}`)
-      .then((res) => res.json())
+      .then(async (res) => {
+        const json = await res.json();
+        if (!res.ok) throw new Error(json.error ?? `Errore ${res.status}`);
+        return json;
+      })
       .then((json) => {
         const list: AppointmentTypeAvailability[] = json.appointmentTypes ?? [];
         setTypes(
@@ -100,7 +106,9 @@ export default function HomePage() {
             requiresApproval: t.requiresApproval,
           }))
         );
-      });
+      })
+      .catch((err) => setLoadError(err.message ?? "Errore di caricamento"))
+      .finally(() => setLoadingTypes(false));
   }, []);
 
   function loadMonth(monthIso: string) {
@@ -283,7 +291,12 @@ export default function HomePage() {
                 <span className="text-neutral-300 dark:text-neutral-600">&rarr;</span>
               </button>
             ))}
-            {types.length === 0 && (
+            {loadError && (
+              <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300">
+                {loadError}
+              </p>
+            )}
+            {!loadError && !loadingTypes && types.length === 0 && (
               <p className="text-sm text-neutral-500 dark:text-neutral-400">Nessun servizio disponibile al momento.</p>
             )}
           </div>

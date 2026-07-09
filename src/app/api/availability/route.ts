@@ -17,42 +17,48 @@ export async function GET(request: NextRequest) {
   const dateParam = request.nextUrl.searchParams.get("date");
   const date = dateParam ? parseISO(dateParam) : new Date();
 
-  const appointmentTypes = await prisma.appointmentType.findMany({ where: { active: true } });
-  if (appointmentTypes.length === 0) {
-    return NextResponse.json({ date: formatISO(date, { representation: "date" }), appointmentTypes: [] });
-  }
+  try {
+    const appointmentTypes = await prisma.appointmentType.findMany({ where: { active: true } });
+    if (appointmentTypes.length === 0) {
+      return NextResponse.json({ date: formatISO(date, { representation: "date" }), appointmentTypes: [] });
+    }
 
-  const results = [];
-  for (const type of appointmentTypes) {
-    const { window, slots } = await generateDaySlots(type.id, date);
+    const results = [];
+    for (const type of appointmentTypes) {
+      const { window, slots } = await generateDaySlots(type.id, date);
 
-    const bookableSlots = [];
-    for (const slot of slots) {
-      if (slot.isDisabled || slot.capacity <= 0) continue;
-      const occupancy = await getSlotOccupancy(type.id, slot.startTime);
-      bookableSlots.push({
-        startTime: slot.startTime.toISOString(),
-        endTime: slot.endTime.toISOString(),
-        capacity: slot.capacity,
-        confirmed: occupancy.confirmed,
-        pending: occupancy.pending,
-        spotsLeft: Math.max(0, slot.capacity - occupancy.total),
-        full: occupancy.total >= slot.capacity,
+      const bookableSlots = [];
+      for (const slot of slots) {
+        if (slot.isDisabled || slot.capacity <= 0) continue;
+        const occupancy = await getSlotOccupancy(type.id, slot.startTime);
+        bookableSlots.push({
+          startTime: slot.startTime.toISOString(),
+          endTime: slot.endTime.toISOString(),
+          capacity: slot.capacity,
+          confirmed: occupancy.confirmed,
+          pending: occupancy.pending,
+          spotsLeft: Math.max(0, slot.capacity - occupancy.total),
+          full: occupancy.total >= slot.capacity,
+        });
+      }
+
+      results.push({
+        appointmentTypeId: type.id,
+        name: type.name,
+        durationMinutes: type.durationMinutes,
+        requiresApproval: type.requiresApproval,
+        closedNote: !window.isOpen ? window.note : null,
+        slots: bookableSlots,
       });
     }
 
-    results.push({
-      appointmentTypeId: type.id,
-      name: type.name,
-      durationMinutes: type.durationMinutes,
-      requiresApproval: type.requiresApproval,
-      closedNote: !window.isOpen ? window.note : null,
-      slots: bookableSlots,
+    return NextResponse.json({
+      date: formatISO(date, { representation: "date" }),
+      appointmentTypes: results,
     });
+  } catch (err) {
+    console.error("[api/availability] errore:", err);
+    const message = err instanceof Error ? err.message : "Errore sconosciuto";
+    return NextResponse.json({ error: `Errore di connessione al database: ${message}` }, { status: 500 });
   }
-
-  return NextResponse.json({
-    date: formatISO(date, { representation: "date" }),
-    appointmentTypes: results,
-  });
 }
