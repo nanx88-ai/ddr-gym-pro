@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Dark mode a scelta (classe .dark su <html>), non solo prefers-color-scheme:
+   necessario per il toggle light/dark nelle impostazioni admin. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 :root {
   --background: #ffffff;
   --foreground: #171717;

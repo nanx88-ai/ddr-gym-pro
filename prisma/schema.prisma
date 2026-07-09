@@ -1,0 +1,291 @@
+// Schema del layer custom per il sistema prenotazioni palestra.
+// Vedi "Koalendar — Prompt Master per Claude Code.docx" sezioni 5, 8, 9
+// per il contesto verificato e le regole di business che questo schema implementa.
+
+generator client {
+  provider = "prisma-client-js"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// Migrato da SQLite a PostgreSQL (Supabase): gli stati restano stringhe
+// vincolate a livello applicativo dalle costanti in src/lib/constants.ts
+// (invece di enum nativi Postgres, per minimizzare le modifiche allo schema)
+// (ClientStatus: "ACTIVE" | "PAUSED";
+//  BookingStatus: "PENDING_APPROVAL" | "APPROVED" | "REJECTED" | "CANCELLED" | "RESCHEDULE_REQUESTED" | "RESCHEDULED";
+//  RescheduleStatus: "PENDING" | "APPROVED" | "REJECTED").
+
+model Client {
+  id        String   @id @default(cuid())
+  firstName String
+  lastName  String
+  email     String   @unique
+  phone     String?
+  status    String   @default("ACTIVE")
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Dati fiscali per la fatturazione. Tutti facoltativi: un cliente puo'
+  // esistere ed essere prenotabile senza dati fiscali, servono solo per
+  // generare un documento fiscale (Prompt Master non copriva questo layer:
+  // e' un requisito custom aggiunto in questa iterazione).
+  clientKind    String? // "PRIVATO" | "AZIENDA"
+  businessName  String? // ragione sociale, solo per AZIENDA
+  fiscalCode    String? // codice fiscale
+  vatNumber     String? // partita IVA, solo per AZIENDA
+  address       String?
+  zipCode       String?
+  city          String?
+  province      String?
+  country       String  @default("IT")
+  pec           String? // posta elettronica certificata
+  sdiCode       String? // codice destinatario SDI (7 caratteri) o "0000000"
+
+  bookings        Booking[]
+  billingProfile  BillingProfile?
+  invoices        Invoice[]
+}
+
+model AppointmentType {
+  id               String   @id @default(cuid())
+  name             String   @unique
+  durationMinutes  Int
+  capacity         Int      @default(6) // Requisito palestra: max 6 persone per slot (verificato nativo su Koalendar Pro)
+  requiresApproval Boolean  @default(true)
+  active           Boolean  @default(true)
+  createdAt        DateTime @default(now())
+
+  bookings           Booking[]
+  weeklySchedules    WeeklySchedule[]
+  scheduleExceptions ScheduleException[]
+  slotOverrides      SlotOverride[]
+}
+
+// Orario settimanale ricorrente per tipo di appuntamento (Prompt Master 3.3:
+// "l'admin deve poter impostare gli slot orari, la durata, cambiare orari di
+// inizio/fine in base al giorno, disattivare giorni specifici"). Replica lato
+// custom quanto osservato nella sezione Disponibilita' dell'editor Koalendar.
+model WeeklySchedule {
+  id                String          @id @default(cuid())
+  appointmentTypeId String
+  appointmentType   AppointmentType @relation(fields: [appointmentTypeId], references: [id])
+  dayOfWeek         Int // 0 = Domenica ... 6 = Sabato
+  isOpen            Boolean         @default(false)
+  openTime          String          @default("09:00") // "HH:mm"
+  closeTime         String          @default("17:00") // "HH:mm"
+  breakStart        String? // pausa pranzo ricorrente per questo giorno, "HH:mm"
+  breakEnd          String?
+
+  @@unique([appointmentTypeId, dayOfWeek])
+}
+
+// Eccezione per una data specifica: chiusura straordinaria/pausa oppure
+// orario diverso da quello standard (Prompt Master 3.3: "inserire pause",
+// "disattivare fasce orarie specifiche"; Koalendar audit: "Override per date
+// specifiche", "Aggiungi pausa").
+model ScheduleException {
+  id                String          @id @default(cuid())
+  appointmentTypeId String
+  appointmentType   AppointmentType @relation(fields: [appointmentTypeId], references: [id])
+  date              DateTime // giorno (mezzanotte locale) a cui si applica l'eccezione
+  isClosed          Boolean         @default(true)
+  openTime          String? // usato solo se isClosed = false (override orario per quel giorno)
+  closeTime         String?
+  breakStart        String? // override della pausa pranzo solo per questa data
+  breakEnd          String?
+  note              String?
+  createdAt         DateTime        @default(now())
+
+  @@unique([appointmentTypeId, date])
+}
+
+// Override puntuale di un singolo slot in una data specifica: disattivazione
+// (es. "mercoledi' 11 disattiva lo slot delle 10 e quello delle 16") oppure
+// capienza diversa da quella predefinita del tipo di appuntamento (es. "il 20
+// luglio alle 18 voglio un solo posto disponibile"). Vista/gestito dal
+// calendario admin giorno per giorno.
+model SlotOverride {
+  id                String          @id @default(cuid())
+  appointmentTypeId String
+  appointmentType   AppointmentType @relation(fields: [appointmentTypeId], references: [id])
+  date              DateTime // giorno (mezzanotte locale)
+  time              String // "HH:mm", orario di inizio dello slot
+  isDisabled        Boolean         @default(false)
+  capacity          Int? // null = usa la capienza predefinita del tipo di appuntamento
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  @@unique([appointmentTypeId, date, time])
+}
+
+model Booking {
+  id                String        @id @default(cuid())
+  koalendarBookingId String?      @unique // riferimento all'evento su Koalendar, se creato lì
+  clientId          String
+  client            Client        @relation(fields: [clientId], references: [id])
+  appointmentTypeId String
+  appointmentType   AppointmentType @relation(fields: [appointmentTypeId], references: [id])
+  startTime         DateTime
+  endTime           DateTime
+  status            String        @default("PENDING_APPROVAL")
+  isRecurring       Boolean       @default(false)
+  recurrenceGroupId String?
+  source            String        @default("custom") // "custom" | "koalendar_webhook"
+  notes             String?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+
+  // Presenza effettiva, distinta dallo stato di approvazione: una
+  // prenotazione APPROVED puo' comunque risultare "non presentato". Base per
+  // la fatturazione "in base agli accessi effettivi".
+  attended          Boolean?      // null = non ancora segnato, true = presente, false = assente
+  attendedAt        DateTime?
+
+  rescheduleRequests RescheduleRequest[]
+  invoiceLineItems   InvoiceLineItem[]
+
+  // Enforcement del requisito "1 utente = max 1 prenotazione nella stessa fascia oraria"
+  // (gap custom, vedi Prompt Master sezione 4 e 8): applicato in lib/booking-rules.ts,
+  // qui solo un indice per velocizzare il controllo.
+  @@index([clientId, startTime])
+  @@index([startTime, appointmentTypeId])
+}
+
+model RescheduleRequest {
+  id                String            @id @default(cuid())
+  bookingId         String
+  booking           Booking           @relation(fields: [bookingId], references: [id])
+  requestedStartTime DateTime
+  requestedEndTime   DateTime
+  status            String            @default("PENDING")
+  reason            String?
+  createdAt         DateTime          @default(now())
+  resolvedAt        DateTime?
+}
+
+model WebhookEvent {
+  id          String   @id @default(cuid())
+  source      String   @default("koalendar")
+  eventType   String
+  payload     String // JSON grezzo ricevuto, per audit/debug
+  processed   Boolean  @default(false)
+  error       String?
+  receivedAt  DateTime @default(now())
+}
+
+// Integrazioni/API REST esterne gestite direttamente da backend (Impostazioni
+// admin), invece che tramite variabili d'ambiente: es. SMTP per l'invio
+// email, Google OAuth per il login utenti, Google Calendar per la sync.
+// "config" e' un JSON libero perche' ogni tipo di integrazione ha campi
+// diversi (host/porta per SMTP, client id/secret per OAuth, ecc.).
+model Integration {
+  id        String   @id @default(cuid())
+  name      String
+  type      String // "smtp" | "google_oauth" | "google_calendar" | "aruba" | "fattureincloud" | "custom"
+  config    String // JSON
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([type, name])
+}
+
+model AdminUser {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  createdAt    DateTime @default(now())
+}
+
+// Listino: voci di prezzo con aliquota IVA o natura di esenzione (codici
+// FatturaPA: N1..N7). Una fattura pesca le sue righe da qui.
+model PriceListItem {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  unitPrice   Float // euro, IVA esclusa
+  vatRate     Float    @default(22) // percentuale, es. 22, 10, 4, 0
+  vatNature   String? // "N1".."N7" quando vatRate = 0 (esente/non imponibile/ecc.)
+  active      Boolean  @default(true)
+  createdAt   DateTime @default(now())
+
+  billingProfiles BillingProfile[]
+}
+
+// Regola di fatturazione per cliente: quale voce di listino usare e con
+// quale criterio di conteggio. PER_ACCESS = "fattura mensile in base agli
+// accessi effettivi" (richiesto esplicitamente); FLAT = importo fisso per
+// periodo indipendentemente dagli accessi.
+model BillingProfile {
+  id              String        @id @default(cuid())
+  clientId        String        @unique
+  client          Client        @relation(fields: [clientId], references: [id])
+  priceListItemId String
+  priceListItem   PriceListItem @relation(fields: [priceListItemId], references: [id])
+  billingType     String        @default("PER_ACCESS") // "PER_ACCESS" | "FLAT"
+  active          Boolean       @default(true)
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+}
+
+// Documento di fatturazione generato per un cliente su un periodo. Le righe
+// (InvoiceLineItem) sono calcolate al momento della generazione da
+// lib/invoicing.ts sulla base degli accessi effettivi (Booking.attended).
+model Invoice {
+  id          String   @id @default(cuid())
+  number      String   @unique // es. "2026/0001"
+  clientId    String
+  client      Client   @relation(fields: [clientId], references: [id])
+  periodStart DateTime
+  periodEnd   DateTime
+  issueDate   DateTime @default(now())
+  status      String   @default("DRAFT") // "DRAFT" | "ISSUED" | "SENT" | "PAID" | "ERROR"
+  subtotal    Float
+  vatAmount   Float
+  total       Float
+  notes       String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  lineItems   InvoiceLineItem[]
+  submissions InvoiceSubmission[]
+}
+
+model InvoiceLineItem {
+  id          String   @id @default(cuid())
+  invoiceId   String
+  invoice     Invoice  @relation(fields: [invoiceId], references: [id])
+  description String
+  quantity    Int      @default(1)
+  unitPrice   Float
+  vatRate     Float
+  vatNature   String?
+  amount      Float // quantity * unitPrice, IVA esclusa
+  bookingId   String? // presenza collegata, se la riga rappresenta un accesso
+  booking     Booking? @relation(fields: [bookingId], references: [id])
+}
+
+// Esito di un tentativo di invio fattura verso un sistema esterno (Aruba,
+// Fatture in Cloud, o invio "manual" locale). Il campo provider indica quale
+// integrazione e' stata usata; per ora solo "manual" e' realmente collegato,
+// gli altri sono stub predisposti per l'integrazione futura (vedi
+// src/lib/invoicing/providers).
+model InvoiceSubmission {
+  id              String   @id @default(cuid())
+  invoiceId       String
+  invoice         Invoice  @relation(fields: [invoiceId], references: [id])
+  provider        String // "manual" | "aruba" | "fattureincloud"
+  status          String // "SUCCESS" | "ERROR"
+  requestPayload  String? // JSON, per audit
+  responsePayload String? // JSON, esito grezzo restituito dal provider/sistema
+  externalId      String? // id assegnato dal provider esterno, se disponibile
+  errorMessage    String?
+  createdAt       DateTime @default(now())
+}
