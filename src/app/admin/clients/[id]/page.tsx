@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { formatCurrency, formatDateTime, STATUS_COLORS, STATUS_LABELS } from "@/lib/format";
 import { btnDanger, btnNeutral, btnPositive, btnPrimary, card, input, label, pageSubtitle, pageTitle } from "@/lib/ui";
 import { useToast } from "@/components/Toast";
+import AttendanceToggle from "@/components/AttendanceToggle";
 
 /**
  * Affidabilita' del cliente: quota di prenotazioni concluse (confermate,
@@ -504,20 +505,7 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
                   {STATUS_LABELS[b.status] ?? b.status}
                 </span>
               </div>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setAttendance(b.id, true)}
-                  className={b.attended === true ? btnPositive : btnNeutral}
-                >
-                  Presente
-                </button>
-                <button
-                  onClick={() => setAttendance(b.id, false)}
-                  className={b.attended === false ? btnDanger : btnNeutral}
-                >
-                  Assente
-                </button>
-              </div>
+              <AttendanceToggle attended={b.attended} onChange={(attended) => setAttendance(b.id, attended)} />
             </div>
           ))}
           {client.bookings.length === 0 && <p className="text-sm text-neutral-500">Nessuna prenotazione.</p>}

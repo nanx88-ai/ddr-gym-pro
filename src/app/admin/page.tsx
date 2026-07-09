@@ -17,6 +17,7 @@ import {
   trBorder,
 } from "@/lib/ui";
 import { useToast } from "@/components/Toast";
+import AttendanceToggle from "@/components/AttendanceToggle";
 
 interface Booking {
   id: string;
@@ -132,9 +133,8 @@ export default function AdminBookingsPage() {
   }
 
   function Actions({ b }: { b: Booking }) {
-    const isPast = new Date(b.startTime) < new Date();
     return (
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         {b.status === "PENDING_APPROVAL" && (
           <>
             <button onClick={() => updateStatus(b.id, "APPROVED")} className={btnPositive}>
@@ -146,17 +146,12 @@ export default function AdminBookingsPage() {
           </>
         )}
         {["APPROVED", "RESCHEDULED"].includes(b.status) && (
-          <button onClick={() => updateStatus(b.id, "CANCELLED")} className={btnNeutral}>
-            Annulla
-          </button>
-        )}
-        {["APPROVED", "RESCHEDULED"].includes(b.status) && isPast && (
-          <button
-            onClick={() => markAttendance(b.id, b.attended === false ? null : false)}
-            className={b.attended === false ? btnDanger : btnNeutral}
-          >
-            {b.attended === false ? "Assente ✓" : "Segna assente"}
-          </button>
+          <>
+            <button onClick={() => updateStatus(b.id, "CANCELLED")} className={btnNeutral}>
+              Annulla
+            </button>
+            <AttendanceToggle attended={b.attended} onChange={(attended) => markAttendance(b.id, attended)} />
+          </>
         )}
       </div>
     );

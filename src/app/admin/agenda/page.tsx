@@ -21,6 +21,7 @@ import { it } from "date-fns/locale";
 import { formatTime, STATUS_COLORS, STATUS_LABELS } from "@/lib/format";
 import { btnDanger, btnNeutral, btnNeutral as btnGhost, btnPositive, card, input, pageSubtitle, pageTitle } from "@/lib/ui";
 import { useToast } from "@/components/Toast";
+import AttendanceToggle from "@/components/AttendanceToggle";
 
 interface AppointmentType {
   id: string;
@@ -32,6 +33,7 @@ interface Booking {
   startTime: string;
   endTime: string;
   status: string;
+  attended: boolean | null;
   client: { firstName: string; lastName: string; email: string };
   appointmentType: { name: string };
 }
@@ -142,6 +144,16 @@ export default function AdminAgendaPage() {
     setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: newStatus } : b)));
   }
 
+  async function markAttendance(id: string, attended: boolean) {
+    await fetch(`/api/admin/bookings/${id}/attendance`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ attended }),
+    });
+    toast.success(attended ? "Presenza aggiornata." : "Assenza segnata.");
+    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, attended } : b)));
+  }
+
   return (
     <div>
       <h1 className={pageTitle}>Agenda</h1>
@@ -237,7 +249,11 @@ export default function AdminAgendaPage() {
       {loading && <p className="text-sm text-neutral-500">Caricamento...</p>}
 
       {!loading && view === "day" && (
-        <DayList bookings={byDay.get(dateKey(selectedDate)) ?? []} onUpdateStatus={updateStatus} />
+        <DayList
+          bookings={byDay.get(dateKey(selectedDate)) ?? []}
+          onUpdateStatus={updateStatus}
+          onMarkAttendance={markAttendance}
+        />
       )}
 
       {!loading && view === "week" && (
@@ -259,7 +275,15 @@ function StatusBadge({ status }: { status: string }) {
   );
 }
 
-function DayList({ bookings, onUpdateStatus }: { bookings: Booking[]; onUpdateStatus: (id: string, s: string) => void }) {
+function DayList({
+  bookings,
+  onUpdateStatus,
+  onMarkAttendance,
+}: {
+  bookings: Booking[];
+  onUpdateStatus: (id: string, s: string) => void;
+  onMarkAttendance: (id: string, attended: boolean) => void;
+}) {
   if (bookings.length === 0) {
     return (
       <p className={`${card} px-4 py-8 text-center text-sm text-neutral-500 dark:text-neutral-400`}>
@@ -301,9 +325,12 @@ function DayList({ bookings, onUpdateStatus }: { bookings: Booking[]; onUpdateSt
                 </>
               )}
               {["APPROVED", "RESCHEDULED"].includes(b.status) && (
-                <button onClick={() => onUpdateStatus(b.id, "CANCELLED")} className={btnGhost}>
-                  Annulla
-                </button>
+                <>
+                  <button onClick={() => onUpdateStatus(b.id, "CANCELLED")} className={btnGhost}>
+                    Annulla
+                  </button>
+                  <AttendanceToggle attended={b.attended} onChange={(attended) => onMarkAttendance(b.id, attended)} />
+                </>
               )}
             </div>
           </div>
