@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { formatCurrency } from "@/lib/format";
-import { btnNeutral, btnPositive, card, input, label, pageSubtitle, pageTitle, tableWrap, td, th, trBorder } from "@/lib/ui";
+import { btnDanger, btnNeutral, btnPositive, card, input, label, pageSubtitle, pageTitle, tableWrap, td, th, trBorder } from "@/lib/ui";
+import { useToast } from "@/components/Toast";
 
 interface PriceListItem {
   id: string;
@@ -26,6 +27,7 @@ const VAT_NATURES = [
 ];
 
 export default function AdminPriceListPage() {
+  const toast = useToast();
   const [items, setItems] = useState<PriceListItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -64,6 +66,7 @@ export default function AdminPriceListPage() {
       return;
     }
     setName("");
+    toast.success("Voce di listino creata.");
     load();
   }
 
@@ -73,6 +76,19 @@ export default function AdminPriceListPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ active: !item.active }),
     });
+    toast.success(item.active ? "Voce disattivata." : "Voce riattivata.");
+    load();
+  }
+
+  async function remove(item: PriceListItem) {
+    if (!window.confirm(`Eliminare definitivamente "${item.name}"? L'operazione non e' reversibile.`)) return;
+    const res = await fetch(`/api/admin/price-list/${item.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      toast.error(json.error ?? "Impossibile eliminare la voce.");
+      return;
+    }
+    toast.success("Voce eliminata.");
     load();
   }
 
@@ -167,9 +183,14 @@ export default function AdminPriceListPage() {
                   </span>
                 </td>
                 <td className={td}>
-                  <button onClick={() => toggleActive(item)} className={btnNeutral}>
-                    {item.active ? "Disattiva" : "Riattiva"}
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => toggleActive(item)} className={btnNeutral}>
+                      {item.active ? "Disattiva" : "Riattiva"}
+                    </button>
+                    <button onClick={() => remove(item)} className={btnDanger}>
+                      Elimina
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}

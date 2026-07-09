@@ -12,9 +12,9 @@ import {
   label,
   pageSubtitle,
   pageTitle,
-  successBox,
 } from "@/lib/ui";
 import ThemeToggle from "@/components/ThemeToggle";
+import { useToast } from "@/components/Toast";
 
 /**
  * Sync calendario admin (Google/Apple) via feed ICS sottoscrivibile, senza
@@ -23,8 +23,8 @@ import ThemeToggle from "@/components/ThemeToggle";
  * periodicamente (di solito ogni poche ore), quindi non e' realtime.
  */
 function CalendarSyncSection() {
+  const toast = useToast();
   const [urls, setUrls] = useState<{ httpsUrl: string; webcalUrl: string } | null>(null);
-  const [copied, setCopied] = useState(false);
   const [regenerating, setRegenerating] = useState(false);
 
   async function load() {
@@ -37,17 +37,18 @@ function CalendarSyncSection() {
   }, []);
 
   async function regenerate() {
+    if (!window.confirm("Rigenerare il link? Quello vecchio smettera' di funzionare e dovrai risottoscriverti.")) return;
     setRegenerating(true);
     await fetch("/api/admin/calendar-feed", { method: "POST" });
     await load();
     setRegenerating(false);
+    toast.success("Link rigenerato.");
   }
 
   async function copy() {
     if (!urls) return;
     await navigator.clipboard.writeText(urls.httpsUrl);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
+    toast.success("Link copiato.");
   }
 
   return (
@@ -64,7 +65,7 @@ function CalendarSyncSection() {
           <div className="flex flex-wrap gap-2">
             <input readOnly value={urls.httpsUrl} className={`${input} flex-1`} onFocus={(e) => e.target.select()} />
             <button type="button" onClick={copy} className={btnNeutral}>
-              {copied ? "Copiato!" : "Copia link"}
+              Copia link
             </button>
           </div>
           <div className="flex flex-wrap gap-3 text-xs">
@@ -101,10 +102,10 @@ const TYPE_OPTIONS = [
 type KV = { key: string; value: string };
 
 export default function AdminSettingsPage() {
+  const toast = useToast();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
   const [name, setName] = useState("");
   const [type, setType] = useState("smtp");
@@ -130,7 +131,6 @@ export default function AdminSettingsPage() {
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setMessage(null);
     setCreating(true);
 
     const config = Object.fromEntries(pairs.filter((p) => p.key.trim()).map((p) => [p.key.trim(), p.value]));
@@ -148,7 +148,7 @@ export default function AdminSettingsPage() {
     }
     setName("");
     setPairs([{ key: "", value: "" }]);
-    setMessage("Integrazione salvata.");
+    toast.success("Integrazione salvata.");
     load();
   }
 
@@ -158,11 +158,14 @@ export default function AdminSettingsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ active: !integration.active }),
     });
+    toast.success(integration.active ? "Integrazione disattivata." : "Integrazione attivata.");
     load();
   }
 
-  async function remove(id: string) {
+  async function remove(id: string, name: string) {
+    if (!window.confirm(`Eliminare l'integrazione "${name}"?`)) return;
     await fetch(`/api/admin/integrations/${id}`, { method: "DELETE" });
+    toast.success("Integrazione eliminata.");
     load();
   }
 
@@ -174,7 +177,6 @@ export default function AdminSettingsPage() {
       <p className={pageSubtitle}>Aspetto, integrazioni API, esportazione dati e backup.</p>
 
       {error && <div className={errorBox}>{error}</div>}
-      {message && <div className={successBox}>{message}</div>}
 
       <section className={`${card} mb-6 p-4`}>
         <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">Aspetto</h2>
@@ -271,7 +273,7 @@ export default function AdminSettingsPage() {
                 <button onClick={() => toggleActive(integ)} className={btnNeutral}>
                   {integ.active ? "Disattiva" : "Riattiva"}
                 </button>
-                <button onClick={() => remove(integ.id)} className={btnDanger}>
+                <button onClick={() => remove(integ.id, integ.name)} className={btnDanger}>
                   Elimina
                 </button>
               </div>

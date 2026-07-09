@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import NotificationBell from "@/components/NotificationBell";
 import PwaRegister from "@/components/PwaRegister";
+import { ToastProvider } from "@/components/Toast";
 
 interface NavItem {
   href: string;
@@ -117,10 +118,15 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   if (isLogin) {
-    return <div className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">{children}</div>;
+    return (
+      <ToastProvider>
+        <div className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">{children}</div>
+      </ToastProvider>
+    );
   }
 
   return (
+    <ToastProvider>
     <div className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
       <PwaRegister />
       <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
@@ -176,5 +182,6 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </main>
       </div>
     </div>
+    </ToastProvider>
   );
 }

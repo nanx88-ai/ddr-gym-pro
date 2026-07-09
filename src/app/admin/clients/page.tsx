@@ -3,7 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { STATUS_COLORS, STATUS_LABELS } from "@/lib/format";
-import { btnNeutral, card, pageSubtitle, pageTitle, tableHeadBg, tableWrap, td, th, trBorder } from "@/lib/ui";
+import { btnDanger, btnNeutral, card, pageSubtitle, pageTitle, tableHeadBg, tableWrap, td, th, trBorder } from "@/lib/ui";
+import { useToast } from "@/components/Toast";
 
 interface Client {
   id: string;
@@ -16,6 +17,7 @@ interface Client {
 }
 
 export default function AdminClientsPage() {
+  const toast = useToast();
   const [clients, setClients] = useState<Client[]>([]);
   const [loading, setLoading] = useState(true);
 
@@ -33,11 +35,29 @@ export default function AdminClientsPage() {
 
   async function toggleStatus(client: Client) {
     const nextStatus = client.status === "ACTIVE" ? "PAUSED" : "ACTIVE";
+    if (nextStatus === "PAUSED" && !window.confirm(`Mettere in pausa ${client.firstName} ${client.lastName}? Non potra' prenotare finche' non lo riattivi.`)) {
+      return;
+    }
     await fetch(`/api/admin/clients/${client.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: nextStatus }),
     });
+    toast.success(nextStatus === "PAUSED" ? "Cliente messo in pausa." : "Cliente riattivato.");
+    load();
+  }
+
+  async function remove(client: Client) {
+    if (!window.confirm(`Eliminare definitivamente ${client.firstName} ${client.lastName}? L'operazione non e' reversibile.`)) {
+      return;
+    }
+    const res = await fetch(`/api/admin/clients/${client.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      toast.error(json.error ?? "Impossibile eliminare il cliente.");
+      return;
+    }
+    toast.success("Cliente eliminato.");
     load();
   }
 
@@ -75,12 +95,15 @@ export default function AdminClientsPage() {
                   {c._count.bookings} prenotazion{c._count.bookings === 1 ? "e" : "i"}
                 </span>
               </div>
-              <div className="mt-3 flex gap-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+              <div className="mt-3 flex flex-wrap gap-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
                 <Link href={`/admin/clients/${c.id}`} className={`flex-1 text-center ${btnNeutral}`}>
                   Dettagli
                 </Link>
                 <button onClick={() => toggleStatus(c)} className={`flex-1 ${btnNeutral}`}>
                   {c.status === "ACTIVE" ? "Metti in pausa" : "Riattiva"}
+                </button>
+                <button onClick={() => remove(c)} className={`flex-1 ${btnDanger}`}>
+                  Elimina
                 </button>
               </div>
             </div>
@@ -119,12 +142,15 @@ export default function AdminClientsPage() {
                     </span>
                   </td>
                   <td className={td}>
-                    <div className="flex gap-2">
+                    <div className="flex flex-wrap gap-2">
                       <Link href={`/admin/clients/${c.id}`} className={btnNeutral}>
                         Dettagli
                       </Link>
                       <button onClick={() => toggleStatus(c)} className={btnNeutral}>
                         {c.status === "ACTIVE" ? "Metti in pausa" : "Riattiva"}
+                      </button>
+                      <button onClick={() => remove(c)} className={btnDanger}>
+                        Elimina
                       </button>
                     </div>
                   </td>

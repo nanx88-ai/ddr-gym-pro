@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { formatDateTime } from "@/lib/format";
 import { btnDanger, btnPositive } from "@/lib/ui";
+import { useToast } from "@/components/Toast";
 
 interface PendingItem {
   id: string;
@@ -23,6 +24,7 @@ const POLL_MS = 20000;
  * pannello. Altri tipi di notifica si aggiungeranno qui in futuro.
  */
 export default function NotificationBell() {
+  const toast = useToast();
   const [items, setItems] = useState<PendingItem[]>([]);
   const [open, setOpen] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -58,12 +60,14 @@ export default function NotificationBell() {
   }, []);
 
   async function decide(id: string, status: "APPROVED" | "REJECTED") {
+    if (status === "REJECTED" && !window.confirm("Rifiutare questa richiesta di prenotazione?")) return;
     setBusyId(id);
     await fetch(`/api/admin/bookings/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
+    toast.success(status === "APPROVED" ? "Prenotazione approvata." : "Prenotazione rifiutata.");
     await load();
     setBusyId(null);
   }

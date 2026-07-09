@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { formatDateTime } from "@/lib/format";
 import { btnDanger, btnPositive, card, pageSubtitle, pageTitle } from "@/lib/ui";
+import { useToast } from "@/components/Toast";
 
 interface RescheduleRequest {
   id: string;
@@ -18,6 +19,7 @@ interface RescheduleRequest {
 }
 
 export default function AdminReschedulePage() {
+  const toast = useToast();
   const [requests, setRequests] = useState<RescheduleRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,6 +37,7 @@ export default function AdminReschedulePage() {
   }, []);
 
   async function decide(id: string, decision: "APPROVE" | "REJECT") {
+    if (decision === "REJECT" && !window.confirm("Rifiutare questa richiesta di spostamento?")) return;
     setError(null);
     const res = await fetch(`/api/admin/reschedule/${id}`, {
       method: "PATCH",
@@ -46,6 +49,7 @@ export default function AdminReschedulePage() {
       setError(json.error ?? "Errore durante l'operazione");
       return;
     }
+    toast.success(decision === "APPROVE" ? "Spostamento approvato." : "Spostamento rifiutato.");
     load();
   }
 

@@ -20,6 +20,7 @@ import {
 import { it } from "date-fns/locale";
 import { formatTime, STATUS_COLORS, STATUS_LABELS } from "@/lib/format";
 import { btnDanger, btnNeutral, btnNeutral as btnGhost, btnPositive, card, input, pageSubtitle, pageTitle } from "@/lib/ui";
+import { useToast } from "@/components/Toast";
 
 interface AppointmentType {
   id: string;
@@ -51,14 +52,17 @@ function dateKey(d: Date) {
 }
 
 export default function AdminAgendaPage() {
+  const toast = useToast();
   const [view, setView] = useState<ViewMode>("day");
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [status, setStatus] = useState("");
   const [appointmentTypeId, setAppointmentTypeId] = useState("");
   const [search, setSearch] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
   const [types, setTypes] = useState<AppointmentType[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const activeFilterCount = (status ? 1 : 0) + (appointmentTypeId ? 1 : 0) + (search.trim() ? 1 : 0);
 
   useEffect(() => {
     fetch("/api/admin/appointment-types?all=1")
@@ -116,12 +120,25 @@ export default function AdminAgendaPage() {
     setView("day");
   }
 
+  const DISRUPTIVE_CONFIRM: Record<string, string> = {
+    REJECTED: "Rifiutare questa richiesta di prenotazione?",
+    CANCELLED: "Annullare questa prenotazione?",
+  };
+  const STATUS_TOAST: Record<string, string> = {
+    APPROVED: "Prenotazione approvata.",
+    REJECTED: "Prenotazione rifiutata.",
+    CANCELLED: "Prenotazione annullata.",
+  };
+
   async function updateStatus(id: string, newStatus: string) {
+    const confirmMsg = DISRUPTIVE_CONFIRM[newStatus];
+    if (confirmMsg && !window.confirm(confirmMsg)) return;
     await fetch(`/api/admin/bookings/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: newStatus }),
     });
+    toast.success(STATUS_TOAST[newStatus] ?? "Stato aggiornato.");
     setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: newStatus } : b)));
   }
 
@@ -167,29 +184,55 @@ export default function AdminAgendaPage() {
         </div>
       </div>
 
-      <div className={`${card} mb-4 grid grid-cols-1 gap-2 p-3 sm:grid-cols-3`}>
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Cerca per nome, cognome o email..."
-          className={`${input} w-full`}
-        />
-        <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${input} w-full`}>
-          {STATUS_OPTIONS.map((s) => (
-            <option key={s.value} value={s.value}>
-              {s.label}
-            </option>
-          ))}
-        </select>
-        <select value={appointmentTypeId} onChange={(e) => setAppointmentTypeId(e.target.value)} className={`${input} w-full`}>
-          <option value="">Tutti i servizi</option>
-          {types.map((t) => (
-            <option key={t.id} value={t.id}>
-              {t.name}
-            </option>
-          ))}
-        </select>
+      <div className="mb-3">
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((o) => !o)}
+          className="flex items-center gap-1.5 rounded-md border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+        >
+          Filtri
+          {activeFilterCount > 0 && (
+            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-yellow-400 px-1 text-[10px] font-semibold text-neutral-900">
+              {activeFilterCount}
+            </span>
+          )}
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className={`h-3.5 w-3.5 transition-transform ${filtersOpen ? "rotate-180" : ""}`}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
       </div>
+
+      {filtersOpen && (
+        <div className={`${card} mb-4 grid grid-cols-1 gap-2 p-3 sm:grid-cols-3`}>
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cerca per nome, cognome o email..."
+            className={`${input} w-full`}
+          />
+          <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${input} w-full`}>
+            {STATUS_OPTIONS.map((s) => (
+              <option key={s.value} value={s.value}>
+                {s.label}
+              </option>
+            ))}
+          </select>
+          <select value={appointmentTypeId} onChange={(e) => setAppointmentTypeId(e.target.value)} className={`${input} w-full`}>
+            <option value="">Tutti i servizi</option>
+            {types.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {loading && <p className="text-sm text-neutral-500">Caricamento...</p>}
 

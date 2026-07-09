@@ -22,3 +22,20 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   const item = await prisma.priceListItem.update({ where: { id }, data: parsed.data });
   return NextResponse.json({ item });
 }
+
+/** Elimina una voce di listino. Blocca se e' usata in un profilo di fatturazione cliente. */
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+  try {
+    await prisma.priceListItem.delete({ where: { id } });
+  } catch (err: unknown) {
+    if (err && typeof err === "object" && "code" in err && err.code === "P2003") {
+      return NextResponse.json(
+        { error: "Questa voce e' usata nel profilo di fatturazione di un cliente: disattivala invece di eliminarla." },
+        { status: 409 }
+      );
+    }
+    throw err;
+  }
+  return NextResponse.json({ ok: true });
+}

@@ -59,3 +59,28 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   return NextResponse.json({ client });
 }
+
+/**
+ * Elimina un cliente. Le sue scadenze vengono rimosse insieme (nessun valore
+ * storico); se invece ha prenotazioni, fatture o un profilo di fatturazione
+ * collegati blocca ed suggerisce di metterlo in pausa invece.
+ */
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+
+  await prisma.reminder.deleteMany({ where: { clientId: id } });
+
+  try {
+    await prisma.client.delete({ where: { id } });
+  } catch (err: unknown) {
+    if (err && typeof err === "object" && "code" in err && err.code === "P2003") {
+      return NextResponse.json(
+        { error: "Questo cliente ha prenotazioni o fatture collegate: mettilo in pausa invece di eliminarlo." },
+        { status: 409 }
+      );
+    }
+    throw err;
+  }
+
+  return NextResponse.json({ ok: true });
+}

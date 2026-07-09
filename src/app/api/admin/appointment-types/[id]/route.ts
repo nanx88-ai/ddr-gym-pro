@@ -26,3 +26,27 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   return NextResponse.json({ appointmentType });
 }
+
+/** Elimina un calendario/servizio. Blocca se ha prenotazioni storiche collegate. */
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+
+  // Config pulibile senza perdita di storico: eccezioni, override slot, orario settimanale.
+  await prisma.weeklySchedule.deleteMany({ where: { appointmentTypeId: id } });
+  await prisma.scheduleException.deleteMany({ where: { appointmentTypeId: id } });
+  await prisma.slotOverride.deleteMany({ where: { appointmentTypeId: id } });
+
+  try {
+    await prisma.appointmentType.delete({ where: { id } });
+  } catch (err: unknown) {
+    if (err && typeof err === "object" && "code" in err && err.code === "P2003") {
+      return NextResponse.json(
+        { error: "Questo calendario ha prenotazioni collegate: disattivalo invece di eliminarlo." },
+        { status: 409 }
+      );
+    }
+    throw err;
+  }
+
+  return NextResponse.json({ ok: true });
+}

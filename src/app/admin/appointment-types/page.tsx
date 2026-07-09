@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { btnNeutral, btnPositive, card, input, label, pageSubtitle, pageTitle, tableWrap, td, th, trBorder } from "@/lib/ui";
+import { btnDanger, btnNeutral, btnPositive, card, input, label, pageSubtitle, pageTitle, tableWrap, td, th, trBorder } from "@/lib/ui";
+import { useToast } from "@/components/Toast";
 
 interface AppointmentType {
   id: string;
@@ -14,6 +15,7 @@ interface AppointmentType {
 }
 
 export default function AdminAppointmentTypesPage() {
+  const toast = useToast();
   const [types, setTypes] = useState<AppointmentType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +57,7 @@ export default function AdminAppointmentTypesPage() {
     setDurationMinutes(60);
     setCapacity(6);
     setRequiresApproval(true);
+    toast.success("Calendario creato.");
     load();
   }
 
@@ -64,6 +67,19 @@ export default function AdminAppointmentTypesPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(patch),
     });
+    if (patch.active !== undefined) toast.success(patch.active ? "Calendario riattivato." : "Calendario disattivato.");
+    load();
+  }
+
+  async function remove(t: AppointmentType) {
+    if (!window.confirm(`Eliminare definitivamente "${t.name}"? L'operazione non e' reversibile.`)) return;
+    const res = await fetch(`/api/admin/appointment-types/${t.id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      toast.error(json.error ?? "Impossibile eliminare il calendario.");
+      return;
+    }
+    toast.success("Calendario eliminato.");
     load();
   }
 
@@ -201,6 +217,9 @@ export default function AdminAppointmentTypesPage() {
                     </Link>
                     <button onClick={() => updateField(t.id, { active: !t.active })} className={btnNeutral}>
                       {t.active ? "Disattiva" : "Riattiva"}
+                    </button>
+                    <button onClick={() => remove(t)} className={btnDanger}>
+                      Elimina
                     </button>
                   </div>
                 </td>

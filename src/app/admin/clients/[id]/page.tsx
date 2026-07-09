@@ -2,8 +2,10 @@
 
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatCurrency, formatDateTime, STATUS_COLORS, STATUS_LABELS } from "@/lib/format";
 import { btnDanger, btnNeutral, btnPositive, btnPrimary, card, input, label, pageSubtitle, pageTitle } from "@/lib/ui";
+import { useToast } from "@/components/Toast";
 
 /**
  * Affidabilita' del cliente: quota di prenotazioni concluse (confermate,
@@ -111,6 +113,8 @@ interface ClientDetail {
 
 export default function AdminClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);
+  const router = useRouter();
+  const toast = useToast();
   const [client, setClient] = useState<ClientDetail | null>(null);
   const [priceList, setPriceList] = useState<PriceListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,7 +122,6 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
   const [savingBilling, setSavingBilling] = useState(false);
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [message, setMessage] = useState<string | null>(null);
 
   const [reminderTitle, setReminderTitle] = useState("");
   const [reminderDescription, setReminderDescription] = useState("");
@@ -195,7 +198,6 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
     e.preventDefault();
     setSavingFiscal(true);
     setError(null);
-    setMessage(null);
     const res = await fetch(`/api/admin/clients/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -206,7 +208,7 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
       setError("Errore durante il salvataggio dei dati fiscali.");
       return;
     }
-    setMessage("Dati fiscali salvati.");
+    toast.success("Dati fiscali salvati.");
     load();
   }
 
@@ -214,7 +216,6 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
     e.preventDefault();
     setSavingBilling(true);
     setError(null);
-    setMessage(null);
     const res = await fetch("/api/admin/billing-profiles", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -225,7 +226,7 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
       setError("Errore durante il salvataggio del profilo di fatturazione.");
       return;
     }
-    setMessage("Profilo di fatturazione salvato.");
+    toast.success("Profilo di fatturazione salvato.");
     load();
   }
 
@@ -235,6 +236,7 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ attended }),
     });
+    toast.success(attended === true ? "Presenza segnata." : attended === false ? "Assenza segnata." : "Presenza azzerata.");
     load();
   }
 
@@ -257,12 +259,14 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
     setReminderDueDate("");
     setReminderNotifyDays(7);
     setAddingReminder(false);
+    toast.success("Scadenza aggiunta.");
     load();
   }
 
   async function deleteReminder(reminderId: string) {
     if (!window.confirm("Eliminare questa scadenza?")) return;
     await fetch(`/api/admin/reminders/${reminderId}`, { method: "DELETE" });
+    toast.success("Scadenza eliminata.");
     load();
   }
 
@@ -270,7 +274,6 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
     e.preventDefault();
     setGenerating(true);
     setError(null);
-    setMessage(null);
     const res = await fetch("/api/admin/invoices", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -282,8 +285,27 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
       setError(json.error ?? "Errore durante la generazione della fattura.");
       return;
     }
-    setMessage(`Fattura ${json.invoice.number} generata.`);
+    toast.success(`Fattura ${json.invoice.number} generata.`);
     load();
+  }
+
+  async function removeClient() {
+    if (!client) return;
+    if (
+      !window.confirm(
+        `Eliminare definitivamente ${client.firstName} ${client.lastName}? L'operazione non e' reversibile.`
+      )
+    ) {
+      return;
+    }
+    const res = await fetch(`/api/admin/clients/${id}`, { method: "DELETE" });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      toast.error(json.error ?? "Impossibile eliminare il cliente.");
+      return;
+    }
+    toast.success("Cliente eliminato.");
+    router.push("/admin/clients");
   }
 
   if (loading) return <p className="text-sm text-neutral-500">Caricamento...</p>;
@@ -294,23 +316,25 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
       <Link href="/admin/clients" className="mb-3 inline-block text-sm text-neutral-500 dark:text-neutral-400 hover:underline">
         &larr; Torna ai clienti
       </Link>
-      <h1 className={pageTitle}>
-        {client.firstName} {client.lastName}
-      </h1>
-      <p className={pageSubtitle}>
-        {client.email} {client.phone ? `· ${client.phone}` : ""}
-      </p>
+      <div className="flex flex-wrap items-start justify-between gap-2">
+        <div>
+          <h1 className={pageTitle}>
+            {client.firstName} {client.lastName}
+          </h1>
+          <p className={pageSubtitle}>
+            {client.email} {client.phone ? `· ${client.phone}` : ""}
+          </p>
+        </div>
+        <button onClick={removeClient} className={btnDanger}>
+          Elimina cliente
+        </button>
+      </div>
 
       <ReliabilityBadge bookings={client.bookings} />
 
       {error && (
         <div className="mb-4 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300">
           {error}
-        </div>
-      )}
-      {message && (
-        <div className="mb-4 rounded-md border border-green-300 bg-green-50 px-3 py-2 text-sm text-green-700 dark:border-green-800 dark:bg-green-950/50 dark:text-green-300">
-          {message}
         </div>
       )}
 

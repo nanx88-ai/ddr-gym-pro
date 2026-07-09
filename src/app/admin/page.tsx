@@ -16,6 +16,7 @@ import {
   th,
   trBorder,
 } from "@/lib/ui";
+import { useToast } from "@/components/Toast";
 
 interface Booking {
   id: string;
@@ -43,6 +44,7 @@ type SortDir = "asc" | "desc";
 const filterField = `${input} w-full`;
 
 export default function AdminBookingsPage() {
+  const toast = useToast();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filter, setFilter] = useState("");
   const [loading, setLoading] = useState(true);
@@ -97,12 +99,25 @@ export default function AdminBookingsPage() {
 
   const activeFilterCount = (filter ? 1 : 0) + (sortBy !== "date" ? 1 : 0) + (sortDir !== "asc" ? 1 : 0) + (!pendingFirst ? 1 : 0);
 
+  const DISRUPTIVE_CONFIRM: Record<string, string> = {
+    REJECTED: "Rifiutare questa richiesta di prenotazione?",
+    CANCELLED: "Annullare questa prenotazione?",
+  };
+  const STATUS_TOAST: Record<string, string> = {
+    APPROVED: "Prenotazione approvata.",
+    REJECTED: "Prenotazione rifiutata.",
+    CANCELLED: "Prenotazione annullata.",
+  };
+
   async function updateStatus(id: string, status: string) {
+    const confirmMsg = DISRUPTIVE_CONFIRM[status];
+    if (confirmMsg && !window.confirm(confirmMsg)) return;
     await fetch(`/api/admin/bookings/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
+    toast.success(STATUS_TOAST[status] ?? "Stato aggiornato.");
     load();
   }
 
@@ -112,6 +127,7 @@ export default function AdminBookingsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ attended }),
     });
+    toast.success(attended === false ? "Assenza segnata." : "Presenza aggiornata.");
     load();
   }
 
