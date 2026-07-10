@@ -5,6 +5,7 @@
 export const CLIENT_STATUS = {
   ACTIVE: "ACTIVE",
   PAUSED: "PAUSED",
+  ARCHIVED: "ARCHIVED",
 } as const;
 export type ClientStatus = (typeof CLIENT_STATUS)[keyof typeof CLIENT_STATUS];
 

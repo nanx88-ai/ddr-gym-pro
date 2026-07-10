@@ -61,6 +61,12 @@ export async function POST(request: NextRequest) {
       { status: 403 }
     );
   }
+  if (client.status === "ARCHIVED") {
+    return NextResponse.json(
+      { error: "Il tuo account risulta archiviato. Contatta la palestra per riattivarlo." },
+      { status: 403 }
+    );
+  }
 
   const bookings = [];
   const errors: { index: number; startTime: string; error: string; code?: string }[] = [];

@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { formatDateTime } from "@/lib/format";
-import { btnDanger, btnPositive } from "@/lib/ui";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 
@@ -21,7 +20,7 @@ const POLL_MS = 20000;
 /**
  * Notifiche admin: per ora solo le richieste di appuntamento in attesa di
  * approvazione, con azioni dirette (Approva/Rifiuta) e i posti ancora
- * disponibili per lo slot, cosi'l'admin puo'decidere senza uscire dal
+ * disponibili per lo slot, cosi' l'admin puo' decidere senza uscire dal
  * pannello. Altri tipi di notifica si aggiungeranno qui in futuro.
  */
 export default function NotificationBell() {
@@ -59,30 +58,21 @@ export default function NotificationBell() {
 
   useEffect(() => {
     function onClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node))
-        setOpen(false);
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
     document.addEventListener("mousedown", onClickOutside);
     return () => document.removeEventListener("mousedown", onClickOutside);
   }, []);
 
   async function decide(id: string, status: "APPROVED" | "REJECTED") {
-    if (
-      status === "REJECTED" &&
-      !(await confirm("Rifiutare questa richiesta di prenotazione?"))
-    )
-      return;
+    if (status === "REJECTED" && !(await confirm("Rifiutare questa richiesta di prenotazione?"))) return;
     setBusyId(id);
     await fetch(`/api/admin/bookings/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
-    toast.success(
-      status === "APPROVED"
-        ? "Prenotazione approvata."
-        : "Prenotazione rifiutata.",
-    );
+    toast.success(status === "APPROVED" ? "Prenotazione approvata." : "Prenotazione rifiutata.");
     await load();
     setBusyId(null);
   }
@@ -94,13 +84,7 @@ export default function NotificationBell() {
         aria-label="Notifiche"
         className="relative flex h-9 w-9 items-center justify-center text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800"
       >
-        <svg
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="2"
-          className="h-5 w-5"
-        >
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
           <path
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -115,66 +99,77 @@ export default function NotificationBell() {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-50 mt-2 w-96 max-w-[92vw] overflow-hidden border border-neutral-200 bg-white shadow-lg dark:border-neutral-800 dark:bg-neutral-900">
-          <div className="border-b border-neutral-200 px-4 py-2.5 text-sm font-semibold text-neutral-900 dark:border-neutral-800 dark:text-white">
-            Richieste in attesa
-          </div>
-          <div className="max-h-96 overflow-y-auto">
-            {items.length === 0 && (
-              <p className="px-4 py-6 text-center text-sm text-neutral-500 dark:text-neutral-400">
-                Nessuna richiesta in attesa.
-              </p>
-            )}
-            {items.map((b) => (
-              <div
-                key={b.id}
-                className="border-b border-neutral-100 px-4 py-3 text-sm last:border-0 dark:border-neutral-800"
+        <>
+          {/* Overlay mobile: piu' marcato di quello del menu, per isolare il pannello notifiche */}
+          <div className="fixed inset-0 z-40 bg-black/70 sm:hidden" onClick={() => setOpen(false)} />
+
+          <div className="fixed inset-x-3 top-16 z-50 max-h-[75vh] overflow-hidden border border-neutral-200 bg-white shadow-lg dark:border-neutral-800 dark:bg-neutral-900 sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 sm:w-96 sm:max-w-[92vw]">
+            <div className="border-b border-neutral-200 px-4 py-2.5 text-sm font-semibold text-neutral-900 dark:border-neutral-800 dark:text-white">
+              Richieste in attesa
+            </div>
+            <div className="max-h-[calc(75vh-84px)] overflow-y-auto sm:max-h-96">
+              {items.length === 0 && (
+                <p className="px-4 py-6 text-center text-sm text-neutral-500 dark:text-neutral-400">
+                  Nessuna richiesta in attesa.
+                </p>
+              )}
+              {items.map((b) => (
+                <div key={b.id} className="flex items-center gap-3 border-b border-neutral-100 px-4 py-3 last:border-0 dark:border-neutral-800">
+                  <div className="min-w-0 flex-1">
+                    <div className="truncate font-semibold text-neutral-900 dark:text-white">
+                      {b.client.firstName} {b.client.lastName}
+                    </div>
+                    <div className="truncate text-xs text-neutral-500 dark:text-neutral-400">{b.appointmentType.name}</div>
+                    <div className="mt-0.5 text-sm font-bold capitalize text-yellow-600 dark:text-yellow-400">
+                      {formatDateTime(b.startTime)}
+                    </div>
+                    <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                      <span
+                        className={`font-bold ${b.spotsLeft <= 1 ? "text-amber-600 dark:text-amber-400" : "text-yellow-600 dark:text-yellow-400"}`}
+                      >
+                        {b.spotsLeft}
+                      </span>{" "}
+                      post{b.spotsLeft === 1 ? "o" : "i"} rimast{b.spotsLeft === 1 ? "o" : "i"} su {b.capacity}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 gap-2">
+                    <button
+                      onClick={() => decide(b.id, "APPROVED")}
+                      disabled={busyId === b.id}
+                      aria-label="Approva"
+                      title="Approva"
+                      className="flex h-11 w-11 items-center justify-center bg-green-600 text-white hover:bg-green-500 disabled:opacity-50"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="h-5 w-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => decide(b.id, "REJECTED")}
+                      disabled={busyId === b.id}
+                      aria-label="Rifiuta"
+                      title="Rifiuta"
+                      className="flex h-11 w-11 items-center justify-center bg-red-600 text-white hover:bg-red-500 disabled:opacity-50"
+                    >
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="h-5 w-5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
+                      </svg>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+            {items.length > 0 && (
+              <Link
+                href="/admin?status=PENDING_APPROVAL"
+                onClick={() => setOpen(false)}
+                className="block px-4 py-2.5 text-center text-xs font-medium text-yellow-600 hover:underline dark:text-yellow-400"
               >
-                <div className="font-medium text-neutral-900 dark:text-white">
-                  {b.client.firstName} {b.client.lastName}
-                </div>
-                <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                  {b.appointmentType.name} · {formatDateTime(b.startTime)}
-                </div>
-                <div
-                  className={`mt-1 text-xs font-medium ${
-                    b.spotsLeft <= 1
-                      ? "text-amber-600 dark:text-amber-400"
-                      : "text-neutral-500 dark:text-neutral-400"
-                  }`}
-                >
-                  {b.spotsLeft} post{b.spotsLeft === 1 ? "o" : "i"} rimasti su{" "}
-                  {b.capacity} per questo slot
-                </div>
-                <div className="mt-2 flex gap-2">
-                  <button
-                    onClick={() => decide(b.id, "APPROVED")}
-                    disabled={busyId === b.id}
-                    className={`${btnPositive} flex-1 disabled:opacity-50`}
-                  >
-                    Approva
-                  </button>
-                  <button
-                    onClick={() => decide(b.id, "REJECTED")}
-                    disabled={busyId === b.id}
-                    className={`${btnDanger} flex-1 disabled:opacity-50`}
-                  >
-                    Rifiuta
-                  </button>
-                </div>
-              </div>
-            ))}
+                Vedi tutte nella pagina Prenotazioni
+              </Link>
+            )}
           </div>
-          {items.length > 0 && (
-            <Link
-              href="/admin?status=PENDING_APPROVAL"
-              onClick={() => setOpen(false)}
-              className="block px-4 py-2.5 text-center text-xs font-medium text-yellow-600 hover:underline dark:text-yellow-400"
-            >
-              Vedi tutte nella pagina Prenotazioni
-            </Link>
-          )}
-        </div>
+        </>
       )}
     </div>
   );

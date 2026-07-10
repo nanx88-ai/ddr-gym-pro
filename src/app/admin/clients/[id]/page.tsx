@@ -331,22 +331,22 @@ export default function AdminClientDetailPage({
     load();
   }
 
-  async function removeClient() {
+  async function archiveClient() {
     if (!client) return;
     if (
-      !(await confirm(
-        `Eliminare definitivamente ${client.firstName} ${client.lastName}? L'operazione non e'reversibile.`,
-      ))
+      !(await confirm({
+        message: `Archiviare ${client.firstName} ${client.lastName}? Non potra' prenotare finche' non lo riattivi. Storico e dati restano intatti.`,
+        confirmLabel: "Archivia",
+      }))
     ) {
       return;
     }
-    const res = await fetch(`/api/admin/clients/${id}`, { method: "DELETE" });
-    if (!res.ok) {
-      const json = await res.json().catch(() => ({}));
-      toast.error(json.error ?? "Impossibile eliminare il cliente.");
-      return;
-    }
-    toast.success("Cliente eliminato.");
+    await fetch(`/api/admin/clients/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ status: "ARCHIVED" }),
+    });
+    toast.success("Cliente archiviato.");
     router.push("/admin/clients");
   }
 
@@ -372,9 +372,11 @@ export default function AdminClientDetailPage({
             {client.email} {client.phone ? `· ${client.phone}` : ""}
           </p>
         </div>
-        <button onClick={removeClient} className={btnDanger}>
-          Elimina cliente
-        </button>
+        {client.status !== "ARCHIVED" && (
+          <button onClick={archiveClient} className={btnDanger}>
+            Archivia cliente
+          </button>
+        )}
       </div>
 
       <ReliabilityBadge bookings={client.bookings} />

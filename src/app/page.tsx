@@ -323,14 +323,18 @@ export default function HomePage() {
             {allOk ? "✅" : "⚠️"}
           </div>
           <h1 className="text-xl font-semibold text-neutral-900 dark:text-white">
-            {result.created} prenotazion{result.created === 1 ? "e" : "i"}{" "}
-            inviat{result.created === 1 ? "a" : "e"}
+            Grazie{firstName ? `, ${firstName}` : ""}!
           </h1>
           <p className="mt-2 text-sm text-neutral-500 dark:text-neutral-400">
-            {result.failed > 0
-              ? `${result.failed} slot non erano piu'disponibili e sono stati saltati.`
-              : "Riceverai una conferma via email."}
+            {selectedType?.requiresApproval
+              ? "Riceverai una email non appena l'appuntamento verra' confermato."
+              : "La tua prenotazione e' confermata: riceverai una email di conferma a breve."}
           </p>
+          {result.failed > 0 && (
+            <p className="mt-2 text-sm text-amber-600 dark:text-amber-400">
+              {result.failed} slot non erano piu' disponibili e sono stati saltati.
+            </p>
+          )}
           <Link
             href="/"
             className={`mt-6 ${publicBtnPrimary}`}
@@ -428,14 +432,18 @@ export default function HomePage() {
 
         {step === 3 && date && selectedType && (
           <div className="mt-6">
-            <p className="mb-4 text-sm font-medium capitalize text-neutral-600 dark:text-neutral-300">
-              {selectedType.name} ·{""}
-              {new Date(`${date}T00:00:00`).toLocaleDateString("it-IT", {
-                weekday: "long",
-                day: "numeric",
-                month: "long",
-              })}
-            </p>
+            <div className="mb-4">
+              <p className="text-sm font-medium text-neutral-600 dark:text-neutral-300">
+                {selectedType.name}
+              </p>
+              <p className="mt-0.5 text-base font-bold capitalize text-yellow-600 dark:text-yellow-400">
+                {new Date(`${date}T00:00:00`).toLocaleDateString("it-IT", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                })}
+              </p>
+            </div>
 
             {loadingAvailability && (
               <div className={`${publicCard} h-32 animate-pulse`} />
@@ -734,22 +742,25 @@ export default function HomePage() {
               <h2 className="text-sm font-semibold text-neutral-900 dark:text-white">
                 Riepilogo
               </h2>
-              <ul className="mt-2 max-h-48 space-y-1 overflow-y-auto text-sm text-neutral-600 dark:text-neutral-300">
+              <ul className="mt-2 max-h-56 space-y-3 overflow-y-auto">
                 {summaryItems
                   .slice()
                   .sort((a, b) => a.start.getTime() - b.start.getTime())
                   .map((o, i) => (
-                    <li key={i} className="flex justify-between gap-2">
-                      <span>{o.name}</span>
-                      <span className="shrink-0 tabular-nums text-neutral-500 dark:text-neutral-400">
+                    <li
+                      key={i}
+                      className="border-b border-neutral-100 pb-2 last:border-0 last:pb-0 dark:border-neutral-800"
+                    >
+                      <div className="text-sm text-neutral-600 dark:text-neutral-300">{o.name}</div>
+                      <div className="mt-0.5 text-sm font-bold capitalize text-yellow-600 dark:text-yellow-400">
                         {o.start.toLocaleString("it-IT", {
-                          weekday: "short",
+                          weekday: "long",
                           day: "numeric",
-                          month: "short",
+                          month: "long",
                           hour: "2-digit",
                           minute: "2-digit",
                         })}
-                      </span>
+                      </div>
                     </li>
                   ))}
               </ul>
