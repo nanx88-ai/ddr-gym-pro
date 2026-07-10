@@ -474,7 +474,7 @@ export default function HomePage() {
 
                         {p.recurring && (
                           <div className="mt-3 space-y-3">
-                            <div className="flex gap-4 text-xs">
+                            <div className="flex gap-4 text-xs text-neutral-700 dark:text-neutral-200">
                               <label className="flex items-center gap-2">
                                 <input
                                   type="radio"
