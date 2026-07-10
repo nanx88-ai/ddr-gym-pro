@@ -30,26 +30,16 @@ async function main() {
     create: { email: adminEmail, passwordHash: adminPasswordHash, name: "Admin Palestra" },
   });
 
-  // Orario settimanale di default: Lun-Ven 09:00-17:00 con pausa pranzo
-  // 13:00-14:00, weekend chiuso. Modificabile dall'admin in /admin/schedule
-  // (Prompt Master 3.3 e 7).
-  for (let dayOfWeek = 0; dayOfWeek <= 6; dayOfWeek++) {
-    const isOpen = dayOfWeek >= 1 && dayOfWeek <= 5;
-    const data = {
-      appointmentTypeId: appointmentType.id,
-      dayOfWeek,
-      isOpen,
-      openTime: "09:00",
-      closeTime: "17:00",
-      breakStart: isOpen ? "13:00" : null,
-      breakEnd: isOpen ? "14:00" : null,
-    };
-    await prisma.weeklySchedule.upsert({
-      where: { appointmentTypeId_dayOfWeek: { appointmentTypeId: appointmentType.id, dayOfWeek } },
-      update: data,
-      create: data,
-    });
-  }
+  // Fasce orarie di default: Lun-Ven 09:00-13:00 e 14:00-17:00 (due fasce
+  // invece di un orario unico + pausa pranzo), weekend chiuso. Modificabile
+  // dall'admin in /admin/schedule (Prompt Master 3.3 e 7).
+  await prisma.scheduleBand.deleteMany({ where: { appointmentTypeId: appointmentType.id } });
+  await prisma.scheduleBand.createMany({
+    data: [1, 2, 3, 4, 5].flatMap((dayOfWeek) => [
+      { appointmentTypeId: appointmentType.id, dayOfWeek, startTime: "09:00", endTime: "13:00" },
+      { appointmentTypeId: appointmentType.id, dayOfWeek, startTime: "14:00", endTime: "17:00" },
+    ]),
+  });
 
   // Secondo calendario di esempio, per dimostrare la gestione di piu'
   // collaboratori/servizi in parallelo (richiesta utente).
@@ -63,21 +53,15 @@ async function main() {
       requiresApproval: false,
     },
   });
-  for (let dayOfWeek = 0; dayOfWeek <= 6; dayOfWeek++) {
-    const isOpen = dayOfWeek === 2 || dayOfWeek === 4; // Martedi' e Giovedi'
-    const data = {
+  await prisma.scheduleBand.deleteMany({ where: { appointmentTypeId: secondType.id } });
+  await prisma.scheduleBand.createMany({
+    data: [2, 4].map((dayOfWeek) => ({
       appointmentTypeId: secondType.id,
       dayOfWeek,
-      isOpen,
-      openTime: "15:00",
-      closeTime: "18:00",
-    };
-    await prisma.weeklySchedule.upsert({
-      where: { appointmentTypeId_dayOfWeek: { appointmentTypeId: secondType.id, dayOfWeek } },
-      update: data,
-      create: data,
-    });
-  }
+      startTime: "15:00",
+      endTime: "18:00",
+    })),
+  });
 
   const client1Data = {
     firstName: "Mario",

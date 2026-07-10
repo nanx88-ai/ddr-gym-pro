@@ -3,60 +3,58 @@ import { addMinutes, isBefore } from "date-fns";
 import { formatInTimeZone } from "date-fns-tz";
 import { dateIsoInRome, GYM_TIMEZONE, romeWallTimeToInstant, startOfDayInRome } from "@/lib/timezone";
 
+export interface DayBand {
+  startTime: string; // "HH:mm"
+  endTime: string;
+}
+
 export interface OpenWindow {
   isOpen: boolean;
-  openTime: string | null; // "HH:mm"
-  closeTime: string | null;
-  breakStart: string | null;
-  breakEnd: string | null;
+  bands: DayBand[];
   note: string | null;
 }
 
 /**
- * Determina se un tipo di appuntamento e' aperto in una data e con quale
- * orario/pausa pranzo, applicando prima le eccezioni puntuali (pause/chiusure
- * straordinarie/orari diversi) e poi l'orario settimanale ricorrente
- * (Prompt Master 3.3 e 7).
+ * Determina se un tipo di appuntamento e' aperto in una data e con quali
+ * fasce orarie attive, applicando prima le eccezioni puntuali (chiusure
+ * straordinarie/orario diverso per quel giorno) e poi le fasce settimanali
+ * ricorrenti (Prompt Master 3.3 e 7). Niente "pausa pranzo" come concetto a
+ * parte: sono semplicemente fasce diverse, i buchi tra loro non sono
+ * prenotabili.
  */
 export async function getOpenWindow(appointmentTypeId: string, date: Date): Promise<OpenWindow> {
   const day = startOfDayInRome(date);
   // Giorno della settimana secondo il calendario di Roma, non quello (UTC)
   // del server: altrimenti vicino alla mezzanotte si rischia di leggere
-  // l'orario ricorrente del giorno sbagliato.
+  // le fasce del giorno sbagliato.
   const dayOfWeek = new Date(`${dateIsoInRome(date)}T12:00:00Z`).getUTCDay();
 
   const exception = await prisma.scheduleException.findUnique({
     where: { appointmentTypeId_date: { appointmentTypeId, date: day } },
   });
 
-  const weekly = await prisma.weeklySchedule.findUnique({
-    where: { appointmentTypeId_dayOfWeek: { appointmentTypeId, dayOfWeek } },
-  });
-
   if (exception) {
     if (exception.isClosed) {
-      return { isOpen: false, openTime: null, closeTime: null, breakStart: null, breakEnd: null, note: exception.note };
+      return { isOpen: false, bands: [], note: exception.note };
+    }
+    if (!exception.openTime || !exception.closeTime) {
+      return { isOpen: false, bands: [], note: exception.note };
     }
     return {
       isOpen: true,
-      openTime: exception.openTime,
-      closeTime: exception.closeTime,
-      breakStart: exception.breakStart ?? weekly?.breakStart ?? null,
-      breakEnd: exception.breakEnd ?? weekly?.breakEnd ?? null,
+      bands: [{ startTime: exception.openTime, endTime: exception.closeTime }],
       note: exception.note,
     };
   }
 
-  if (!weekly || !weekly.isOpen) {
-    return { isOpen: false, openTime: null, closeTime: null, breakStart: null, breakEnd: null, note: null };
-  }
+  const bands = await prisma.scheduleBand.findMany({
+    where: { appointmentTypeId, dayOfWeek },
+    orderBy: { startTime: "asc" },
+  });
 
   return {
-    isOpen: true,
-    openTime: weekly.openTime,
-    closeTime: weekly.closeTime,
-    breakStart: weekly.breakStart,
-    breakEnd: weekly.breakEnd,
+    isOpen: bands.length > 0,
+    bands: bands.map((b) => ({ startTime: b.startTime, endTime: b.endTime })),
     note: null,
   };
 }
@@ -91,7 +89,7 @@ export interface GeneratedSlot {
 
 /**
  * Genera tutti gli slot "grezzi" di un giorno per un tipo di appuntamento,
- * applicando orario, pausa pranzo e override puntuali per singolo slot
+ * applicando le fasce orarie attive e gli override puntuali per singolo slot
  * (disattivazione o capienza diversa dal default). Include anche gli slot
  * disattivati: chi consuma questa funzione decide se filtrarli (frontend
  * pubblico) o mostrarli per poterli riattivare (calendario admin).
@@ -102,40 +100,44 @@ export async function generateDaySlots(appointmentTypeId: string, date: Date) {
   const window = await getOpenWindow(appointmentTypeId, day);
 
   const slots: GeneratedSlot[] = [];
-  if (!window.isOpen || !window.openTime || !window.closeTime) {
+  if (!window.isOpen || window.bands.length === 0) {
     return { type, window, slots };
   }
 
   const overrides = await prisma.slotOverride.findMany({ where: { appointmentTypeId, date: day } });
   const overrideByTime = new Map(overrides.map((o) => [o.time, o]));
+  const seenTimes = new Set<string>();
 
-  const breakStart = window.breakStart ? timeOnDay(day, window.breakStart) : null;
-  const breakEnd = window.breakEnd ? timeOnDay(day, window.breakEnd) : null;
+  for (const band of window.bands) {
+    let slotStart = timeOnDay(day, band.startTime);
+    const bandEnd = timeOnDay(day, band.endTime);
 
-  let slotStart = timeOnDay(day, window.openTime);
-  const dayClose = timeOnDay(day, window.closeTime);
-
-  while (isBefore(slotStart, dayClose)) {
-    const slotEnd = addMinutes(slotStart, type.durationMinutes);
-    const overlapsBreak = breakStart && breakEnd && isBefore(slotStart, breakEnd) && isBefore(breakStart, slotEnd);
-
-    if (!overlapsBreak) {
+    while (isBefore(slotStart, bandEnd)) {
+      const slotEnd = addMinutes(slotStart, type.durationMinutes);
       const time = toHHMM(slotStart);
-      const override = overrideByTime.get(time);
-      slots.push({
-        time,
-        startTime: slotStart,
-        endTime: slotEnd,
-        defaultCapacity: type.capacity,
-        capacity: override?.capacity ?? type.capacity,
-        isDisabled: override?.isDisabled ?? false,
-        overrideId: override?.id ?? null,
-        isPast: isBefore(slotStart, new Date()),
-      });
-    }
 
-    slotStart = addMinutes(slotStart, type.durationMinutes);
+      // Se due fasce si sovrappongono per errore di configurazione, non
+      // duplicare lo stesso slot.
+      if (!seenTimes.has(time)) {
+        seenTimes.add(time);
+        const override = overrideByTime.get(time);
+        slots.push({
+          time,
+          startTime: slotStart,
+          endTime: slotEnd,
+          defaultCapacity: type.capacity,
+          capacity: override?.capacity ?? type.capacity,
+          isDisabled: override?.isDisabled ?? false,
+          overrideId: override?.id ?? null,
+          isPast: isBefore(slotStart, new Date()),
+        });
+      }
+
+      slotStart = addMinutes(slotStart, type.durationMinutes);
+    }
   }
+
+  slots.sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
 
   return { type, window, slots };
 }

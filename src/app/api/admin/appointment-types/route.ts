@@ -36,15 +36,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: "Esiste gia' un calendario con questo nome." }, { status: 409 });
   }
 
+  // Nessuna fascia oraria creata di default: un calendario senza
+  // ScheduleBand e' gia' chiuso su tutti i giorni.
   const appointmentType = await prisma.appointmentType.create({ data: parsed.data });
-
-  await prisma.weeklySchedule.createMany({
-    data: Array.from({ length: 7 }, (_, dayOfWeek) => ({
-      appointmentTypeId: appointmentType.id,
-      dayOfWeek,
-      isOpen: false,
-    })),
-  });
 
   return NextResponse.json({ appointmentType });
 }

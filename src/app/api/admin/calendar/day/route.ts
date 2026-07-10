@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { generateDaySlots } from "@/lib/schedule";
 import { ACTIVE_BOOKING_STATUSES, BOOKING_STATUS } from "@/lib/constants";
-import { addDays, formatISO, parseISO, startOfDay } from "date-fns";
+import { addDays, formatISO, parseISO } from "date-fns";
+import { startOfDayInRome } from "@/lib/timezone";
 
 /**
  * Vista giorno per il calendario admin: tutti gli slot del giorno (anche
@@ -17,7 +18,7 @@ export async function GET(request: NextRequest) {
   }
 
   const date = parseISO(dateParam);
-  const dayStart = startOfDay(date);
+  const dayStart = startOfDayInRome(date);
   const dayEnd = addDays(dayStart, 1);
 
   const { type, window, slots } = await generateDaySlots(appointmentTypeId, date);
@@ -71,10 +72,7 @@ export async function GET(request: NextRequest) {
     appointmentType: { id: type.id, name: type.name, durationMinutes: type.durationMinutes, capacity: type.capacity },
     isOpen: window.isOpen,
     note: window.note,
-    openTime: window.openTime,
-    closeTime: window.closeTime,
-    breakStart: window.breakStart,
-    breakEnd: window.breakEnd,
+    bands: window.bands,
     slots: slotsWithBookings,
   });
 }

@@ -81,43 +81,40 @@ model AppointmentType {
   createdAt        DateTime @default(now())
 
   bookings           Booking[]
-  weeklySchedules    WeeklySchedule[]
+  scheduleBands      ScheduleBand[]
   scheduleExceptions ScheduleException[]
   slotOverrides      SlotOverride[]
 }
 
-// Orario settimanale ricorrente per tipo di appuntamento (Prompt Master 3.3:
-// "l'admin deve poter impostare gli slot orari, la durata, cambiare orari di
-// inizio/fine in base al giorno, disattivare giorni specifici"). Replica lato
-// custom quanto osservato nella sezione Disponibilita' dell'editor Koalendar.
-model WeeklySchedule {
+// Orario settimanale ricorrente per tipo di appuntamento, come lista libera
+// di fasce orarie attive per ogni giorno (es. 06:00-08:00, 09:00-11:00,
+// 13:00-16:00): niente concetto di "pausa pranzo" a parte, i buchi tra le
+// fasce sono semplicemente tempo non prenotabile. Un giorno senza fasce e'
+// un giorno chiuso.
+model ScheduleBand {
   id                String          @id @default(cuid())
   appointmentTypeId String
   appointmentType   AppointmentType @relation(fields: [appointmentTypeId], references: [id])
   dayOfWeek         Int // 0 = Domenica ... 6 = Sabato
-  isOpen            Boolean         @default(false)
-  openTime          String          @default("09:00") // "HH:mm"
-  closeTime         String          @default("17:00") // "HH:mm"
-  breakStart        String? // pausa pranzo ricorrente per questo giorno, "HH:mm"
-  breakEnd          String?
+  startTime         String // "HH:mm"
+  endTime           String // "HH:mm"
+  createdAt         DateTime        @default(now())
 
-  @@unique([appointmentTypeId, dayOfWeek])
+  @@index([appointmentTypeId, dayOfWeek])
 }
 
-// Eccezione per una data specifica: chiusura straordinaria/pausa oppure
-// orario diverso da quello standard (Prompt Master 3.3: "inserire pause",
-// "disattivare fasce orarie specifiche"; Koalendar audit: "Override per date
-// specifiche", "Aggiungi pausa").
+// Eccezione per una data specifica: chiusura straordinaria oppure singola
+// fascia oraria diversa da quella standard per quel giorno (Prompt Master
+// 3.3: "disattivare fasce orarie specifiche"; Koalendar audit: "Override per
+// date specifiche").
 model ScheduleException {
   id                String          @id @default(cuid())
   appointmentTypeId String
   appointmentType   AppointmentType @relation(fields: [appointmentTypeId], references: [id])
   date              DateTime // giorno (mezzanotte locale) a cui si applica l'eccezione
   isClosed          Boolean         @default(true)
-  openTime          String? // usato solo se isClosed = false (override orario per quel giorno)
+  openTime          String? // usato solo se isClosed = false (fascia unica di override per quel giorno)
   closeTime         String?
-  breakStart        String? // override della pausa pranzo solo per questa data
-  breakEnd          String?
   note              String?
   createdAt         DateTime        @default(now())
 

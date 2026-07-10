@@ -480,16 +480,20 @@ function DayList({
               )}
               {["APPROVED", "RESCHEDULED"].includes(b.status) && (
                 <>
-                  <button
-                    onClick={() => onUpdateStatus(b.id, "CANCELLED")}
-                    className={btnGhost}
-                  >
-                    Annulla
-                  </button>
-                  <AttendanceToggle
-                    attended={b.attended}
-                    onChange={(attended) => onMarkAttendance(b.id, attended)}
-                  />
+                  {b.attended === null && (
+                    <button
+                      onClick={() => onUpdateStatus(b.id, "CANCELLED")}
+                      className={btnGhost}
+                    >
+                      Annulla
+                    </button>
+                  )}
+                  {new Date(b.startTime).getTime() <= Date.now() && (
+                    <AttendanceToggle
+                      attended={b.attended}
+                      onChange={(attended) => onMarkAttendance(b.id, attended)}
+                    />
+                  )}
                 </>
               )}
             </div>

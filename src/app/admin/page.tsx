@@ -298,16 +298,24 @@ export default function AdminBookingsPage() {
           b.status,
         ) && (
           <>
-            <button
-              onClick={() => updateStatus(b.id, "CANCELLED")}
-              className={btnNeutral}
-            >
-              Annulla
-            </button>
-            <AttendanceToggle
-              attended={b.attended}
-              onChange={(attended) => markAttendance(b.id, attended)}
-            />
+            {/* "Annulla" ha senso solo finche' non e' ancora stata segnata la
+                presenza: una volta registrato l'esito (presente/assente),
+                annullare la prenotazione non e' piu' coerente - l'evento e'
+                gia' accaduto. */}
+            {b.attended === null && (
+              <button
+                onClick={() => updateStatus(b.id, "CANCELLED")}
+                className={btnNeutral}
+              >
+                Annulla
+              </button>
+            )}
+            {new Date(b.startTime).getTime() <= Date.now() && (
+              <AttendanceToggle
+                attended={b.attended}
+                onChange={(attended) => markAttendance(b.id, attended)}
+              />
+            )}
           </>
         )}
       </div>

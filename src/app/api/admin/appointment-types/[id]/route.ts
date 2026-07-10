@@ -32,7 +32,7 @@ export async function DELETE(_request: NextRequest, { params }: { params: Promis
   const { id } = await params;
 
   // Config pulibile senza perdita di storico: eccezioni, override slot, orario settimanale.
-  await prisma.weeklySchedule.deleteMany({ where: { appointmentTypeId: id } });
+  await prisma.scheduleBand.deleteMany({ where: { appointmentTypeId: id } });
   await prisma.scheduleException.deleteMany({ where: { appointmentTypeId: id } });
   await prisma.slotOverride.deleteMany({ where: { appointmentTypeId: id } });
 

@@ -2,42 +2,41 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 
-/** Orario settimanale per tipo di appuntamento (Prompt Master 3.3 / 7). */
+/** Fasce orarie settimanali per tipo di appuntamento (Prompt Master 3.3 / 7). */
 export async function GET(request: NextRequest) {
   const appointmentTypeId = request.nextUrl.searchParams.get("appointmentTypeId");
   if (!appointmentTypeId) {
     return NextResponse.json({ error: "appointmentTypeId richiesto" }, { status: 400 });
   }
 
-  const schedule = await prisma.weeklySchedule.findMany({
+  const bands = await prisma.scheduleBand.findMany({
     where: { appointmentTypeId },
-    orderBy: { dayOfWeek: "asc" },
+    orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
   });
 
-  return NextResponse.json({ schedule });
+  return NextResponse.json({ bands });
 }
 
 const timeRegex = /^\d{2}:\d{2}$/;
 
-const dayEntrySchema = z
+const bandSchema = z
   .object({
     dayOfWeek: z.number().int().min(0).max(6),
-    isOpen: z.boolean(),
-    openTime: z.string().regex(timeRegex),
-    closeTime: z.string().regex(timeRegex),
-    breakStart: z.string().regex(timeRegex).nullable().optional(),
-    breakEnd: z.string().regex(timeRegex).nullable().optional(),
+    startTime: z.string().regex(timeRegex),
+    endTime: z.string().regex(timeRegex),
   })
-  .refine((d) => (d.breakStart === null || d.breakStart === undefined) === (d.breakEnd === null || d.breakEnd === undefined), {
-    message: "Indicare sia inizio che fine della pausa pranzo, o nessuno dei due.",
-  });
+  .refine((b) => b.startTime < b.endTime, { message: "L'inizio della fascia deve precedere la fine." });
 
 const bodySchema = z.object({
   appointmentTypeId: z.string().min(1),
-  days: z.array(dayEntrySchema).length(7),
+  bands: z.array(bandSchema),
 });
 
-/** Salva l'intero orario settimanale (7 giorni), inclusa la pausa pranzo ricorrente, per un tipo di appuntamento. */
+/**
+ * Sostituisce l'intero set di fasce orarie settimanali di un tipo di
+ * appuntamento: l'admin puo' avere quante fasce vuole per ogni giorno (es.
+ * 06:00-08:00, 09:00-11:00, 13:00-16:00), un giorno senza fasce e' chiuso.
+ */
 export async function PUT(request: NextRequest) {
   const json = await request.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);
@@ -45,47 +44,37 @@ export async function PUT(request: NextRequest) {
     return NextResponse.json({ error: "Dati non validi", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const { appointmentTypeId, days } = parsed.data;
+  const { appointmentTypeId, bands } = parsed.data;
 
-  if (days.some((d) => d.openTime >= d.closeTime)) {
-    return NextResponse.json({ error: "L'orario di apertura deve precedere quello di chiusura." }, { status: 400 });
+  // Fasce sovrapposte nello stesso giorno sono quasi certamente un errore di
+  // battitura piuttosto che intenzionali: meglio bloccare e far correggere.
+  const byDay = new Map<number, typeof bands>();
+  for (const b of bands) byDay.set(b.dayOfWeek, [...(byDay.get(b.dayOfWeek) ?? []), b]);
+  for (const dayBands of byDay.values()) {
+    const sorted = [...dayBands].sort((a, b) => a.startTime.localeCompare(b.startTime));
+    for (let i = 1; i < sorted.length; i++) {
+      if (sorted[i].startTime < sorted[i - 1].endTime) {
+        return NextResponse.json({ error: "Due fasce dello stesso giorno si sovrappongono." }, { status: 400 });
+      }
+    }
   }
-  if (
-    days.some(
-      (d) => d.breakStart && d.breakEnd && (d.breakStart < d.openTime || d.breakEnd > d.closeTime || d.breakStart >= d.breakEnd)
-    )
-  ) {
-    return NextResponse.json({ error: "La pausa pranzo deve rientrare nell'orario di apertura." }, { status: 400 });
-  }
 
-  await prisma.$transaction(
-    days.map((day) =>
-      prisma.weeklySchedule.upsert({
-        where: { appointmentTypeId_dayOfWeek: { appointmentTypeId, dayOfWeek: day.dayOfWeek } },
-        update: {
-          isOpen: day.isOpen,
-          openTime: day.openTime,
-          closeTime: day.closeTime,
-          breakStart: day.breakStart ?? null,
-          breakEnd: day.breakEnd ?? null,
-        },
-        create: {
-          appointmentTypeId,
-          dayOfWeek: day.dayOfWeek,
-          isOpen: day.isOpen,
-          openTime: day.openTime,
-          closeTime: day.closeTime,
-          breakStart: day.breakStart ?? null,
-          breakEnd: day.breakEnd ?? null,
-        },
-      })
-    )
-  );
+  await prisma.$transaction([
+    prisma.scheduleBand.deleteMany({ where: { appointmentTypeId } }),
+    prisma.scheduleBand.createMany({
+      data: bands.map((b) => ({
+        appointmentTypeId,
+        dayOfWeek: b.dayOfWeek,
+        startTime: b.startTime,
+        endTime: b.endTime,
+      })),
+    }),
+  ]);
 
-  const schedule = await prisma.weeklySchedule.findMany({
+  const saved = await prisma.scheduleBand.findMany({
     where: { appointmentTypeId },
-    orderBy: { dayOfWeek: "asc" },
+    orderBy: [{ dayOfWeek: "asc" }, { startTime: "asc" }],
   });
 
-  return NextResponse.json({ schedule });
+  return NextResponse.json({ bands: saved });
 }
