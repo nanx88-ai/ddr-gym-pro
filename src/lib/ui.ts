@@ -3,19 +3,19 @@
 // accento giallo, verde per azioni positive, rosso per azioni distruttive.
 
 export const btnPrimary =
-  "rounded-md bg-yellow-400 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+  "min-h-11 rounded-md bg-yellow-400 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 
 export const btnPositive =
-  "rounded-md bg-green-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+  "min-h-11 rounded-md bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 
 export const btnDanger =
-  "rounded-md bg-red-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+  "min-h-11 rounded-md bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
 
 export const btnNeutral =
-  "rounded-md border border-neutral-300 bg-neutral-100 px-3 py-1.5 text-sm font-medium text-neutral-800 hover:bg-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700";
+  "min-h-11 rounded-md border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700";
 
 export const btnGhost =
-  "rounded-md px-3 py-1.5 text-sm font-medium text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100";
+  "min-h-11 rounded-md px-3 py-2 text-sm font-medium text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100";
 
 export const linkText = "text-sm font-medium hover:underline";
 export const linkPositive = `${linkText} text-green-600 dark:text-green-400`;
@@ -26,13 +26,13 @@ export const card = "rounded-lg border border-neutral-200 bg-white dark:border-n
 export const cardPadded = `${card} p-4`;
 
 export const input =
-  "w-full rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder-neutral-400 focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500 disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500 dark:focus:border-yellow-400 dark:focus:ring-yellow-400";
+  "w-full min-h-11 rounded-md border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder-neutral-400 focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500 disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500 dark:focus:border-yellow-400 dark:focus:ring-yellow-400";
 
 export const label = "mb-1 block text-sm font-medium text-neutral-600 dark:text-neutral-300";
 
-// Checkbox piu' grande del default del browser: sotto i ~24px e' un target
-// difficile da toccare su mobile (requisito di accessibilita'/usabilita').
-export const checkbox = "h-5 w-5 shrink-0 cursor-pointer accent-yellow-400";
+// h-6 w-6 (24px) = minimo WCAG 2.5.5 per target di tap; il div wrapper con
+// padding nei punti d'uso porta l'area di tocco reale vicino ai 44px.
+export const checkbox = "h-6 w-6 shrink-0 cursor-pointer accent-yellow-400";
 
 export const pageTitle = "mb-1 text-xl font-bold text-neutral-900 dark:text-white";
 export const pageSubtitle = "mb-4 text-sm text-neutral-500 dark:text-neutral-400";
