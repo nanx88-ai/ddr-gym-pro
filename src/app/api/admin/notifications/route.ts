@@ -53,8 +53,21 @@ export async function GET() {
     }),
   ]);
 
+  // Le richieste di una stessa serie ricorrente (stesso recurrenceGroupId)
+  // diventano UNA sola voce azionabile con tutti i bookingId dentro, invece
+  // di bombardare il pannello con una riga per ogni occorrenza: approvare/
+  // rifiutare quella voce decide sull'intera serie in un colpo solo.
+  const singlePending = pendingBookings.filter((b) => !b.recurrenceGroupId);
+  const seriesPendingGroups = new Map<string, typeof pendingBookings>();
+  for (const b of pendingBookings) {
+    if (!b.recurrenceGroupId) continue;
+    const list = seriesPendingGroups.get(b.recurrenceGroupId);
+    if (list) list.push(b);
+    else seriesPendingGroups.set(b.recurrenceGroupId, [b]);
+  }
+
   const actionable = await Promise.all(
-    pendingBookings.map(async (b) => {
+    singlePending.map(async (b) => {
       const { capacity } = await getEffectiveCapacity(b.appointmentTypeId, b.startTime, b.appointmentType.capacity);
       const occupancy = await getSlotOccupancy(b.appointmentTypeId, b.startTime);
       return {
@@ -70,6 +83,21 @@ export async function GET() {
     })
   );
 
+  const seriesActionable = [...seriesPendingGroups.entries()].map(([groupId, group]) => {
+    const sorted = [...group].sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+    const first = sorted[0];
+    return {
+      type: "pending_approval_series" as const,
+      id: `pending-series-${groupId}`,
+      recurrenceGroupId: groupId,
+      bookingIds: sorted.map((b) => b.id),
+      count: sorted.length,
+      startTime: first.startTime,
+      client: { firstName: first.client.firstName, lastName: first.client.lastName },
+      appointmentType: { name: first.appointmentType.name },
+    };
+  });
+
   const rescheduleActionable = pendingReschedules.map((r) => ({
     type: "reschedule_request" as const,
     id: `reschedule-${r.id}`,
@@ -80,8 +108,31 @@ export async function GET() {
     appointmentType: { name: r.booking.appointmentType.name },
   }));
 
+  const singleNew = newBookings.filter((b) => !b.recurrenceGroupId);
+  const seriesNewGroups = new Map<string, typeof newBookings>();
+  for (const b of newBookings) {
+    if (!b.recurrenceGroupId) continue;
+    const list = seriesNewGroups.get(b.recurrenceGroupId);
+    if (list) list.push(b);
+    else seriesNewGroups.set(b.recurrenceGroupId, [b]);
+  }
+  const seriesNewInformational = [...seriesNewGroups.entries()].map(([groupId, group]) => {
+    const sorted = [...group].sort((a, b) => a.startTime.getTime() - b.startTime.getTime());
+    const first = sorted[0];
+    const latestCreatedAt = sorted.reduce((max, b) => (b.createdAt > max ? b.createdAt : max), sorted[0].createdAt);
+    return {
+      type: "new_booking_series" as const,
+      id: `new-series-${groupId}`,
+      count: sorted.length,
+      startTime: first.startTime,
+      at: latestCreatedAt,
+      client: { firstName: first.client.firstName, lastName: first.client.lastName },
+      appointmentType: { name: first.appointmentType.name },
+    };
+  });
+
   const informational = [
-    ...newBookings.map((b) => ({
+    ...singleNew.map((b) => ({
       type: "new_booking" as const,
       id: `new-${b.id}`,
       startTime: b.startTime,
@@ -89,6 +140,7 @@ export async function GET() {
       client: { firstName: b.client.firstName, lastName: b.client.lastName },
       appointmentType: { name: b.appointmentType.name },
     })),
+    ...seriesNewInformational,
     ...cancelledBookings.map((b) => ({
       type: "cancellation" as const,
       id: `cancel-${b.id}`,
@@ -108,7 +160,7 @@ export async function GET() {
   ].sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime());
 
   return NextResponse.json({
-    actionable: [...actionable, ...rescheduleActionable],
+    actionable: [...actionable, ...seriesActionable, ...rescheduleActionable],
     informational,
   });
 }

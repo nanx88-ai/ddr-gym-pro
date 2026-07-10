@@ -19,19 +19,12 @@ import {
 } from "date-fns";
 import { it } from "date-fns/locale";
 import { formatTime, STATUS_COLORS, STATUS_LABELS } from "@/lib/format";
-import {
-  btnDanger,
-  btnNeutral as btnGhost,
-  btnPositive,
-  card,
-  input,
-  pageSubtitle,
-  pageTitle,
-} from "@/lib/ui";
+import { card, input, pageSubtitle, pageTitle } from "@/lib/ui";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import AttendanceToggle from "@/components/AttendanceToggle";
-import { IconButton } from "@/components/IconAction";
+import { ActionsMenu, IconButton } from "@/components/IconAction";
+import EditBookingModal from "@/components/EditBookingModal";
 
 interface AppointmentType {
   id: string;
@@ -89,6 +82,8 @@ export default function AdminAgendaPage() {
   const [types, setTypes] = useState<AppointmentType[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
   const activeFilterCount =
     (status ? 1 : 0) +
     (appointmentTypeId ? 1 : 0) +
@@ -131,7 +126,7 @@ export default function AdminAgendaPage() {
       .then((res) => res.json())
       .then((json) => setBookings(json.bookings ?? []))
       .finally(() => setLoading(false));
-  }, [range, status, appointmentTypeId, search]);
+  }, [range, status, appointmentTypeId, search, reloadKey]);
 
   // Occupazione per singolo slot (appointmentTypeId+startTime), calcolata sui
   // dati gia' caricati per il periodo: usata dal filtro "pieno/con posti
@@ -390,6 +385,7 @@ export default function AdminAgendaPage() {
           bookings={byDay.get(dateKey(selectedDate)) ?? []}
           onUpdateStatus={updateStatus}
           onMarkAttendance={markAttendance}
+          onEdit={setEditingBooking}
         />
       )}
 
@@ -404,6 +400,17 @@ export default function AdminAgendaPage() {
 
       {!loading && view === "month" && (
         <MonthGrid month={selectedDate} byDay={byDay} onDayClick={goToDay} />
+      )}
+
+      {editingBooking && (
+        <EditBookingModal
+          booking={editingBooking}
+          onClose={() => setEditingBooking(null)}
+          onSaved={() => {
+            setEditingBooking(null);
+            setReloadKey((k) => k + 1);
+          }}
+        />
       )}
     </div>
   );
@@ -423,10 +430,12 @@ function DayList({
   bookings,
   onUpdateStatus,
   onMarkAttendance,
+  onEdit,
 }: {
   bookings: Booking[];
   onUpdateStatus: (id: string, s: string) => void;
   onMarkAttendance: (id: string, attended: boolean) => void;
+  onEdit: (b: Booking) => void;
 }) {
   if (bookings.length === 0) {
     return (
@@ -463,40 +472,44 @@ function DayList({
             </div>
             <div className="flex items-center gap-2">
               <StatusBadge status={b.status} />
-              {b.status === "PENDING_APPROVAL" && (
-                <>
-                  <button
-                    onClick={() => onUpdateStatus(b.id, "APPROVED")}
-                    className={btnPositive}
-                  >
-                    Approva
-                  </button>
-                  <button
-                    onClick={() => onUpdateStatus(b.id, "REJECTED")}
-                    className={btnDanger}
-                  >
-                    Rifiuta
-                  </button>
-                </>
+              {["APPROVED", "RESCHEDULED"].includes(b.status) && new Date(b.startTime).getTime() <= Date.now() && (
+                <AttendanceToggle attended={b.attended} onChange={(attended) => onMarkAttendance(b.id, attended)} />
               )}
-              {["APPROVED", "RESCHEDULED"].includes(b.status) && (
-                <>
-                  {b.attended === null && (
-                    <button
-                      onClick={() => onUpdateStatus(b.id, "CANCELLED")}
-                      className={btnGhost}
-                    >
-                      Annulla
-                    </button>
-                  )}
-                  {new Date(b.startTime).getTime() <= Date.now() && (
-                    <AttendanceToggle
-                      attended={b.attended}
-                      onChange={(attended) => onMarkAttendance(b.id, attended)}
-                    />
-                  )}
-                </>
-              )}
+              <ActionsMenu
+                actions={[
+                  {
+                    key: "approve",
+                    icon: "activate",
+                    label: "Approva",
+                    tone: "positive",
+                    onClick: () => onUpdateStatus(b.id, "APPROVED"),
+                    hidden: b.status !== "PENDING_APPROVAL",
+                  },
+                  {
+                    key: "reject",
+                    icon: "deactivate",
+                    label: "Rifiuta",
+                    tone: "danger",
+                    onClick: () => onUpdateStatus(b.id, "REJECTED"),
+                    hidden: b.status !== "PENDING_APPROVAL",
+                  },
+                  {
+                    key: "edit",
+                    icon: "edit",
+                    label: "Modifica data/ora",
+                    onClick: () => onEdit(b),
+                    hidden: !["PENDING_APPROVAL", "APPROVED", "RESCHEDULED"].includes(b.status),
+                  },
+                  {
+                    key: "cancel",
+                    icon: "remove",
+                    label: "Annulla",
+                    tone: "danger",
+                    onClick: () => onUpdateStatus(b.id, "CANCELLED"),
+                    hidden: !(["APPROVED", "RESCHEDULED"].includes(b.status) && b.attended === null),
+                  },
+                ]}
+              />
             </div>
           </div>
         ))}

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 export type ActionIconKey =
   | "expand"
@@ -22,7 +22,8 @@ export type ActionIconKey =
   | "today"
   | "viewDay"
   | "viewWeek"
-  | "viewMonth";
+  | "viewMonth"
+  | "moreVertical";
 
 const PATHS: Record<ActionIconKey, React.ReactNode> = {
   expand: (
@@ -103,6 +104,13 @@ const PATHS: Record<ActionIconKey, React.ReactNode> = {
     <>
       <rect x="3.5" y="3.5" width="17" height="17" />
       <path strokeLinecap="round" d="M3.5 9h17M3.5 14.5h17M9 3.5v17M14.5 3.5v17" />
+    </>
+  ),
+  moreVertical: (
+    <>
+      <circle cx="12" cy="5" r="1.6" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="12" r="1.6" fill="currentColor" stroke="none" />
+      <circle cx="12" cy="19" r="1.6" fill="currentColor" stroke="none" />
     </>
   ),
 };
@@ -213,4 +221,69 @@ export function IconLink({ icon, label, tone = "neutral", href }: BaseProps & { 
 /** Wrapper per allineare sempre le azioni a destra, coerente su ogni colonna/riga. */
 export function ActionsRow({ children }: { children: React.ReactNode }) {
   return <div className="flex flex-wrap justify-end gap-2">{children}</div>;
+}
+
+export interface MenuAction {
+  key: string;
+  icon: ActionIconKey;
+  label: string;
+  tone?: Tone;
+  onClick: () => void;
+  hidden?: boolean;
+}
+
+/**
+ * Menu "..." per righe con troppe azioni possibili (conferma/rifiuta/
+ * annulla/modifica/elimina...): invece di affiancare N bottoni icona che
+ * rompono il layout su mobile, un solo trigger apre un dropdown squadrato
+ * con la lista, sempre allineato a destra.
+ */
+export function ActionsMenu({ actions, label = "Azioni" }: { actions: MenuAction[]; label?: string }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const visible = actions.filter((a) => !a.hidden);
+
+  useEffect(() => {
+    function onClickOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    document.addEventListener("mousedown", onClickOutside);
+    return () => document.removeEventListener("mousedown", onClickOutside);
+  }, []);
+
+  if (visible.length === 0) return null;
+
+  return (
+    <div className="relative shrink-0" ref={ref}>
+      <button
+        type="button"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={label}
+        title={label}
+        className="flex h-11 w-11 items-center justify-center border border-neutral-300 bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+      >
+        <ActionSvg icon="moreVertical" />
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-30 mt-1 w-48 border border-neutral-200 bg-white shadow-lg dark:border-neutral-800 dark:bg-neutral-900">
+          {visible.map((a) => (
+            <button
+              key={a.key}
+              type="button"
+              onClick={() => {
+                setOpen(false);
+                a.onClick();
+              }}
+              className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
+                a.tone === "danger" ? "text-red-600 dark:text-red-400" : "text-neutral-800 dark:text-neutral-100"
+              }`}
+            >
+              <ActionSvg icon={a.icon} />
+              {a.label}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }

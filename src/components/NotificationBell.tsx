@@ -17,6 +17,16 @@ interface PendingApproval {
   spotsLeft: number;
 }
 
+interface PendingApprovalSeries {
+  type: "pending_approval_series";
+  id: string;
+  bookingIds: string[];
+  count: number;
+  startTime: string;
+  client: { firstName: string; lastName: string };
+  appointmentType: { name: string };
+}
+
 interface RescheduleRequestItem {
   type: "reschedule_request";
   id: string;
@@ -27,16 +37,17 @@ interface RescheduleRequestItem {
   appointmentType: { name: string };
 }
 
-type ActionableItem = PendingApproval | RescheduleRequestItem;
+type ActionableItem = PendingApproval | PendingApprovalSeries | RescheduleRequestItem;
 
 interface InformationalItem {
-  type: "new_booking" | "cancellation" | "reminder_due";
+  type: "new_booking" | "new_booking_series" | "cancellation" | "reminder_due";
   id: string;
   startTime: string;
   at: string;
   client: { firstName: string; lastName: string };
   appointmentType?: { name: string };
   title?: string;
+  count?: number;
 }
 
 const POLL_MS = 20000;
@@ -58,6 +69,7 @@ function saveDismissed(ids: Set<string>) {
 
 const TYPE_LABEL: Record<InformationalItem["type"], string> = {
   new_booking: "Nuova prenotazione",
+  new_booking_series: "Nuova serie ricorrente",
   cancellation: "Prenotazione annullata",
   reminder_due: "Scadenza in arrivo",
 };
@@ -150,6 +162,23 @@ export default function NotificationBell() {
     setBusyId(null);
   }
 
+  async function decideApprovalSeries(item: PendingApprovalSeries, status: "APPROVED" | "REJECTED") {
+    if (!(await confirm(
+      status === "APPROVED"
+        ? `Approvare tutti e ${item.count} gli appuntamenti di questa serie ricorrente?`
+        : `Rifiutare tutti e ${item.count} gli appuntamenti di questa serie ricorrente?`
+    ))) return;
+    setBusyId(item.id);
+    await fetch("/api/admin/bookings/decide-group", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bookingIds: item.bookingIds, status }),
+    });
+    toast.success(status === "APPROVED" ? "Serie approvata." : "Serie rifiutata.");
+    await load();
+    setBusyId(null);
+  }
+
   async function decideReschedule(item: RescheduleRequestItem, decision: "APPROVE" | "REJECT") {
     if (decision === "REJECT" && !(await confirm("Rifiutare questa richiesta di spostamento?"))) return;
     setBusyId(item.id);
@@ -207,7 +236,45 @@ export default function NotificationBell() {
               )}
 
               {actionable.map((item) =>
-                item.type === "pending_approval" ? (
+                item.type === "pending_approval_series" ? (
+                  <div key={item.id} className="flex items-center gap-3 border-b border-neutral-100 px-4 py-3 last:border-0 dark:border-neutral-800">
+                    <div className="min-w-0 flex-1">
+                      <div className="truncate font-semibold text-neutral-900 dark:text-white">
+                        {item.client.firstName} {item.client.lastName}
+                      </div>
+                      <div className="truncate text-xs text-neutral-500 dark:text-neutral-400">
+                        {item.appointmentType.name} - serie ricorrente, {item.count} appuntamenti
+                      </div>
+                      <div className="mt-0.5 text-sm font-bold capitalize text-yellow-600 dark:text-yellow-400">
+                        Dal {formatDateTime(item.startTime)}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 gap-2">
+                      <button
+                        onClick={() => decideApprovalSeries(item, "APPROVED")}
+                        disabled={busyId === item.id}
+                        aria-label="Approva serie"
+                        title="Approva serie"
+                        className="flex h-11 w-11 items-center justify-center bg-green-600 text-white hover:bg-green-500 disabled:opacity-50"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="h-5 w-5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                        </svg>
+                      </button>
+                      <button
+                        onClick={() => decideApprovalSeries(item, "REJECTED")}
+                        disabled={busyId === item.id}
+                        aria-label="Rifiuta serie"
+                        title="Rifiuta serie"
+                        className="flex h-11 w-11 items-center justify-center bg-red-600 text-white hover:bg-red-500 disabled:opacity-50"
+                      >
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" className="h-5 w-5">
+                          <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6L6 18" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                ) : item.type === "pending_approval" ? (
                   <div key={item.id} className="flex items-center gap-3 border-b border-neutral-100 px-4 py-3 last:border-0 dark:border-neutral-800">
                     <div className="min-w-0 flex-1">
                       <div className="truncate font-semibold text-neutral-900 dark:text-white">
@@ -303,7 +370,10 @@ export default function NotificationBell() {
                       {item.type === "reminder_due" ? item.title : `${item.client.firstName} ${item.client.lastName}`}
                     </div>
                     {item.appointmentType && (
-                      <div className="truncate text-xs text-neutral-500 dark:text-neutral-400">{item.appointmentType.name}</div>
+                      <div className="truncate text-xs text-neutral-500 dark:text-neutral-400">
+                        {item.appointmentType.name}
+                        {item.type === "new_booking_series" ? ` - ${item.count} appuntamenti` : ""}
+                      </div>
                     )}
                     <div className="mt-0.5 text-sm capitalize text-neutral-600 dark:text-neutral-300">{formatDateTime(item.startTime)}</div>
                   </div>

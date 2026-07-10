@@ -106,6 +106,12 @@ interface CreateBookingInput {
    * self-service che deve difendersi da errori dell'utente pubblico.
    */
   bypassConstraints?: boolean;
+  /**
+   * Per le serie ricorrenti: il chiamante invia UNA notifica riepilogativa
+   * per l'intera serie invece di farne inviare una per ogni singola
+   * occorrenza (altrimenti prenotare 10 martedi' di fila manda 10 push).
+   */
+  skipAdminPush?: boolean;
 }
 
 /**
@@ -181,7 +187,9 @@ export async function createCustomBooking(input: CreateBookingInput) {
   }
 
   // L'admin va avvisato per OGNI nuova prenotazione, non solo quelle da
-  // approvare: cambia solo il testo/link della notifica.
+  // approvare: cambia solo il testo/link della notifica. Per le serie
+  // ricorrenti il chiamante gestisce un'unica notifica riepilogativa.
+  if (input.skipAdminPush) return booking;
   const { sendAdminPush } = await import("@/lib/push");
   await sendAdminPush(
     initialStatus === BOOKING_STATUS.APPROVED

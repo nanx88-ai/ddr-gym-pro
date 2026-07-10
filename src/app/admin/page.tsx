@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { formatDateTime, STATUS_COLORS, STATUS_LABELS } from "@/lib/format";
 import {
   btnDanger,
-  btnNeutral,
   btnPositive,
   card,
   checkbox,
@@ -20,6 +19,8 @@ import {
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import AttendanceToggle from "@/components/AttendanceToggle";
+import { ActionsMenu } from "@/components/IconAction";
+import EditBookingModal from "@/components/EditBookingModal";
 
 interface RescheduleRequest {
   id: string;
@@ -86,6 +87,7 @@ export default function AdminBookingsPage() {
   const [onlyRescheduleRequested, setOnlyRescheduleRequested] = useState(false);
   const [clientId, setClientId] = useState("");
   const [types, setTypes] = useState<AppointmentTypeOption[]>([]);
+  const [editingBooking, setEditingBooking] = useState<Booking | null>(null);
 
   async function load() {
     setLoading(true);
@@ -276,48 +278,52 @@ export default function AdminBookingsPage() {
   }
 
   function Actions({ b }: { b: Booking }) {
+    const canCancel =
+      ["APPROVED", "RESCHEDULED", "RESCHEDULE_REQUESTED"].includes(b.status) && b.attended === null;
+    const isPast = new Date(b.startTime).getTime() <= Date.now();
+    const canMarkAttendance =
+      ["APPROVED", "RESCHEDULED", "RESCHEDULE_REQUESTED"].includes(b.status) && isPast;
+
     return (
-      <div className="flex flex-wrap items-center gap-2">
-        {b.status === "PENDING_APPROVAL" && (
-          <>
-            <button
-              onClick={() => updateStatus(b.id, "APPROVED")}
-              className={btnPositive}
-            >
-              Approva
-            </button>
-            <button
-              onClick={() => updateStatus(b.id, "REJECTED")}
-              className={btnDanger}
-            >
-              Rifiuta
-            </button>
-          </>
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        {canMarkAttendance && (
+          <AttendanceToggle attended={b.attended} onChange={(attended) => markAttendance(b.id, attended)} />
         )}
-        {["APPROVED", "RESCHEDULED", "RESCHEDULE_REQUESTED"].includes(
-          b.status,
-        ) && (
-          <>
-            {/* "Annulla" ha senso solo finche' non e' ancora stata segnata la
-                presenza: una volta registrato l'esito (presente/assente),
-                annullare la prenotazione non e' piu' coerente - l'evento e'
-                gia' accaduto. */}
-            {b.attended === null && (
-              <button
-                onClick={() => updateStatus(b.id, "CANCELLED")}
-                className={btnNeutral}
-              >
-                Annulla
-              </button>
-            )}
-            {new Date(b.startTime).getTime() <= Date.now() && (
-              <AttendanceToggle
-                attended={b.attended}
-                onChange={(attended) => markAttendance(b.id, attended)}
-              />
-            )}
-          </>
-        )}
+        <ActionsMenu
+          actions={[
+            {
+              key: "approve",
+              icon: "activate",
+              label: "Approva",
+              tone: "positive",
+              onClick: () => updateStatus(b.id, "APPROVED"),
+              hidden: b.status !== "PENDING_APPROVAL",
+            },
+            {
+              key: "reject",
+              icon: "deactivate",
+              label: "Rifiuta",
+              tone: "danger",
+              onClick: () => updateStatus(b.id, "REJECTED"),
+              hidden: b.status !== "PENDING_APPROVAL",
+            },
+            {
+              key: "edit",
+              icon: "edit",
+              label: "Modifica data/ora",
+              onClick: () => setEditingBooking(b),
+              hidden: !["PENDING_APPROVAL", "APPROVED", "RESCHEDULED"].includes(b.status),
+            },
+            {
+              key: "cancel",
+              icon: "remove",
+              label: "Annulla",
+              tone: "danger",
+              onClick: () => updateStatus(b.id, "CANCELLED"),
+              hidden: !canCancel,
+            },
+          ]}
+        />
       </div>
     );
   }
@@ -364,14 +370,8 @@ export default function AdminBookingsPage() {
       </div>
 
       {filtersOpen && (
-        <div
-          className={`${card} mb-4 grid grid-cols-2 gap-2 p-3 sm:grid-cols-4`}
-        >
-          <select
-            value={filter}
-            onChange={(e) => setFilter(e.target.value)}
-            className={filterField}
-          >
+        <div className={`${card} mb-4 grid grid-cols-1 gap-2 p-3 sm:grid-cols-3`}>
+          <select value={filter} onChange={(e) => setFilter(e.target.value)} className={filterField}>
             {STATUS_OPTIONS.map((f) => (
               <option key={f.value} value={f.value}>
                 {f.label}
@@ -379,11 +379,34 @@ export default function AdminBookingsPage() {
             ))}
           </select>
 
-          <select
-            value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as SortBy)}
-            className={filterField}
-          >
+          <select value={appointmentTypeId} onChange={(e) => setAppointmentTypeId(e.target.value)} className={filterField}>
+            <option value="">Tutti i servizi</option>
+            {types.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+
+          <select value={clientId} onChange={(e) => setClientId(e.target.value)} className={filterField}>
+            <option value="">Tutti i clienti</option>
+            {clientOptions.map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </select>
+
+          <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={filterField} placeholder="Dal" />
+          <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={filterField} placeholder="Al" />
+
+          <select value={recurring} onChange={(e) => setRecurring(e.target.value)} className={filterField}>
+            <option value="">Ricorrenti e singole</option>
+            <option value="yes">Solo ricorrenti</option>
+            <option value="no">Solo singole</option>
+          </select>
+
+          <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)} className={filterField}>
             <option value="date">Ordina per data</option>
             <option value="status">Ordina per stato</option>
           </select>
@@ -396,53 +419,17 @@ export default function AdminBookingsPage() {
             {sortDir === "asc" ? "↑ Crescente" : "↓ Decrescente"}
           </button>
 
+          <span className="hidden sm:block" />
+
           <label
-            className={`${filterField} flex items-center gap-2 border border-neutral-300 bg-neutral-100 font-medium text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200`}
+            className={`${input} w-full flex items-center gap-2 border border-neutral-300 bg-neutral-100 font-medium text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200`}
           >
-            <input
-              type="checkbox"
-              checked={pendingFirst}
-              onChange={(e) => setPendingFirst(e.target.checked)}
-              className={checkbox}
-            />
+            <input type="checkbox" checked={pendingFirst} onChange={(e) => setPendingFirst(e.target.checked)} className={checkbox} />
             In attesa in cima
           </label>
 
-          <label className="block">
-            <span className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">Da</span>
-            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={filterField} />
-          </label>
-          <label className="block">
-            <span className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">A</span>
-            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={filterField} />
-          </label>
-
-          <select value={appointmentTypeId} onChange={(e) => setAppointmentTypeId(e.target.value)} className={filterField}>
-            <option value="">Tutti i servizi</option>
-            {types.map((t) => (
-              <option key={t.id} value={t.id}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-
-          <select value={recurring} onChange={(e) => setRecurring(e.target.value)} className={filterField}>
-            <option value="">Ricorrenti e singole</option>
-            <option value="yes">Solo ricorrenti</option>
-            <option value="no">Solo singole</option>
-          </select>
-
-          <select value={clientId} onChange={(e) => setClientId(e.target.value)} className={filterField}>
-            <option value="">Tutti i clienti</option>
-            {clientOptions.map(([id, name]) => (
-              <option key={id} value={id}>
-                {name}
-              </option>
-            ))}
-          </select>
-
           <label
-            className={`${filterField} flex items-center gap-2 border border-neutral-300 bg-neutral-100 font-medium text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200`}
+            className={`${input} w-full flex items-center gap-2 border border-neutral-300 bg-neutral-100 font-medium text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200`}
           >
             <input
               type="checkbox"
@@ -559,6 +546,17 @@ export default function AdminBookingsPage() {
             </tbody>
           </table>
         </div>
+      )}
+
+      {editingBooking && (
+        <EditBookingModal
+          booking={editingBooking}
+          onClose={() => setEditingBooking(null)}
+          onSaved={() => {
+            setEditingBooking(null);
+            load();
+          }}
+        />
       )}
     </div>
   );

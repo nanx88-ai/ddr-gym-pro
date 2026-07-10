@@ -86,6 +86,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Una serie ricorrente manda UNA sola notifica riepilogativa all'admin
+  // invece di una per occorrenza (10 martedi' di fila non devono bombardare
+  // di push chi gestisce la palestra).
+  const isSeries = data.items.length > 1 && data.items.some((i) => i.isRecurring);
+
   const bookings = [];
   const errors: { index: number; startTime: string; error: string; code?: string }[] = [];
 
@@ -101,6 +106,7 @@ export async function POST(request: NextRequest) {
         isRecurring: item.isRecurring,
         recurrenceGroupId: item.recurrenceGroupId,
         source: "custom",
+        skipAdminPush: isSeries,
       });
       bookings.push(booking);
     } catch (err) {
@@ -110,6 +116,17 @@ export async function POST(request: NextRequest) {
         errors.push({ index: i, startTime: item.startTime, error: "Errore durante la creazione della prenotazione" });
       }
     }
+  }
+
+  if (isSeries && bookings.length > 0) {
+    const { sendAdminPush } = await import("@/lib/push");
+    const first = bookings[0];
+    const anyPending = bookings.some((b) => b.status === "PENDING_APPROVAL");
+    await sendAdminPush({
+      title: anyPending ? "Nuova richiesta di prenotazione ricorrente" : "Nuova prenotazione ricorrente confermata",
+      body: `${client.firstName} ${client.lastName} - ${first.appointmentType.name} - ${bookings.length} appuntamenti`,
+      url: anyPending ? "/admin?status=PENDING_APPROVAL" : "/admin",
+    }).catch((err) => console.error("[bookings] invio push riepilogo serie fallito:", err));
   }
 
   if (bookings.length === 0) {
