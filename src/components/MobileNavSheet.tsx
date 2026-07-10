@@ -89,7 +89,6 @@ export default function MobileNavSheet({
           style={{
             transform: `translateY(${dragY}px)`,
             transition: dragState.current?.dragging ? "none" : "transform 0.2s ease-out",
-            paddingBottom: "env(safe-area-inset-bottom)",
           }}
         >
           <div
@@ -126,7 +125,10 @@ export default function MobileNavSheet({
             </div>
           </div>
 
-          <div className="flex items-center justify-between border-t border-neutral-800 px-4 py-3">
+          <div
+            className="flex items-center justify-between border-t border-neutral-800 px-4 pt-3"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 28px)" }}
+          >
             <Link
               href="/admin/settings"
               onClick={() => setOpen(false)}
