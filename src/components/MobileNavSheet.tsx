@@ -9,8 +9,11 @@ const DRAG_CLOSE_THRESHOLD = 70;
 const BAR_HEIGHT = 52;
 // Zona morta sotto la barra collassata: nera, senza handler, cosi' la
 // gesture "swipe up" di iOS per chiudere le app non entra in conflitto col
-// trascinamento del nostro menu.
-const BOTTOM_DEAD_ZONE = "max(10vh, env(safe-area-inset-bottom) + 24px)";
+// trascinamento del nostro menu. L'Apple HIG riserva 34pt alla home
+// indicator sui device senza tasto Home (env(safe-area-inset-bottom));
+// aggiungiamo un margine di 8pt di cuscinetto. Su device piu' vecchi/Android
+// senza quell'inset usiamo comunque 34px come minimo di sicurezza.
+const BOTTOM_DEAD_ZONE = "calc(max(env(safe-area-inset-bottom), 34px) + 8px)";
 
 const BG_BASE = "#0D0D0D";
 const BG_CELL = "#1A1A1A";
