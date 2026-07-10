@@ -91,15 +91,18 @@ export default function MobileNavSheet({
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
-            className={`flex w-full touch-none items-center gap-3 border-t px-4 ${SURFACE} ${LINE}`}
-            style={{ height: BAR_HEIGHT }}
+            className={`relative flex w-full touch-none items-center border-t px-4 ${SURFACE} ${LINE}`}
+            style={{
+              height: BAR_HEIGHT,
+              transform: `translateY(${dragY}px)`,
+              transition: dragState.current?.dragging ? "none" : "transform 0.2s ease-out",
+            }}
             aria-label="Apri menu"
           >
-            <span className={`h-1 w-8 shrink-0 border ${LINE}`} />
             <span className={`text-xs font-semibold uppercase tracking-wide ${TEXT_LABEL}`}>Menu</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`ml-auto h-4 w-4 ${TEXT_MUTED}`}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 15l6-6 6 6" />
-            </svg>
+            <span className="absolute inset-x-0 flex justify-center">
+              <span className={`h-1 w-10 border ${LINE}`} />
+            </span>
           </button>
           {/* zona morta: nessun handler, lascia passare le gesture di sistema */}
         </div>
@@ -120,15 +123,14 @@ export default function MobileNavSheet({
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
-            className="w-full touch-none text-left"
+            className="relative flex w-full touch-none items-center px-4"
+            style={{ height: BAR_HEIGHT }}
             aria-label="Chiudi menu"
           >
-            <div className="flex justify-center pt-2.5 pb-1.5">
+            <span className={`text-xs font-semibold uppercase tracking-wide ${TEXT_LABEL}`}>Menu</span>
+            <span className="absolute inset-x-0 flex justify-center">
               <span className={`h-1 w-10 border ${LINE}`} />
-            </div>
-            <div className="px-4 pb-2.5">
-              <span className={`text-xs font-semibold uppercase tracking-wide ${TEXT_LABEL}`}>Menu</span>
-            </div>
+            </span>
           </button>
 
           <div className={`flex-1 overflow-y-auto border-t ${LINE}`}>
