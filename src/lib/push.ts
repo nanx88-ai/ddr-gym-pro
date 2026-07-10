@@ -14,7 +14,7 @@ function ensureConfigured() {
     console.warn("[push] VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY non impostate: nessuna push verra' inviata.");
     return;
   }
-  webpush.setVapidDetails("mailto:admin@ddracademy.local", publicKey, privateKey);
+  webpush.setVapidDetails("mailto:nftvseries@gmail.com", publicKey, privateKey);
   configured = true;
 }
 
