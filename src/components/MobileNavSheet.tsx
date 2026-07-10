@@ -21,10 +21,6 @@ const CELL = "bg-neutral-100 dark:bg-[#1A1A1A]";
 const TEXT_MUTED = "text-neutral-500 dark:text-neutral-400";
 const TEXT_LABEL = "text-neutral-700 dark:text-neutral-300";
 const TEXT_CELL = "text-neutral-800 dark:text-[#E0E0E0]";
-// Barra menu (chiusa e handle aperta): invertita per tema, sempre a massimo
-// contrasto cosi' si nota anche su sfondo scuro/chiaro - nero+giallo in
-// light mode, giallo+nero in dark mode.
-const MENU_BAR = "bg-black dark:bg-yellow-400 text-yellow-400 dark:text-neutral-900";
 
 /**
  * Menu principale da mobile: non un burger+drawer laterale, ma una bottom
@@ -83,12 +79,10 @@ export default function MobileNavSheet({
       {open && <div className="fixed inset-0 z-40 bg-black/80" onClick={() => setOpen(false)} />}
 
       {/* Barra collassata: sollevata dal bordo, con zona morta non interattiva
-          sotto per non entrare in conflitto con la gesture bar iOS. Bordo
-          superiore giallo pieno cosi' si nota anche sopra contenuto scuro/
-          chiaro, invece di confondersi con lo sfondo. */}
+          sotto per non entrare in conflitto con la gesture bar iOS */}
       {!open && (
         <div
-          className="fixed inset-x-0 bottom-0 z-40"
+          className={`fixed inset-x-0 bottom-0 z-40 ${SURFACE}`}
           style={{ height: `calc(${BAR_HEIGHT}px + ${BOTTOM_DEAD_ZONE})` }}
         >
           <button
@@ -97,18 +91,15 @@ export default function MobileNavSheet({
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
-            className={`flex w-full touch-none flex-col items-center justify-center gap-0.5 ${MENU_BAR}`}
-            style={{
-              height: BAR_HEIGHT,
-              transform: `translateY(${dragY}px)`,
-              transition: dragState.current?.dragging ? "none" : "transform 0.2s ease-out",
-            }}
+            className={`flex w-full touch-none items-center gap-3 border-t px-4 ${SURFACE} ${LINE}`}
+            style={{ height: BAR_HEIGHT }}
             aria-label="Apri menu"
           >
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-4 w-4">
+            <span className={`h-1 w-8 shrink-0 border ${LINE}`} />
+            <span className={`text-xs font-semibold uppercase tracking-wide ${TEXT_LABEL}`}>Menu</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`ml-auto h-4 w-4 ${TEXT_MUTED}`}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 15l6-6 6 6" />
             </svg>
-            <span className="text-sm font-bold uppercase tracking-wide">Menu</span>
           </button>
           {/* zona morta: nessun handler, lascia passare le gesture di sistema */}
         </div>
@@ -129,14 +120,15 @@ export default function MobileNavSheet({
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
-            className={`flex w-full touch-none flex-col items-center justify-center gap-0.5 ${MENU_BAR}`}
-            style={{ height: BAR_HEIGHT }}
+            className="w-full touch-none text-left"
             aria-label="Chiudi menu"
           >
-            <span className="text-sm font-bold uppercase tracking-wide">Menu</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="h-4 w-4">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M18 9l-6 6-6-6" />
-            </svg>
+            <div className="flex justify-center pt-2.5 pb-1.5">
+              <span className={`h-1 w-10 border ${LINE}`} />
+            </div>
+            <div className="px-4 pb-2.5">
+              <span className={`text-xs font-semibold uppercase tracking-wide ${TEXT_LABEL}`}>Menu</span>
+            </div>
           </button>
 
           <div className={`flex-1 overflow-y-auto border-t ${LINE}`}>
