@@ -6,6 +6,11 @@ import { NAV_GROUPS, NavIcon } from "@/components/AdminNav";
 
 const DRAG_OPEN_THRESHOLD = 50;
 const DRAG_CLOSE_THRESHOLD = 70;
+const BAR_HEIGHT = 52;
+// Zona morta sotto la barra collassata: nera, senza handler, cosi' la
+// gesture "swipe up" di iOS per chiudere le app non entra in conflitto col
+// trascinamento del nostro menu.
+const BOTTOM_DEAD_ZONE = "max(10vh, env(safe-area-inset-bottom) + 24px)";
 
 const BG_BASE = "#0D0D0D";
 const BG_CELL = "#1A1A1A";
@@ -69,31 +74,31 @@ export default function MobileNavSheet({
       {/* Overlay a tutto schermo, piu' marcato di quello del pannello notifiche */}
       {open && <div className="fixed inset-0 z-40 bg-black/80" onClick={() => setOpen(false)} />}
 
-      {/* Barra collassata: piena, a tutta larghezza, "Menu" allineato a sinistra */}
-      {!open && (
-        <button
-          type="button"
-          onClick={() => setOpen(true)}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          className="fixed inset-x-0 bottom-0 z-40 flex touch-none items-center gap-3 border-t px-4"
-          style={{ backgroundColor: BG_BASE, borderColor: LINE, height: 52 }}
-          aria-label="Apri menu"
-        >
-          <span className="h-1 w-8 shrink-0" style={{ backgroundColor: LINE }} />
-          <span className="text-xs font-semibold uppercase tracking-wide text-neutral-300">Menu</span>
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="ml-auto h-4 w-4 text-neutral-500">
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 15l6-6 6 6" />
-          </svg>
-        </button>
-      )}
-      {/* Spacer piatto per l'area gesture di sistema, sempre presente sotto la barra */}
+      {/* Barra collassata: sollevata dal bordo, con zona nera non interattiva
+          sotto per non entrare in conflitto con la gesture bar iOS */}
       {!open && (
         <div
           className="fixed inset-x-0 bottom-0 z-40"
-          style={{ backgroundColor: BG_BASE, height: "env(safe-area-inset-bottom)", marginBottom: 52 }}
-        />
+          style={{ backgroundColor: BG_BASE, height: `calc(${BAR_HEIGHT}px + ${BOTTOM_DEAD_ZONE})` }}
+        >
+          <button
+            type="button"
+            onClick={() => setOpen(true)}
+            onPointerDown={onPointerDown}
+            onPointerMove={onPointerMove}
+            onPointerUp={onPointerUp}
+            className="flex w-full touch-none items-center gap-3 border-t px-4"
+            style={{ backgroundColor: BG_BASE, borderColor: LINE, height: BAR_HEIGHT }}
+            aria-label="Apri menu"
+          >
+            <span className="h-1 w-8 shrink-0" style={{ backgroundColor: LINE }} />
+            <span className="text-xs font-semibold uppercase tracking-wide text-neutral-300">Menu</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="ml-auto h-4 w-4 text-neutral-500">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 15l6-6 6 6" />
+            </svg>
+          </button>
+          {/* zona morta: nessun handler, lascia passare le gesture di sistema */}
+        </div>
       )}
 
       {/* Scheda a schermo intero */}
@@ -107,11 +112,14 @@ export default function MobileNavSheet({
             transition: dragState.current?.dragging ? "none" : "transform 0.2s ease-out",
           }}
         >
-          <div
+          <button
+            type="button"
+            onClick={() => setOpen(false)}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
-            className="touch-none"
+            className="w-full touch-none text-left"
+            aria-label="Chiudi menu"
           >
             <div className="flex justify-center pt-2.5 pb-1.5">
               <span className="h-1 w-10" style={{ backgroundColor: LINE }} />
@@ -119,7 +127,7 @@ export default function MobileNavSheet({
             <div className="px-4 pb-2.5">
               <span className="text-xs font-semibold uppercase tracking-wide text-neutral-300">Menu</span>
             </div>
-          </div>
+          </button>
 
           <div className="flex-1 overflow-y-auto border-t" style={{ borderColor: LINE }}>
             <div className="grid grid-cols-3">
