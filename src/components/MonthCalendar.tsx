@@ -51,36 +51,36 @@ export default function MonthCalendar({ selected, onSelect, fullDates, onMonthCh
   for (let i = 0; i < days.length; i += 7) weeks.push(days.slice(i, i + 7));
 
   return (
-    <div className="flex min-h-[60vh] flex-col sm:min-h-[420px]">
-      <div className="mb-3 flex items-center justify-between">
+    <div className="flex min-h-[70vh] flex-col sm:min-h-[420px]">
+      <div className="mb-4 flex items-center justify-between">
         <button
           type="button"
           onClick={() => setMonth((m) => subMonths(m, 1))}
           aria-label="Mese precedente"
-          className="flex h-9 w-9 items-center justify-center rounded-full text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
+          className="flex h-11 w-11 items-center justify-center rounded-full text-lg text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
         >
           &larr;
         </button>
-        <span className="text-sm font-semibold capitalize text-neutral-900 dark:text-white">
+        <span className="text-base font-semibold capitalize text-neutral-900 dark:text-white sm:text-sm">
           {format(month, "MMMM yyyy", { locale: it })}
         </span>
         <button
           type="button"
           onClick={() => setMonth((m) => addMonths(m, 1))}
           aria-label="Mese successivo"
-          className="flex h-9 w-9 items-center justify-center rounded-full text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
+          className="flex h-11 w-11 items-center justify-center rounded-full text-lg text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
         >
           &rarr;
         </button>
       </div>
 
-      <div className="grid grid-cols-7 gap-1 pb-1 text-center text-[11px] font-medium uppercase text-neutral-400 dark:text-neutral-500">
+      <div className="grid grid-cols-7 gap-1 pb-1 text-center text-xs font-medium uppercase text-neutral-400 dark:text-neutral-500 sm:text-[11px]">
         {WEEKDAY_HEADERS.map((w) => (
           <div key={w}>{w}</div>
         ))}
       </div>
 
-      <div className="grid flex-1 grid-cols-7 gap-1">
+      <div className="grid flex-1 grid-cols-7 gap-1.5">
         {weeks.map((week) =>
           week.map((day) => {
             const iso = toIsoDate(day);
@@ -96,7 +96,7 @@ export default function MonthCalendar({ selected, onSelect, fullDates, onMonthCh
                 type="button"
                 disabled={disabled}
                 onClick={() => onSelect(iso)}
-                className={`flex flex-col items-center justify-center rounded-xl text-sm font-medium transition-colors ${
+                className={`flex min-h-11 flex-col items-center justify-center rounded-xl text-base font-medium transition-colors sm:text-sm ${
                   !inMonth
                     ? "invisible"
                     : isPast

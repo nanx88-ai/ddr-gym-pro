@@ -408,12 +408,12 @@ function MonthGrid({
 
   return (
     <div>
-      <div className="grid grid-cols-7 gap-1 pb-1 text-center text-[11px] font-medium uppercase text-neutral-400 dark:text-neutral-500">
+      <div className="grid grid-cols-7 gap-1 pb-1 text-center text-xs font-medium uppercase text-neutral-400 dark:text-neutral-500 sm:text-[11px]">
         {WEEKDAY_HEADERS.map((w) => (
           <div key={w}>{w}</div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-1">
+      <div className="grid grid-cols-7 gap-1.5">
         {days.map((d) => {
           const key = dateKey(d);
           const items = byDay.get(key) ?? [];
@@ -423,7 +423,7 @@ function MonthGrid({
             <button
               key={key}
               onClick={() => onDayClick(d)}
-              className={`flex min-h-16 flex-col items-start rounded-lg border p-1.5 text-left transition-colors sm:min-h-20 ${
+              className={`flex min-h-20 flex-col items-start rounded-lg border p-2 text-left transition-colors sm:min-h-20 ${
                 !inMonth
                   ? "border-transparent text-neutral-300 dark:text-neutral-700"
                   : isToday(d)
@@ -431,13 +431,13 @@ function MonthGrid({
                     : "border-neutral-100 hover:border-neutral-300 dark:border-neutral-800 dark:hover:border-neutral-600"
               }`}
             >
-              <span className="text-xs font-medium text-neutral-700 dark:text-neutral-300">{d.getDate()}</span>
+              <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300 sm:text-xs">{d.getDate()}</span>
               {items.length > 0 && (
-                <span className="mt-1 rounded-full bg-neutral-200 px-1.5 py-0.5 text-[10px] font-semibold text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200">
+                <span className="mt-1 rounded-full bg-neutral-200 px-1.5 py-0.5 text-xs font-semibold text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200 sm:text-[10px]">
                   {items.length}
                 </span>
               )}
-              {pending > 0 && <span className="mt-1 h-1.5 w-1.5 rounded-full bg-amber-500" title={`${pending} in attesa`} />}
+              {pending > 0 && <span className="mt-1 h-2 w-2 rounded-full bg-amber-500" title={`${pending} in attesa`} />}
             </button>
           );
         })}

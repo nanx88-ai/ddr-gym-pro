@@ -159,7 +159,8 @@ export default function AdminInvoiceDetailPage({ params }: { params: Promise<{ i
           )}
         </div>
 
-        <table className="mb-4 w-full text-sm">
+        <div className="mb-4 overflow-x-auto">
+        <table className="w-full text-sm">
           <thead>
             <tr className="border-b border-neutral-300 text-left text-xs uppercase text-neutral-500">
               <th className="py-1">Descrizione</th>
@@ -181,6 +182,7 @@ export default function AdminInvoiceDetailPage({ params }: { params: Promise<{ i
             ))}
           </tbody>
         </table>
+        </div>
 
         <div className="ml-auto max-w-xs space-y-1 text-sm">
           <div className="flex justify-between">

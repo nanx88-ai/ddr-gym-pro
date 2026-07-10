@@ -9,7 +9,11 @@ export async function GET(request: NextRequest) {
   const bookings = await prisma.booking.findMany({
     where: status ? { status } : undefined,
     orderBy: { startTime: "asc" },
-    include: { client: true, appointmentType: true },
+    include: {
+      client: true,
+      appointmentType: true,
+      rescheduleRequests: { where: { status: "PENDING" }, orderBy: { createdAt: "desc" }, take: 1 },
+    },
   });
   return NextResponse.json({ bookings });
 }

@@ -40,7 +40,6 @@ const NAV_GROUPS: NavGroup[] = [
       { href: "/admin", label: "Prenotazioni", icon: "bookings" },
       { href: "/admin/agenda", label: "Agenda", icon: "agenda" },
       { href: "/admin/calendar", label: "Calendario", icon: "calendar" },
-      { href: "/admin/reschedule", label: "Spostamenti", icon: "reschedule" },
       { href: "/admin/schedule", label: "Orario settimanale", icon: "schedule" },
       { href: "/admin/appointment-types", label: "Calendari/servizi", icon: "types" },
       { href: "/admin/bookings/new", label: "Nuovo appuntamento", icon: "new" },

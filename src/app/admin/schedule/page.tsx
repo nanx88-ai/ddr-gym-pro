@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { btnDanger, btnPositive, btnPrimary, card, input, label, pageSubtitle, pageTitle } from "@/lib/ui";
+import { btnDanger, btnPositive, btnPrimary, card, checkbox, input, label, pageSubtitle, pageTitle } from "@/lib/ui";
 
 interface AppointmentType {
   id: string;
@@ -193,6 +193,7 @@ function SchedulePageContent() {
                   type="checkbox"
                   checked={day.isOpen}
                   onChange={(e) => updateDay(day.dayOfWeek, { isOpen: e.target.checked })}
+                  className={checkbox}
                 />
                 {DAY_NAMES[day.dayOfWeek]}
               </label>
@@ -260,7 +261,7 @@ function SchedulePageContent() {
             <input type="date" value={excDate} onChange={(e) => setExcDate(e.target.value)} className={`${input} w-40`} />
           </label>
           <label className="flex items-center gap-2 pb-2 text-sm text-neutral-700 dark:text-neutral-300">
-            <input type="checkbox" checked={excClosed} onChange={(e) => setExcClosed(e.target.checked)} />
+            <input type="checkbox" checked={excClosed} onChange={(e) => setExcClosed(e.target.checked)} className={checkbox} />
             Giorno chiuso
           </label>
           {!excClosed && (

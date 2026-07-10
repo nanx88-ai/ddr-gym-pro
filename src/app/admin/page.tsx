@@ -7,6 +7,7 @@ import {
   btnNeutral,
   btnPositive,
   card,
+  checkbox,
   input,
   pageSubtitle,
   pageTitle,
@@ -19,6 +20,13 @@ import {
 import { useToast } from "@/components/Toast";
 import AttendanceToggle from "@/components/AttendanceToggle";
 
+interface RescheduleRequest {
+  id: string;
+  requestedStartTime: string;
+  requestedEndTime: string;
+  reason: string | null;
+}
+
 interface Booking {
   id: string;
   startTime: string;
@@ -29,6 +37,7 @@ interface Booking {
   attended: boolean | null;
   client: { firstName: string; lastName: string; email: string; status: string };
   appointmentType: { name: string };
+  rescheduleRequests: RescheduleRequest[];
 }
 
 const STATUS_OPTIONS = [
@@ -37,6 +46,8 @@ const STATUS_OPTIONS = [
   { value: "APPROVED", label: "Confermate" },
   { value: "REJECTED", label: "Rifiutate" },
   { value: "CANCELLED", label: "Annullate" },
+  { value: "RESCHEDULE_REQUESTED", label: "Spostamento richiesto" },
+  { value: "RESCHEDULED", label: "Riprogrammate" },
 ];
 
 type SortBy = "date" | "status";
@@ -132,6 +143,43 @@ export default function AdminBookingsPage() {
     load();
   }
 
+  async function decideReschedule(requestId: string, decision: "APPROVE" | "REJECT") {
+    if (decision === "REJECT" && !window.confirm("Rifiutare questa richiesta di spostamento?")) return;
+    const res = await fetch(`/api/admin/reschedule/${requestId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ decision }),
+    });
+    if (!res.ok) {
+      const json = await res.json().catch(() => ({}));
+      toast.error(json.error ?? "Errore durante l'operazione.");
+      return;
+    }
+    toast.success(decision === "APPROVE" ? "Spostamento approvato." : "Spostamento rifiutato.");
+    load();
+  }
+
+  function RescheduleBanner({ b }: { b: Booking }) {
+    const req = b.rescheduleRequests[0];
+    if (b.status !== "RESCHEDULE_REQUESTED" || !req) return null;
+    return (
+      <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-900/50 dark:bg-blue-950/30">
+        <p className="text-blue-800 dark:text-blue-300">
+          Richiesta nuovo orario: <span className="font-medium capitalize">{formatDateTime(req.requestedStartTime)}</span>
+        </p>
+        {req.reason && <p className="mt-0.5 text-xs italic text-blue-700 dark:text-blue-400">&quot;{req.reason}&quot;</p>}
+        <div className="mt-2 flex flex-wrap gap-2">
+          <button onClick={() => decideReschedule(req.id, "APPROVE")} className={btnPositive}>
+            Approva spostamento
+          </button>
+          <button onClick={() => decideReschedule(req.id, "REJECT")} className={btnDanger}>
+            Rifiuta spostamento
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   function Actions({ b }: { b: Booking }) {
     return (
       <div className="flex flex-wrap items-center gap-2">
@@ -145,7 +193,7 @@ export default function AdminBookingsPage() {
             </button>
           </>
         )}
-        {["APPROVED", "RESCHEDULED"].includes(b.status) && (
+        {["APPROVED", "RESCHEDULED", "RESCHEDULE_REQUESTED"].includes(b.status) && (
           <>
             <button onClick={() => updateStatus(b.id, "CANCELLED")} className={btnNeutral}>
               Annulla
@@ -218,7 +266,12 @@ export default function AdminBookingsPage() {
           <label
             className={`${filterField} flex items-center gap-2 border border-neutral-300 bg-neutral-100 font-medium text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200`}
           >
-            <input type="checkbox" checked={pendingFirst} onChange={(e) => setPendingFirst(e.target.checked)} />
+            <input
+              type="checkbox"
+              checked={pendingFirst}
+              onChange={(e) => setPendingFirst(e.target.checked)}
+              className={checkbox}
+            />
             In attesa in cima
           </label>
         </div>
@@ -256,6 +309,8 @@ export default function AdminBookingsPage() {
                 <span className="text-neutral-700 dark:text-neutral-200">{b.appointmentType.name}</span>
                 <span className="capitalize text-neutral-500 dark:text-neutral-400">{formatDateTime(b.startTime)}</span>
               </div>
+
+              <RescheduleBanner b={b} />
 
               <div className="mt-3 border-t border-neutral-100 pt-3 dark:border-neutral-800">
                 <Actions b={b} />
@@ -297,6 +352,7 @@ export default function AdminBookingsPage() {
                   </td>
                   <td className={td}>
                     <Actions b={b} />
+                    <RescheduleBanner b={b} />
                   </td>
                 </tr>
               ))}

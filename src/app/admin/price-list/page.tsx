@@ -105,18 +105,18 @@ export default function AdminPriceListPage() {
 
       <div className={`${card} mb-6 p-4`}>
         <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">Nuova voce</h2>
-        <form onSubmit={handleCreate} className="flex flex-wrap items-end gap-3">
-          <label className="block">
+        <form onSubmit={handleCreate} className="grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-end">
+          <label className="block sm:w-56">
             <span className={label}>Nome</span>
             <input
               required
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder="es. Ingresso singolo"
-              className={`${input} w-56`}
+              className={input}
             />
           </label>
-          <label className="block">
+          <label className="block sm:w-44">
             <span className={label}>Prezzo unitario (IVA esclusa)</span>
             <input
               required
@@ -125,10 +125,10 @@ export default function AdminPriceListPage() {
               step={0.01}
               value={unitPrice}
               onChange={(e) => setUnitPrice(Number(e.target.value))}
-              className={`${input} w-32`}
+              className={input}
             />
           </label>
-          <label className="block">
+          <label className="block sm:w-32">
             <span className={label}>Aliquota IVA %</span>
             <input
               required
@@ -137,12 +137,12 @@ export default function AdminPriceListPage() {
               max={100}
               value={vatRate}
               onChange={(e) => setVatRate(Number(e.target.value))}
-              className={`${input} w-24`}
+              className={input}
             />
           </label>
-          <label className="block">
+          <label className="block sm:w-56">
             <span className={label}>Natura (se esente)</span>
-            <select value={vatNature} onChange={(e) => setVatNature(e.target.value)} className={`${input} w-56`}>
+            <select value={vatNature} onChange={(e) => setVatNature(e.target.value)} className={input}>
               {VAT_NATURES.map((n) => (
                 <option key={n.value} value={n.value}>
                   {n.label}
@@ -150,60 +150,98 @@ export default function AdminPriceListPage() {
               ))}
             </select>
           </label>
-          <button type="submit" disabled={creating} className={btnPositive}>
+          <button type="submit" disabled={creating} className={`${btnPositive} w-full sm:w-auto`}>
             {creating ? "Creazione..." : "Aggiungi"}
           </button>
         </form>
       </div>
 
-      <div className={tableWrap}>
-        <table className="w-full text-sm">
-          <thead className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900/60">
-            <tr>
-              <th className={th}>Nome</th>
-              <th className={th}>Prezzo</th>
-              <th className={th}>IVA</th>
-              <th className={th}>Stato</th>
-              <th className={th}>Azioni</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((item) => (
-              <tr key={item.id} className={trBorder}>
-                <td className={`${td} font-medium text-neutral-900 dark:text-white`}>{item.name}</td>
-                <td className={td}>{formatCurrency(item.unitPrice)}</td>
-                <td className={td}>{item.vatNature ? `Esente (${item.vatNature})` : `${item.vatRate}%`}</td>
-                <td className={td}>
-                  <span
-                    className={`rounded-full px-2 py-1 text-xs font-medium ${
-                      item.active ? "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-400" : "bg-neutral-200 text-neutral-600 dark:bg-neutral-700/50 dark:text-neutral-400"
-                    }`}
-                  >
-                    {item.active ? "Attiva" : "Disattivata"}
-                  </span>
-                </td>
-                <td className={td}>
-                  <div className="flex flex-wrap gap-2">
-                    <button onClick={() => toggleActive(item)} className={btnNeutral}>
-                      {item.active ? "Disattiva" : "Riattiva"}
-                    </button>
-                    <button onClick={() => remove(item)} className={btnDanger}>
-                      Elimina
-                    </button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {!loading && items.length === 0 && (
+      {!loading && items.length === 0 && (
+        <p className={`${card} px-4 py-8 text-center text-sm text-neutral-500 dark:text-neutral-400`}>
+          Nessuna voce di listino.
+        </p>
+      )}
+
+      {/* Mobile: schede */}
+      {items.length > 0 && (
+        <div className="space-y-3 sm:hidden">
+          {items.map((item) => (
+            <div key={item.id} className={`${card} p-4`}>
+              <div className="flex items-start justify-between gap-2">
+                <span className="font-medium text-neutral-900 dark:text-white">{item.name}</span>
+                <span
+                  className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium ${
+                    item.active
+                      ? "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-400"
+                      : "bg-neutral-200 text-neutral-600 dark:bg-neutral-700/50 dark:text-neutral-400"
+                  }`}
+                >
+                  {item.active ? "Attiva" : "Disattivata"}
+                </span>
+              </div>
+              <div className="mt-2 flex items-center justify-between text-sm">
+                <span className="text-neutral-600 dark:text-neutral-300">
+                  {item.vatNature ? `Esente (${item.vatNature})` : `IVA ${item.vatRate}%`}
+                </span>
+                <span className="font-medium text-neutral-900 dark:text-white">{formatCurrency(item.unitPrice)}</span>
+              </div>
+              <div className="mt-3 flex gap-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+                <button onClick={() => toggleActive(item)} className={`flex-1 ${btnNeutral}`}>
+                  {item.active ? "Disattiva" : "Riattiva"}
+                </button>
+                <button onClick={() => remove(item)} className={`flex-1 ${btnDanger}`}>
+                  Elimina
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Desktop/tablet: tabella */}
+      {items.length > 0 && (
+        <div className={`hidden sm:block ${tableWrap}`}>
+          <table className="w-full text-sm">
+            <thead className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900/60">
               <tr>
-                <td colSpan={5} className="px-4 py-8 text-center text-sm text-neutral-500">
-                  Nessuna voce di listino.
-                </td>
+                <th className={th}>Nome</th>
+                <th className={th}>Prezzo</th>
+                <th className={th}>IVA</th>
+                <th className={th}>Stato</th>
+                <th className={th}>Azioni</th>
               </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {items.map((item) => (
+                <tr key={item.id} className={trBorder}>
+                  <td className={`${td} font-medium text-neutral-900 dark:text-white`}>{item.name}</td>
+                  <td className={td}>{formatCurrency(item.unitPrice)}</td>
+                  <td className={td}>{item.vatNature ? `Esente (${item.vatNature})` : `${item.vatRate}%`}</td>
+                  <td className={td}>
+                    <span
+                      className={`rounded-full px-2 py-1 text-xs font-medium ${
+                        item.active ? "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-400" : "bg-neutral-200 text-neutral-600 dark:bg-neutral-700/50 dark:text-neutral-400"
+                      }`}
+                    >
+                      {item.active ? "Attiva" : "Disattivata"}
+                    </span>
+                  </td>
+                  <td className={td}>
+                    <div className="flex flex-wrap gap-2">
+                      <button onClick={() => toggleActive(item)} className={btnNeutral}>
+                        {item.active ? "Disattiva" : "Riattiva"}
+                      </button>
+                      <button onClick={() => remove(item)} className={btnDanger}>
+                        Elimina
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </div>
   );
 }

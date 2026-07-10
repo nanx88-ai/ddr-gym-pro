@@ -30,6 +30,10 @@ export const input =
 
 export const label = "mb-1 block text-sm font-medium text-neutral-600 dark:text-neutral-300";
 
+// Checkbox piu' grande del default del browser: sotto i ~24px e' un target
+// difficile da toccare su mobile (requisito di accessibilita'/usabilita').
+export const checkbox = "h-5 w-5 shrink-0 cursor-pointer accent-yellow-400";
+
 export const pageTitle = "mb-1 text-xl font-bold text-neutral-900 dark:text-white";
 export const pageSubtitle = "mb-4 text-sm text-neutral-500 dark:text-neutral-400";
 

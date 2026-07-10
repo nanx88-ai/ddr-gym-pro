@@ -432,20 +432,22 @@ export default function HomePage() {
 
                         {p.recurring && (
                           <div className="mt-3 space-y-3">
-                            <div className="flex gap-3 text-xs">
-                              <label className="flex items-center gap-1.5">
+                            <div className="flex gap-4 text-xs">
+                              <label className="flex items-center gap-2">
                                 <input
                                   type="radio"
                                   checked={p.endMethod === "count"}
                                   onChange={() => updatePickedSlot(p.key, { endMethod: "count", confirmed: false })}
+                                  className="h-5 w-5 accent-yellow-400"
                                 />
                                 Numero di volte
                               </label>
-                              <label className="flex items-center gap-1.5">
+                              <label className="flex items-center gap-2">
                                 <input
                                   type="radio"
                                   checked={p.endMethod === "date"}
                                   onChange={() => updatePickedSlot(p.key, { endMethod: "date", confirmed: false })}
+                                  className="h-5 w-5 accent-yellow-400"
                                 />
                                 Data di fine
                               </label>
