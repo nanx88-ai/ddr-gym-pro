@@ -16,7 +16,13 @@ export type ActionIconKey =
   | "deactivate"
   | "edit"
   | "schedule"
-  | "calendar";
+  | "calendar"
+  | "chevronLeft"
+  | "chevronRight"
+  | "today"
+  | "viewDay"
+  | "viewWeek"
+  | "viewMonth";
 
 const PATHS: Record<ActionIconKey, React.ReactNode> = {
   expand: (
@@ -68,6 +74,35 @@ const PATHS: Record<ActionIconKey, React.ReactNode> = {
     <>
       <rect x="3.5" y="5" width="17" height="16" />
       <path strokeLinecap="round" d="M8 3v4M16 3v4M3.5 10h17" />
+    </>
+  ),
+  chevronLeft: <path strokeLinecap="round" strokeLinejoin="round" d="M15 6l-6 6 6 6" />,
+  chevronRight: <path strokeLinecap="round" strokeLinejoin="round" d="M9 6l6 6-6 6" />,
+  today: (
+    <>
+      <rect x="3.5" y="5" width="17" height="16" />
+      <path strokeLinecap="round" d="M8 3v4M16 3v4M3.5 10h17" />
+      <circle cx="12" cy="15.5" r="1.6" fill="currentColor" stroke="none" />
+    </>
+  ),
+  viewDay: (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M4 5.5h16M4 5.5v13a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-13M8 10h8M8 14h8"
+    />
+  ),
+  viewWeek: (
+    <>
+      <rect x="3.5" y="4.5" width="4" height="15" />
+      <rect x="10" y="4.5" width="4" height="15" />
+      <rect x="16.5" y="4.5" width="4" height="15" />
+    </>
+  ),
+  viewMonth: (
+    <>
+      <rect x="3.5" y="3.5" width="17" height="17" />
+      <path strokeLinecap="round" d="M3.5 9h17M3.5 14.5h17M9 3.5v17M14.5 3.5v17" />
     </>
   ),
 };

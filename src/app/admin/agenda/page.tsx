@@ -21,7 +21,6 @@ import { it } from "date-fns/locale";
 import { formatTime, STATUS_COLORS, STATUS_LABELS } from "@/lib/format";
 import {
   btnDanger,
-  btnNeutral,
   btnNeutral as btnGhost,
   btnPositive,
   card,
@@ -32,10 +31,12 @@ import {
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import AttendanceToggle from "@/components/AttendanceToggle";
+import { IconButton } from "@/components/IconAction";
 
 interface AppointmentType {
   id: string;
   name: string;
+  capacity: number;
 }
 
 interface Booking {
@@ -44,6 +45,7 @@ interface Booking {
   endTime: string;
   status: string;
   attended: boolean | null;
+  appointmentTypeId: string;
   client: { firstName: string; lastName: string; email: string };
   appointmentType: { name: string };
 }
@@ -59,6 +61,14 @@ const STATUS_OPTIONS = [
   { value: "RESCHEDULED", label: "Riprogrammate" },
 ];
 
+const ACTIVE_STATUSES = new Set(["PENDING_APPROVAL", "APPROVED", "RESCHEDULE_REQUESTED", "RESCHEDULED"]);
+
+const TIME_OF_DAY_RANGES: Record<string, [number, number]> = {
+  morning: [5, 12],
+  afternoon: [12, 18],
+  evening: [18, 24],
+};
+
 function dateKey(d: Date) {
   return format(d, "yyyy-MM-dd");
 }
@@ -71,12 +81,20 @@ export default function AdminAgendaPage() {
   const [status, setStatus] = useState("");
   const [appointmentTypeId, setAppointmentTypeId] = useState("");
   const [search, setSearch] = useState("");
+  const [fullness, setFullness] = useState(""); // "" | "full" | "available"
+  const [attendance, setAttendance] = useState(""); // "" | "present" | "absent" | "unmarked"
+  const [timeOfDay, setTimeOfDay] = useState(""); // "" | "morning" | "afternoon" | "evening"
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [types, setTypes] = useState<AppointmentType[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
   const activeFilterCount =
-    (status ? 1 : 0) + (appointmentTypeId ? 1 : 0) + (search.trim() ? 1 : 0);
+    (status ? 1 : 0) +
+    (appointmentTypeId ? 1 : 0) +
+    (search.trim() ? 1 : 0) +
+    (fullness ? 1 : 0) +
+    (attendance ? 1 : 0) +
+    (timeOfDay ? 1 : 0);
 
   useEffect(() => {
     fetch("/api/admin/appointment-types?all=1")
@@ -114,15 +132,60 @@ export default function AdminAgendaPage() {
       .finally(() => setLoading(false));
   }, [range, status, appointmentTypeId, search]);
 
+  // Occupazione per singolo slot (appointmentTypeId+startTime), calcolata sui
+  // dati gia' caricati per il periodo: usata dal filtro "pieno/con posti
+  // liberi". Usa la capienza di default del servizio (non gli override
+  // puntuali per singolo slot, non caricati qui).
+  const occupancyBySlot = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const b of bookings) {
+      if (!ACTIVE_STATUSES.has(b.status)) continue;
+      const key = `${b.appointmentTypeId}|${b.startTime}`;
+      map.set(key, (map.get(key) ?? 0) + 1);
+    }
+    return map;
+  }, [bookings]);
+
+  const capacityByType = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const t of types) map.set(t.id, t.capacity);
+    return map;
+  }, [types]);
+
+  const filteredBookings = useMemo(() => {
+    return bookings.filter((b) => {
+      if (attendance === "present" && b.attended !== true) return false;
+      if (attendance === "absent" && b.attended !== false) return false;
+      if (attendance === "unmarked" && b.attended !== null) return false;
+
+      if (timeOfDay) {
+        const hour = new Date(b.startTime).getHours();
+        const [from, to] = TIME_OF_DAY_RANGES[timeOfDay];
+        if (hour < from || hour >= to) return false;
+      }
+
+      if (fullness) {
+        const capacity = capacityByType.get(b.appointmentTypeId);
+        const occupancy = occupancyBySlot.get(`${b.appointmentTypeId}|${b.startTime}`) ?? 0;
+        if (capacity == null) return true;
+        const isFull = occupancy >= capacity;
+        if (fullness === "full" && !isFull) return false;
+        if (fullness === "available" && isFull) return false;
+      }
+
+      return true;
+    });
+  }, [bookings, attendance, timeOfDay, fullness, capacityByType, occupancyBySlot]);
+
   const byDay = useMemo(() => {
     const map = new Map<string, Booking[]>();
-    for (const b of bookings) {
+    for (const b of filteredBookings) {
       const key = dateKey(new Date(b.startTime));
       if (!map.has(key)) map.set(key, []);
       map.get(key)!.push(b);
     }
     return map;
-  }, [bookings]);
+  }, [filteredBookings]);
 
   function step(direction: 1 | -1) {
     if (view === "day") setSelectedDate((d) => addDays(d, direction));
@@ -178,43 +241,63 @@ export default function AdminAgendaPage() {
         Vista d&apos;insieme delle prenotazioni per giorno, settimana o mese.
       </p>
 
-      <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1 border border-neutral-200 bg-neutral-100 p-1 dark:border-neutral-800 dark:bg-neutral-900">
-          {(["day", "week", "month"] as ViewMode[]).map((v) => (
+      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900">
+          {(
+            [
+              { v: "day", icon: "viewDay", label: "Giorno" },
+              { v: "week", icon: "viewWeek", label: "Settimana" },
+              { v: "month", icon: "viewMonth", label: "Mese" },
+            ] as const
+          ).map(({ v, icon, label: viewLabel }) => (
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`px-3 py-1 text-sm font-medium transition-colors ${
+              title={viewLabel}
+              aria-label={viewLabel}
+              className={`flex h-11 w-11 items-center justify-center transition-colors ${
                 view === v
                   ? "bg-yellow-400 text-neutral-900"
                   : "text-neutral-600 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-800"
               }`}
             >
-              {v === "day" ? "Giorno" : v === "week" ? "Settimana" : "Mese"}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+                {icon === "viewDay" && (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M4 5.5h16M4 5.5v13a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-13M8 10h8M8 14h8"
+                  />
+                )}
+                {icon === "viewWeek" && (
+                  <>
+                    <rect x="3.5" y="4.5" width="4" height="15" />
+                    <rect x="10" y="4.5" width="4" height="15" />
+                    <rect x="16.5" y="4.5" width="4" height="15" />
+                  </>
+                )}
+                {icon === "viewMonth" && (
+                  <>
+                    <rect x="3.5" y="3.5" width="17" height="17" />
+                    <path strokeLinecap="round" d="M3.5 9h17M3.5 14.5h17M9 3.5v17M14.5 3.5v17" />
+                  </>
+                )}
+              </svg>
             </button>
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
-          <button onClick={() => step(-1)} className={btnNeutral}>
-            &larr;
-          </button>
-          <button
-            onClick={() => setSelectedDate(new Date())}
-            className={btnNeutral}
-          >
-            Oggi
-          </button>
-          <button onClick={() => step(1)} className={btnNeutral}>
-            &rarr;
-          </button>
-          <span className="ml-1 text-sm font-medium capitalize text-neutral-900 dark:text-white">
+        <div className="flex items-center justify-center gap-2 sm:justify-end">
+          <IconButton icon="chevronLeft" label="Periodo precedente" onClick={() => step(-1)} />
+          <span className="min-w-[9rem] text-center text-sm font-semibold capitalize text-neutral-900 dark:text-white sm:min-w-[13rem]">
             {view === "month"
               ? format(selectedDate, "MMMM yyyy", { locale: it })
               : view === "week"
                 ? `${format(range.start, "d MMM", { locale: it })} - ${format(range.end, "d MMM yyyy", { locale: it })}`
                 : format(selectedDate, "EEEE d MMMM yyyy", { locale: it })}
           </span>
+          <IconButton icon="chevronRight" label="Periodo successivo" onClick={() => step(1)} />
+          <IconButton icon="today" label="Vai a oggi" onClick={() => setSelectedDate(new Date())} />
         </div>
       </div>
 
@@ -278,6 +361,23 @@ export default function AdminAgendaPage() {
                 {t.name}
               </option>
             ))}
+          </select>
+          <select value={fullness} onChange={(e) => setFullness(e.target.value)} className={`${input} w-full`}>
+            <option value="">Pieni e con posti liberi</option>
+            <option value="available">Solo con posti liberi</option>
+            <option value="full">Solo pieni</option>
+          </select>
+          <select value={attendance} onChange={(e) => setAttendance(e.target.value)} className={`${input} w-full`}>
+            <option value="">Presenza: tutte</option>
+            <option value="present">Solo presenti</option>
+            <option value="absent">Solo assenti</option>
+            <option value="unmarked">Non ancora segnati</option>
+          </select>
+          <select value={timeOfDay} onChange={(e) => setTimeOfDay(e.target.value)} className={`${input} w-full`}>
+            <option value="">Tutta la giornata</option>
+            <option value="morning">Mattina (5-12)</option>
+            <option value="afternoon">Pomeriggio (12-18)</option>
+            <option value="evening">Sera (18-24)</option>
           </select>
         </div>
       )}
