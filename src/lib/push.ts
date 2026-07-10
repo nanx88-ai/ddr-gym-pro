@@ -5,8 +5,11 @@ let configured = false;
 
 function ensureConfigured() {
   if (configured) return;
-  const publicKey = process.env.VAPID_PUBLIC_KEY;
-  const privateKey = process.env.VAPID_PRIVATE_KEY;
+  // .trim(): incollando le chiavi da dashboard Vercel capita che si porti
+  // dietro uno spazio o un a-capo finale, che basta a corrompere la firma
+  // JWT e far rispondere ad Apple "BadJwtToken" anche con chiavi corrette.
+  const publicKey = process.env.VAPID_PUBLIC_KEY?.trim();
+  const privateKey = process.env.VAPID_PRIVATE_KEY?.trim();
   if (!publicKey || !privateKey) {
     console.warn("[push] VAPID_PUBLIC_KEY/VAPID_PRIVATE_KEY non impostate: nessuna push verra' inviata.");
     return;

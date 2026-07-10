@@ -19,5 +19,5 @@ export async function POST() {
     body: "Se la vedi, le notifiche push funzionano su questo dispositivo.",
     url: "/admin/settings",
   });
-  return NextResponse.json({ ...result, serverVapidPublicKeyPreview: keyPreview(process.env.VAPID_PUBLIC_KEY) });
+  return NextResponse.json({ ...result, serverVapidPublicKeyPreview: keyPreview(process.env.VAPID_PUBLIC_KEY?.trim()) });
 }

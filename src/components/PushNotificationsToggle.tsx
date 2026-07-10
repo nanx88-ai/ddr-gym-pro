@@ -48,7 +48,7 @@ export default function PushNotificationsToggle() {
       const sub = await reg.pushManager.getSubscription();
       setStatus(sub ? "on" : "off");
 
-      const currentKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      const currentKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim();
       if (sub?.options.applicationServerKey && currentKey) {
         const subscribedKey = arrayBufferToBase64Url(sub.options.applicationServerKey);
         setKeyMismatch(subscribedKey !== currentKey);
@@ -65,7 +65,7 @@ export default function PushNotificationsToggle() {
         setStatus(permission === "denied" ? "denied" : "off");
         return;
       }
-      const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY?.trim();
       if (!publicKey) {
         toast.error("Notifiche push non configurate sul server.");
         setStatus("off");
