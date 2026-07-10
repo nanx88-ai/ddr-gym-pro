@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { BookingRuleError, createCustomBooking } from "@/lib/booking-rules";
+import { CLIENT_TOKEN_COOKIE, clientTokenCookieOptions, generateClientToken } from "@/lib/client-token";
 
 const itemSchema = z.object({
   appointmentTypeId: z.string().min(1),
@@ -63,6 +64,15 @@ export async function POST(request: NextRequest) {
     },
   });
 
+  // Cookie "ricordami" (nessun account): se il cliente non ha ancora un
+  // token lo generiamo ora, cosi' al prossimo giro sullo stesso device i
+  // suoi dati vengono precompilati.
+  let returningToken = client.returningToken;
+  if (!returningToken) {
+    returningToken = generateClientToken();
+    await prisma.client.update({ where: { id: client.id }, data: { returningToken } });
+  }
+
   if (client.status === "PAUSED") {
     return NextResponse.json(
       { error: "Il tuo account risulta in pausa. Contatta la palestra per riattivarlo." },
@@ -103,8 +113,12 @@ export async function POST(request: NextRequest) {
   }
 
   if (bookings.length === 0) {
-    return NextResponse.json({ error: "Nessuna prenotazione creata", errors }, { status: 409 });
+    const res = NextResponse.json({ error: "Nessuna prenotazione creata", errors }, { status: 409 });
+    res.cookies.set(CLIENT_TOKEN_COOKIE, returningToken, clientTokenCookieOptions());
+    return res;
   }
 
-  return NextResponse.json({ bookings, errors });
+  const res = NextResponse.json({ bookings, errors });
+  res.cookies.set(CLIENT_TOKEN_COOKIE, returningToken, clientTokenCookieOptions());
+  return res;
 }

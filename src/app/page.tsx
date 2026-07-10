@@ -145,6 +145,22 @@ export default function HomePage() {
   const selectedType = types.find((t) => t.id === selectedTypeId) ?? null;
 
   useEffect(() => {
+    // Precompila i dati contatto se il device ha gia' prenotato prima
+    // (cookie "ricordami" impostato dal server, nessun account): l'utente
+    // puo' comunque modificarli, non e' un login.
+    fetch("/api/client/me")
+      .then((res) => res.json())
+      .then((json) => {
+        if (!json.client) return;
+        setFirstName((v) => v || json.client.firstName || "");
+        setLastName((v) => v || json.client.lastName || "");
+        setEmail((v) => v || json.client.email || "");
+        setPhone((v) => v || json.client.phone || "");
+      })
+      .catch(() => {});
+  }, []);
+
+  useEffect(() => {
     fetch(`/api/availability?date=${todayIso()}`)
       .then(async (res) => {
         const json = await res.json();

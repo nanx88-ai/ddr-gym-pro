@@ -47,6 +47,12 @@ model Client {
   pec           String? // posta elettronica certificata
   sdiCode       String? // codice destinatario SDI (7 caratteri) o "0000000"
 
+  // Token opaco per il cookie "ricordami" lato booking pubblico: nessun
+  // account/password, solo per precompilare i dati contatto al prossimo
+  // giro sullo stesso device. Se il cliente viene cancellato il token
+  // smette semplicemente di risolvere (l'endpoint pulisce il cookie).
+  returningToken String? @unique
+
   bookings        Booking[]
   billingProfile  BillingProfile?
   invoices        Invoice[]
