@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     let full = true;
     if (window.isOpen) {
       for (const slot of slots) {
-        if (slot.isDisabled || slot.capacity <= 0) continue;
+        if (slot.isDisabled || slot.capacity <= 0 || slot.isPast) continue;
         const occupancy = await getSlotOccupancy(appointmentTypeId, slot.startTime);
         if (occupancy.total < slot.capacity) {
           full = false;

@@ -14,7 +14,11 @@ const itemSchema = z.object({
 const bodySchema = z.object({
   firstName: z.string().min(1),
   lastName: z.string().min(1),
-  email: z.string().email(),
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .email("Email non valida"),
   phone: z.string().optional(),
   notes: z.string().optional(),
   items: z.array(itemSchema).min(1).max(60),
@@ -38,6 +42,10 @@ export async function POST(request: NextRequest) {
         { error: "Richiesta troppo estesa (max 1 anno di prenotazioni ricorrenti). Per esigenze diverse, contatta il responsabile." },
         { status: 400 }
       );
+    }
+    const badEmail = parsed.error.issues.some((i) => i.path[0] === "email");
+    if (badEmail) {
+      return NextResponse.json({ error: "Inserisci un indirizzo email valido." }, { status: 400 });
     }
     return NextResponse.json({ error: "Dati non validi", details: parsed.error.flatten() }, { status: 400 });
   }

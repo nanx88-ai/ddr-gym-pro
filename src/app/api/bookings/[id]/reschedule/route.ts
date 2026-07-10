@@ -46,8 +46,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     data: { status: BOOKING_STATUS.RESCHEDULE_REQUESTED },
   });
 
+  // await: su Vercel la funzione puo' congelarsi non appena parte la
+  // response, uccidendo una push fire-and-forget prima che venga spedita.
   const { sendAdminPush } = await import("@/lib/push");
-  sendAdminPush({
+  await sendAdminPush({
     title: "Richiesta di spostamento",
     body: `${booking.client.firstName} ${booking.client.lastName} - ${booking.appointmentType.name}`,
     url: "/admin",

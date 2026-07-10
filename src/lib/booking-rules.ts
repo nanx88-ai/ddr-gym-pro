@@ -15,8 +15,8 @@ import { getSlotOverride } from "@/lib/schedule";
  */
 
 export class BookingRuleError extends Error {
-  code: "SLOT_FULL" | "DUPLICATE_TIMESLOT" | "SLOT_DISABLED";
-  constructor(code: "SLOT_FULL" | "DUPLICATE_TIMESLOT" | "SLOT_DISABLED", message: string) {
+  code: "SLOT_FULL" | "DUPLICATE_TIMESLOT" | "SLOT_DISABLED" | "SLOT_PAST";
+  constructor(code: "SLOT_FULL" | "DUPLICATE_TIMESLOT" | "SLOT_DISABLED" | "SLOT_PAST", message: string) {
     super(message);
     this.code = code;
   }
@@ -97,6 +97,8 @@ interface CreateBookingInput {
   recurrenceGroupId?: string;
   source?: string;
   notes?: string;
+  /** L'admin puo' registrare un appuntamento gia' avvenuto (walk-in, riconciliazione); il booking pubblico no. */
+  allowPast?: boolean;
 }
 
 /**
@@ -109,6 +111,10 @@ export async function createCustomBooking(input: CreateBookingInput) {
   const appointmentType = await prisma.appointmentType.findUniqueOrThrow({
     where: { id: input.appointmentTypeId },
   });
+
+  if (!input.allowPast && input.startTime.getTime() <= Date.now()) {
+    throw new BookingRuleError("SLOT_PAST", "Questo slot e' gia' passato: scegli un orario futuro.");
+  }
 
   const conflict = await hasConflictingBooking(input.clientId, input.startTime);
   if (conflict) {
@@ -153,15 +159,18 @@ export async function createCustomBooking(input: CreateBookingInput) {
 
   // Se il servizio non richiede approvazione, la prenotazione nasce gia' confermata:
   // l'email di conferma va inviata subito, la transizione via admin non avverra' mai.
+  // IMPORTANTE: awaitate (non fire-and-forget) perche' su Vercel la funzione
+  // serverless puo' congelarsi non appena la response e' partita, uccidendo
+  // qualunque promise ancora in corso e facendo sparire email/push in silenzio.
   if (initialStatus === BOOKING_STATUS.APPROVED) {
     const { sendBookingConfirmationEmail } = await import("@/lib/mailer");
-    sendBookingConfirmationEmail(booking).catch((err) => console.error("[booking-rules] invio email fallito:", err));
+    await sendBookingConfirmationEmail(booking).catch((err) => console.error("[booking-rules] invio email fallito:", err));
   }
 
   // L'admin va avvisato per OGNI nuova prenotazione, non solo quelle da
   // approvare: cambia solo il testo/link della notifica.
   const { sendAdminPush } = await import("@/lib/push");
-  sendAdminPush(
+  await sendAdminPush(
     initialStatus === BOOKING_STATUS.APPROVED
       ? {
           title: "Nuova prenotazione confermata",

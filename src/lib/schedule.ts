@@ -1,5 +1,7 @@
 import { prisma } from "@/lib/db";
-import { addMinutes, isBefore, setHours, setMinutes, startOfDay } from "date-fns";
+import { addMinutes, isBefore } from "date-fns";
+import { formatInTimeZone } from "date-fns-tz";
+import { dateIsoInRome, GYM_TIMEZONE, romeWallTimeToInstant, startOfDayInRome } from "@/lib/timezone";
 
 export interface OpenWindow {
   isOpen: boolean;
@@ -17,14 +19,18 @@ export interface OpenWindow {
  * (Prompt Master 3.3 e 7).
  */
 export async function getOpenWindow(appointmentTypeId: string, date: Date): Promise<OpenWindow> {
-  const day = startOfDay(date);
+  const day = startOfDayInRome(date);
+  // Giorno della settimana secondo il calendario di Roma, non quello (UTC)
+  // del server: altrimenti vicino alla mezzanotte si rischia di leggere
+  // l'orario ricorrente del giorno sbagliato.
+  const dayOfWeek = new Date(`${dateIsoInRome(date)}T12:00:00Z`).getUTCDay();
 
   const exception = await prisma.scheduleException.findUnique({
     where: { appointmentTypeId_date: { appointmentTypeId, date: day } },
   });
 
   const weekly = await prisma.weeklySchedule.findUnique({
-    where: { appointmentTypeId_dayOfWeek: { appointmentTypeId, dayOfWeek: day.getDay() } },
+    where: { appointmentTypeId_dayOfWeek: { appointmentTypeId, dayOfWeek } },
   });
 
   if (exception) {
@@ -56,17 +62,16 @@ export async function getOpenWindow(appointmentTypeId: string, date: Date): Prom
 }
 
 function timeOnDay(day: Date, hhmm: string) {
-  const [h, m] = hhmm.split(":").map(Number);
-  return setMinutes(setHours(day, h), m);
+  return romeWallTimeToInstant(dateIsoInRome(day), hhmm);
 }
 
 export function toHHMM(date: Date) {
-  return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`;
+  return formatInTimeZone(date, GYM_TIMEZONE, "HH:mm");
 }
 
 /** Override puntuale (disattivazione o capienza diversa) per un preciso slot data+ora. */
 export async function getSlotOverride(appointmentTypeId: string, startTime: Date) {
-  const day = startOfDay(startTime);
+  const day = startOfDayInRome(startTime);
   const time = toHHMM(startTime);
   return prisma.slotOverride.findUnique({
     where: { appointmentTypeId_date_time: { appointmentTypeId, date: day, time } },
@@ -81,6 +86,7 @@ export interface GeneratedSlot {
   capacity: number; // dopo eventuale override
   isDisabled: boolean;
   overrideId: string | null;
+  isPast: boolean; // startTime gia' trascorso rispetto ad ora (istante reale, non serve il fuso: vedi src/lib/timezone.ts)
 }
 
 /**
@@ -91,7 +97,7 @@ export interface GeneratedSlot {
  * pubblico) o mostrarli per poterli riattivare (calendario admin).
  */
 export async function generateDaySlots(appointmentTypeId: string, date: Date) {
-  const day = startOfDay(date);
+  const day = startOfDayInRome(date);
   const type = await prisma.appointmentType.findUniqueOrThrow({ where: { id: appointmentTypeId } });
   const window = await getOpenWindow(appointmentTypeId, day);
 
@@ -124,6 +130,7 @@ export async function generateDaySlots(appointmentTypeId: string, date: Date) {
         capacity: override?.capacity ?? type.capacity,
         isDisabled: override?.isDisabled ?? false,
         overrideId: override?.id ?? null,
+        isPast: isBefore(slotStart, new Date()),
       });
     }
 

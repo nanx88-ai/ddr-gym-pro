@@ -28,6 +28,10 @@ import MonthCalendar from "@/components/MonthCalendar";
 const LOGO_URL =
   "https://uznyeraxjpgaxncytzki.supabase.co/storage/v1/object/public/assets/logo.png";
 const LOGO_TAP_WINDOW_MS = 600;
+// Allineata alla validazione server (zod .email()): niente spazi, un solo
+// @, dominio con almeno un punto. Il tipo "email" nativo dei browser da solo
+// accetta indirizzi tipo "a@b" senza dominio valido.
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 interface Slot {
   startTime: string;
@@ -256,6 +260,13 @@ export default function HomePage() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!selectedType) return;
+
+    const trimmedEmail = email.trim();
+    if (!EMAIL_REGEX.test(trimmedEmail)) {
+      setSubmitError("Inserisci un indirizzo email valido.");
+      return;
+    }
+
     setSubmitting(true);
     setSubmitError(null);
 
@@ -283,7 +294,7 @@ export default function HomePage() {
     const res = await fetch("/api/bookings", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ firstName, lastName, email, phone, notes, items }),
+      body: JSON.stringify({ firstName, lastName, email: trimmedEmail, phone, notes, items }),
     });
     const json = await res.json();
     setSubmitting(false);

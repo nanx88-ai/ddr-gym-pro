@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
-import { startOfDay } from "date-fns";
+import { startOfDayInRome } from "@/lib/timezone";
 
 /**
  * Eccezioni al calendario standard: chiusure straordinarie/pause o orari
@@ -16,7 +16,7 @@ export async function GET(request: NextRequest) {
   }
 
   const exceptions = await prisma.scheduleException.findMany({
-    where: { appointmentTypeId, date: { gte: startOfDay(new Date()) } },
+    where: { appointmentTypeId, date: { gte: startOfDayInRome(new Date()) } },
     orderBy: { date: "asc" },
   });
 
@@ -49,11 +49,11 @@ export async function POST(request: NextRequest) {
   }
 
   const exception = await prisma.scheduleException.upsert({
-    where: { appointmentTypeId_date: { appointmentTypeId, date: startOfDay(new Date(date)) } },
+    where: { appointmentTypeId_date: { appointmentTypeId, date: startOfDayInRome(new Date(date)) } },
     update: { isClosed, openTime: isClosed ? null : openTime, closeTime: isClosed ? null : closeTime, note },
     create: {
       appointmentTypeId,
-      date: startOfDay(new Date(date)),
+      date: startOfDayInRome(new Date(date)),
       isClosed,
       openTime: isClosed ? null : openTime,
       closeTime: isClosed ? null : closeTime,

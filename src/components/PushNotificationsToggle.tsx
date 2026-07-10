@@ -73,6 +73,24 @@ export default function PushNotificationsToggle() {
     }
   }
 
+  async function sendTest() {
+    try {
+      const res = await fetch("/api/admin/push-subscriptions/test", { method: "POST" });
+      const json = await res.json();
+      if (!json.configured) {
+        toast.error("VAPID non configurato sul server (env var mancanti su Vercel).");
+      } else if (json.subscriptions === 0) {
+        toast.error("Nessun dispositivo registrato sul server: riattiva il toggle qui sopra.");
+      } else if (json.sent > 0) {
+        toast.success(`Push di prova inviata a ${json.sent}/${json.subscriptions} dispositivo/i. Controlla se e' arrivata.`);
+      } else {
+        toast.error(`Invio fallito su tutti i dispositivi: ${json.errors?.[0] ?? "errore sconosciuto"}`);
+      }
+    } catch {
+      toast.error("Richiesta di test fallita.");
+    }
+  }
+
   async function disable() {
     setStatus("loading");
     try {
@@ -117,6 +135,11 @@ export default function PushNotificationsToggle() {
       >
         {status === "loading" ? "..." : status === "on" ? "Disattiva" : "Attiva"}
       </button>
+      {status === "on" && (
+        <button onClick={sendTest} className={btnNeutral}>
+          Invia notifica di prova
+        </button>
+      )}
     </div>
   );
 }

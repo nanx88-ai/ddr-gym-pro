@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
       endTime: new Date(parsed.data.endTime),
       notes: parsed.data.notes,
       source: "custom",
+      allowPast: true,
     });
 
     // Le prenotazioni create dall'admin sono considerate gia' confermate,
