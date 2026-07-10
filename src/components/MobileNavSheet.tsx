@@ -79,7 +79,9 @@ export default function MobileNavSheet({
       {open && <div className="fixed inset-0 z-40 bg-black/80" onClick={() => setOpen(false)} />}
 
       {/* Barra collassata: sollevata dal bordo, con zona morta non interattiva
-          sotto per non entrare in conflitto con la gesture bar iOS */}
+          sotto per non entrare in conflitto con la gesture bar iOS. Bordo
+          superiore giallo pieno cosi' si nota anche sopra contenuto scuro/
+          chiaro, invece di confondersi con lo sfondo. */}
       {!open && (
         <div
           className={`fixed inset-x-0 bottom-0 z-40 ${SURFACE}`}
@@ -91,13 +93,17 @@ export default function MobileNavSheet({
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
-            className={`flex w-full touch-none items-center gap-3 border-t px-4 ${SURFACE} ${LINE}`}
-            style={{ height: BAR_HEIGHT }}
+            className={`flex w-full touch-none items-center gap-3 border-t-2 border-yellow-400 px-4 ${SURFACE} shadow-[0_-2px_8px_rgba(0,0,0,0.15)]`}
+            style={{
+              height: BAR_HEIGHT,
+              transform: `translateY(${dragY}px)`,
+              transition: dragState.current?.dragging ? "none" : "transform 0.2s ease-out",
+            }}
             aria-label="Apri menu"
           >
-            <span className={`h-1 w-8 shrink-0 border ${LINE}`} />
+            <span className="h-1.5 w-10 shrink-0 rounded-none bg-yellow-400" />
             <span className={`text-xs font-semibold uppercase tracking-wide ${TEXT_LABEL}`}>Menu</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`ml-auto h-4 w-4 ${TEXT_MUTED}`}>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="ml-auto h-4 w-4 animate-bounce text-yellow-500">
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 15l6-6 6 6" />
             </svg>
           </button>
