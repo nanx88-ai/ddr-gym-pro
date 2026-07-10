@@ -1,11 +1,15 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatTime } from "@/lib/format";
 import { publicCard, publicInput, publicLabel, publicBtnPrimary, publicBtnSecondary } from "@/lib/public-ui";
 import { expandWeeklyOccurrences, occurrenceCountEndDate, toIsoDate, WEEKDAY_LABELS_FULL } from "@/lib/recurrence";
 import MonthCalendar from "@/components/MonthCalendar";
+
+const LOGO_URL = "https://uznyeraxjpgaxncytzki.supabase.co/storage/v1/object/public/assets/logo.png";
+const LOGO_TAP_WINDOW_MS = 600;
 
 interface Slot {
   startTime: string;
@@ -63,6 +67,26 @@ function hasConsecutiveRun(slots: PickedSlot[], minLen = 3) {
 }
 
 export default function HomePage() {
+  const router = useRouter();
+  const logoTapsRef = useRef<{ count: number; timer: ReturnType<typeof setTimeout> | null }>({
+    count: 0,
+    timer: null,
+  });
+
+  function handleLogoTap() {
+    const state = logoTapsRef.current;
+    state.count += 1;
+    if (state.timer) clearTimeout(state.timer);
+    if (state.count >= 3) {
+      state.count = 0;
+      router.push("/admin/login");
+      return;
+    }
+    state.timer = setTimeout(() => {
+      state.count = 0;
+    }, LOGO_TAP_WINDOW_MS);
+  }
+
   const [step, setStep] = useState(1);
 
   const [types, setTypes] = useState<AppointmentTypeMeta[]>([]);
@@ -260,48 +284,60 @@ export default function HomePage() {
     );
   }
 
+  if (step === 1) {
+    return (
+      <div className="flex h-[100dvh] flex-col overflow-hidden bg-neutral-50 dark:bg-neutral-950">
+        <button
+          type="button"
+          onClick={handleLogoTap}
+          aria-label="Logo"
+          className="flex shrink-0 items-center justify-center bg-neutral-950 px-8"
+          style={{ height: "clamp(140px, 40vh, 340px)" }}
+        >
+          <img src={LOGO_URL} alt="" className="h-full max-w-[70%] object-contain" />
+        </button>
+
+        <div className="flex flex-1 flex-col overflow-y-auto px-4 pb-6 pt-5 sm:px-5">
+          <div className="mx-auto w-full max-w-2xl">
+            <h1 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white sm:text-2xl">
+              Prenota un Servizio
+            </h1>
+
+            <div className="mt-4 space-y-3">
+              {types.map((t) => (
+                <button
+                  key={t.id}
+                  onClick={() => selectService(t.id)}
+                  className={`${publicCard} flex w-full items-center justify-between p-4 text-left transition-colors hover:border-yellow-400`}
+                >
+                  <div>
+                    <div className="font-semibold text-neutral-900 dark:text-white">{t.name}</div>
+                    <div className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
+                      {t.durationMinutes} minuti
+                      {t.requiresApproval && " · su approvazione"}
+                    </div>
+                  </div>
+                  <span className="text-neutral-300 dark:text-neutral-600">&rarr;</span>
+                </button>
+              ))}
+              {loadError && (
+                <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300">
+                  {loadError}
+                </p>
+              )}
+              {!loadError && !loadingTypes && types.length === 0 && (
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">Nessun servizio disponibile al momento.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
-      <header className="border-b border-neutral-200 bg-white/80 backdrop-blur dark:border-neutral-800 dark:bg-neutral-900/80">
-        <div className="mx-auto max-w-2xl px-4 py-4 sm:px-5">
-          <span className="text-base font-semibold text-neutral-900 dark:text-white">Palestra</span>
-        </div>
-      </header>
-
       <main className="mx-auto max-w-2xl px-4 pb-28 pt-6 sm:px-5 sm:pb-8 sm:pt-8">
-        <h1 className="text-2xl font-semibold tracking-tight text-neutral-900 dark:text-white sm:text-3xl">
-          Prenota il tuo allenamento
-        </h1>
-
-        {step === 1 && (
-          <div className="mt-6 space-y-3">
-            {types.map((t) => (
-              <button
-                key={t.id}
-                onClick={() => selectService(t.id)}
-                className={`${publicCard} flex w-full items-center justify-between p-4 text-left transition-colors hover:border-yellow-400`}
-              >
-                <div>
-                  <div className="font-semibold text-neutral-900 dark:text-white">{t.name}</div>
-                  <div className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
-                    {t.durationMinutes} minuti
-                    {t.requiresApproval && " · su approvazione"}
-                  </div>
-                </div>
-                <span className="text-neutral-300 dark:text-neutral-600">&rarr;</span>
-              </button>
-            ))}
-            {loadError && (
-              <p className="rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300">
-                {loadError}
-              </p>
-            )}
-            {!loadError && !loadingTypes && types.length === 0 && (
-              <p className="text-sm text-neutral-500 dark:text-neutral-400">Nessun servizio disponibile al momento.</p>
-            )}
-          </div>
-        )}
-
         {step === 2 && selectedType && (
           <div className="mt-6">
             <p className="mb-3 text-sm text-neutral-500 dark:text-neutral-400">
@@ -599,15 +635,6 @@ export default function HomePage() {
             )}
           </div>
         </div>
-
-        <footer className="mt-16 hidden border-t border-neutral-200 pt-6 text-center dark:border-neutral-800 sm:block">
-          <Link
-            href="/admin/login"
-            className="text-xs text-neutral-400 hover:text-neutral-600 hover:underline dark:text-neutral-500 dark:hover:text-neutral-300"
-          >
-            Accesso staff
-          </Link>
-        </footer>
       </main>
     </div>
   );

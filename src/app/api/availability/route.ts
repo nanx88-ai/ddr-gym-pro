@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { getSlotOccupancy } from "@/lib/booking-rules";
+import { getDayOccupancyMap } from "@/lib/booking-rules";
 import { generateDaySlots } from "@/lib/schedule";
-import { formatISO, parseISO } from "date-fns";
+import { formatISO, parseISO, startOfDay, addDays } from "date-fns";
 
 /**
  * Disponibilita' per una data, con conteggio separato confermati/pending
@@ -23,14 +23,18 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ date: formatISO(date, { representation: "date" }), appointmentTypes: [] });
     }
 
+    const dayStart = startOfDay(date);
+    const dayEnd = addDays(dayStart, 1);
+
     const results = [];
     for (const type of appointmentTypes) {
       const { window, slots } = await generateDaySlots(type.id, date);
+      const occupancyFor = await getDayOccupancyMap(type.id, dayStart, dayEnd);
 
       const bookableSlots = [];
       for (const slot of slots) {
         if (slot.isDisabled || slot.capacity <= 0) continue;
-        const occupancy = await getSlotOccupancy(type.id, slot.startTime);
+        const occupancy = occupancyFor(slot.startTime);
         bookableSlots.push({
           startTime: slot.startTime.toISOString(),
           endTime: slot.endTime.toISOString(),

@@ -38,12 +38,41 @@ export async function getSlotOccupancy(appointmentTypeId: string, startTime: Dat
     select: { status: true },
   });
 
+  return summarizeOccupancy(bookings);
+}
+
+function summarizeOccupancy(bookings: { status: string }[]) {
   const confirmed = bookings.filter((b) => b.status === BOOKING_STATUS.APPROVED || b.status === BOOKING_STATUS.RESCHEDULED).length;
   const pending = bookings.filter(
     (b) => b.status === BOOKING_STATUS.PENDING_APPROVAL || b.status === BOOKING_STATUS.RESCHEDULE_REQUESTED
   ).length;
 
   return { confirmed, pending, total: confirmed + pending };
+}
+
+/**
+ * Occupancy di tutti gli slot di un giorno per un tipo di appuntamento, con
+ * una sola query invece di una per slot (evita N+1 in /api/availability).
+ */
+export async function getDayOccupancyMap(appointmentTypeId: string, dayStart: Date, dayEnd: Date) {
+  const bookings = await prisma.booking.findMany({
+    where: {
+      appointmentTypeId,
+      startTime: { gte: dayStart, lt: dayEnd },
+      status: { in: ACTIVE_BOOKING_STATUSES },
+    },
+    select: { startTime: true, status: true },
+  });
+
+  const byStart = new Map<number, { status: string }[]>();
+  for (const b of bookings) {
+    const key = b.startTime.getTime();
+    const list = byStart.get(key);
+    if (list) list.push(b);
+    else byStart.set(key, [b]);
+  }
+
+  return (startTime: Date) => summarizeOccupancy(byStart.get(startTime.getTime()) ?? []);
 }
 
 /** Requisito: "una persona deve poter prenotare al massimo 1 slot nella stessa fascia oraria" */
