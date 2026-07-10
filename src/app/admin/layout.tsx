@@ -130,7 +130,10 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
   if (isLogin) {
     return (
-      <div className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
+      <div
+        className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
         {children}
       </div>
     );
@@ -139,7 +142,13 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
   return (
     <div className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
       <PwaRegister />
-      <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
+      {/* paddingTop copre l'area status bar (notch/carrier/batteria) quando la
+          PWA gira standalone da schermata Home: stesso sfondo dell'header,
+          cosi' non resta ne' vuota di colore diverso ne' sovrapposta al testo. */}
+      <header
+        className="sticky top-0 z-30 border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900"
+        style={{ paddingTop: "env(safe-area-inset-top)" }}
+      >
         <div className="flex items-center justify-between px-3 py-3 sm:px-4">
           <Link href="/admin" className="font-semibold text-neutral-900 dark:text-white">
             DDR <span className="text-yellow-500 dark:text-yellow-400">Academy</span>
@@ -154,9 +163,13 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
 
       <div className="flex pb-20 sm:pb-0">
         <aside
-          className={`sticky top-[57px] hidden h-[calc(100vh-57px)] shrink-0 overflow-y-auto border-r border-neutral-200 bg-white py-4 transition-[width] dark:border-neutral-800 dark:bg-neutral-900 sm:block ${
+          className={`sticky hidden shrink-0 overflow-y-auto border-r border-neutral-200 bg-white py-4 transition-[width] dark:border-neutral-800 dark:bg-neutral-900 sm:block ${
             collapsed ? "w-14 px-2" : "w-56 px-3"
           }`}
+          style={{
+            top: "calc(env(safe-area-inset-top) + 57px)",
+            height: "calc(100vh - env(safe-area-inset-top) - 57px)",
+          }}
         >
           <NavContent
             pathname={pathname}
