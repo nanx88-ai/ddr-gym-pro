@@ -17,7 +17,7 @@ const bodySchema = z.object({
   email: z.string().email(),
   phone: z.string().optional(),
   notes: z.string().optional(),
-  items: z.array(itemSchema).min(1).max(120),
+  items: z.array(itemSchema).min(1).max(60),
 });
 
 /**
@@ -32,6 +32,13 @@ export async function POST(request: NextRequest) {
   const json = await request.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);
   if (!parsed.success) {
+    const tooMany = parsed.error.issues.some((i) => i.path[0] === "items" && i.code === "too_big");
+    if (tooMany) {
+      return NextResponse.json(
+        { error: "Richiesta troppo estesa (max 1 anno di prenotazioni ricorrenti). Per esigenze diverse, contatta il responsabile." },
+        { status: 400 }
+      );
+    }
     return NextResponse.json({ error: "Dati non validi", details: parsed.error.flatten() }, { status: 400 });
   }
 

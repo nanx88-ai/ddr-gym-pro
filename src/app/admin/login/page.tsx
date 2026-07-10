@@ -36,6 +36,13 @@ function LoginForm() {
 
   return (
     <main className="mx-auto mt-20 max-w-sm px-4">
+      <button
+        type="button"
+        onClick={() => router.push("/")}
+        className="mb-4 text-sm text-neutral-500 hover:underline dark:text-neutral-400"
+      >
+        &larr; Torna alla prenotazione
+      </button>
       <h1 className="mb-6 text-xl font-bold text-neutral-900 dark:text-white">
         Accesso staff <span className="text-yellow-400">.</span>
       </h1>

@@ -6,6 +6,12 @@ import Link from "next/link";
 import { formatTime } from "@/lib/format";
 import { publicCard, publicInput, publicLabel, publicBtnPrimary, publicBtnSecondary } from "@/lib/public-ui";
 import { expandWeeklyOccurrences, occurrenceCountEndDate, toIsoDate, WEEKDAY_LABELS_FULL } from "@/lib/recurrence";
+
+function addYears(iso: string, years: number) {
+  const d = new Date(`${iso}T00:00:00`);
+  d.setFullYear(d.getFullYear() + years);
+  return toIsoDate(d);
+}
 import MonthCalendar from "@/components/MonthCalendar";
 
 const LOGO_URL = "https://uznyeraxjpgaxncytzki.supabase.co/storage/v1/object/public/assets/logo.png";
@@ -509,10 +515,14 @@ export default function HomePage() {
                                 <input
                                   type="date"
                                   min={date}
+                                  max={date ? addYears(date, 1) : undefined}
                                   value={p.endDate}
                                   onChange={(e) => updatePickedSlot(p.key, { endDate: e.target.value, confirmed: false })}
                                   className={publicInput}
                                 />
+                                <span className="mt-1 block text-xs text-neutral-500 dark:text-neutral-400">
+                                  Massimo 1 anno. Per richieste diverse, contatta il responsabile.
+                                </span>
                               </label>
                             )}
 

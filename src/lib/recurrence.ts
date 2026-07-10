@@ -1,6 +1,6 @@
 import { addDays, isAfter, parseISO, setHours, setMinutes, startOfDay } from "date-fns";
 
-const MAX_OCCURRENCES = 104; // ~2 anni a settimana, tetto di sicurezza
+export const MAX_OCCURRENCES = 52; // max 1 anno (abbonamento annuale), tetto di sicurezza
 
 /**
  * Espande una regola ricorrente settimanale ("tutti i martedi' dal gg al gg
