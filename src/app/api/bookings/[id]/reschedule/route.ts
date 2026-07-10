@@ -23,7 +23,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     return NextResponse.json({ error: "Dati non validi" }, { status: 400 });
   }
 
-  const booking = await prisma.booking.findUnique({ where: { id } });
+  const booking = await prisma.booking.findUnique({
+    where: { id },
+    include: { client: true, appointmentType: true },
+  });
   if (!booking) {
     return NextResponse.json({ error: "Prenotazione non trovata" }, { status: 404 });
   }
@@ -42,6 +45,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     where: { id },
     data: { status: BOOKING_STATUS.RESCHEDULE_REQUESTED },
   });
+
+  const { sendAdminPush } = await import("@/lib/push");
+  sendAdminPush({
+    title: "Richiesta di spostamento",
+    body: `${booking.client.firstName} ${booking.client.lastName} - ${booking.appointmentType.name}`,
+    url: "/admin",
+  }).catch((err) => console.error("[reschedule] invio push fallito:", err));
 
   return NextResponse.json({ rescheduleRequest });
 }

@@ -308,3 +308,15 @@ model InvoiceSubmission {
   errorMessage    String?
   createdAt       DateTime @default(now())
 }
+
+// Subscription push (Web Push API/VAPID) per un dispositivo admin che ha
+// installato la PWA e accettato le notifiche. Un solo account admin esiste
+// oggi (vedi middleware), ma un admin puo' avere piu' dispositivi: ogni
+// subscription e' quindi indipendente, non legata a un utente.
+model PushSubscription {
+  id        String   @id @default(cuid())
+  endpoint  String   @unique
+  p256dh    String
+  auth      String
+  createdAt DateTime @default(now())
+}

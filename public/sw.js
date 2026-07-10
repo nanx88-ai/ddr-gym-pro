@@ -1,5 +1,5 @@
-const CACHE_NAME = "palestra-admin-v1";
-const SHELL = ["/admin", "/manifest.webmanifest", "/icon.svg"];
+const CACHE_NAME = "ddr-academy-admin-v2";
+const SHELL = ["/admin", "/manifest.webmanifest", "/icon-192.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(SHELL)));
@@ -28,7 +28,42 @@ self.addEventListener("fetch", (event) => {
   );
 });
 
-// TODO (fase 2): gestione push notifications in tempo reale.
-// Richiede: VAPID keys, endpoint per salvare le subscription lato server
-// (tabella dedicata), e invio push da qui quando arriva una nuova richiesta
-// di prenotazione. Non attivabile senza quella infrastruttura.
+// Push notifications native: il payload arriva come JSON da sendAdminPush
+// (src/lib/push.ts) con { title, body, url }. url e' dove portare l'admin
+// al tap sulla notifica (o "/admin" di default se manca/parsing fallisce).
+self.addEventListener("push", (event) => {
+  let data = { title: "DDR Academy", body: "Hai una nuova notifica.", url: "/admin" };
+  try {
+    if (event.data) data = { ...data, ...event.data.json() };
+  } catch {
+    // payload non-JSON: usa i default
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title, {
+      body: data.body,
+      icon: "/icon-192.png",
+      badge: "/icon-192.png",
+      data: { url: data.url || "/admin" },
+    })
+  );
+});
+
+self.addEventListener("notificationclick", (event) => {
+  event.notification.close();
+  const targetUrl = event.notification.data?.url || "/admin";
+
+  event.waitUntil(
+    self.clients.matchAll({ type: "window", includeUncontrolled: true }).then((clients) => {
+      for (const client of clients) {
+        if (client.url.includes(targetUrl) && "focus" in client) return client.focus();
+      }
+      for (const client of clients) {
+        if ("navigate" in client && "focus" in client) {
+          return client.focus().then(() => client.navigate(targetUrl));
+        }
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(targetUrl);
+    })
+  );
+});

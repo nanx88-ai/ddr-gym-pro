@@ -1,0 +1,122 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { btnNeutral, btnPrimary } from "@/lib/ui";
+import { useToast } from "@/components/Toast";
+
+type Status = "unsupported" | "denied" | "loading" | "off" | "on";
+
+function urlBase64ToUint8Array(base64String: string) {
+  const padding = "=".repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + padding).replace(/-/g, "+").replace(/_/g, "/");
+  const rawData = atob(base64);
+  return Uint8Array.from([...rawData].map((c) => c.charCodeAt(0)));
+}
+
+/**
+ * Attiva/disattiva le notifiche push native su questo dispositivo (nuove
+ * richieste di prenotazione/spostamento anche a PWA chiusa). Ogni
+ * dispositivo ha una sua subscription indipendente: va attivata su ognuno
+ * separatamente (telefono, desktop, ecc).
+ */
+export default function PushNotificationsToggle() {
+  const toast = useToast();
+  const [status, setStatus] = useState<Status>("loading");
+
+  useEffect(() => {
+    async function check() {
+      if (!("serviceWorker" in navigator) || !("PushManager" in window)) {
+        setStatus("unsupported");
+        return;
+      }
+      if (Notification.permission === "denied") {
+        setStatus("denied");
+        return;
+      }
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      setStatus(sub ? "on" : "off");
+    }
+    check().catch(() => setStatus("unsupported"));
+  }, []);
+
+  async function enable() {
+    setStatus("loading");
+    try {
+      const permission = await Notification.requestPermission();
+      if (permission !== "granted") {
+        setStatus(permission === "denied" ? "denied" : "off");
+        return;
+      }
+      const publicKey = process.env.NEXT_PUBLIC_VAPID_PUBLIC_KEY;
+      if (!publicKey) {
+        toast.error("Notifiche push non configurate sul server.");
+        setStatus("off");
+        return;
+      }
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey),
+      });
+      const json = sub.toJSON();
+      await fetch("/api/admin/push-subscriptions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ endpoint: json.endpoint, keys: json.keys }),
+      });
+      setStatus("on");
+      toast.success("Notifiche push attivate su questo dispositivo.");
+    } catch {
+      toast.error("Impossibile attivare le notifiche push.");
+      setStatus("off");
+    }
+  }
+
+  async function disable() {
+    setStatus("loading");
+    try {
+      const reg = await navigator.serviceWorker.ready;
+      const sub = await reg.pushManager.getSubscription();
+      if (sub) {
+        await fetch("/api/admin/push-subscriptions", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ endpoint: sub.endpoint }),
+        });
+        await sub.unsubscribe();
+      }
+      setStatus("off");
+      toast.success("Notifiche push disattivate su questo dispositivo.");
+    } catch {
+      toast.error("Impossibile disattivare le notifiche push.");
+      setStatus("on");
+    }
+  }
+
+  if (status === "unsupported") {
+    return <p className="text-xs text-neutral-500 dark:text-neutral-400">Notifiche push non supportate su questo browser/dispositivo.</p>;
+  }
+  if (status === "denied") {
+    return (
+      <p className="text-xs text-neutral-500 dark:text-neutral-400">
+        Notifiche bloccate nelle impostazioni del browser/telefono per questo sito: riabilitale da li&apos; per attivarle.
+      </p>
+    );
+  }
+
+  return (
+    <div className="flex items-center gap-3">
+      <span className="text-sm text-neutral-600 dark:text-neutral-300">
+        {status === "on" ? "Attive su questo dispositivo" : "Nuove richieste di prenotazione/spostamento"}
+      </span>
+      <button
+        onClick={status === "on" ? disable : enable}
+        disabled={status === "loading"}
+        className={status === "on" ? btnNeutral : btnPrimary}
+      >
+        {status === "loading" ? "..." : status === "on" ? "Disattiva" : "Attiva"}
+      </button>
+    </div>
+  );
+}

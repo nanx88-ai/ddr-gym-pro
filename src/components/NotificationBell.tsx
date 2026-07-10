@@ -32,10 +32,15 @@ export default function NotificationBell() {
   const ref = useRef<HTMLDivElement>(null);
 
   async function fetchItems(): Promise<PendingItem[]> {
-    const res = await fetch("/api/admin/notifications");
-    if (!res.ok) return [];
-    const json = await res.json().catch(() => null);
-    return json?.items ?? [];
+    try {
+      const res = await fetch("/api/admin/notifications");
+      if (!res.ok) return [];
+      const json = await res.json().catch(() => null);
+      return json?.items ?? [];
+    } catch {
+      // rete assente/tab in background/server riavviato: riprovera' al prossimo poll
+      return [];
+    }
   }
 
   async function load() {

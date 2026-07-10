@@ -14,6 +14,7 @@ import {
   pageTitle,
 } from "@/lib/ui";
 import ThemeToggle from "@/components/ThemeToggle";
+import PushNotificationsToggle from "@/components/PushNotificationsToggle";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 
@@ -245,6 +246,15 @@ export default function AdminSettingsPage() {
           </span>
           <ThemeToggle />
         </div>
+      </section>
+
+      <section className={`${card} mb-6 p-4`}>
+        <h2 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">Notifiche push</h2>
+        <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
+          Notifiche native su questo dispositivo (anche a PWA chiusa/in background). Vanno attivate separatamente su
+          ogni telefono/computer da cui gestisci l&apos;admin.
+        </p>
+        <PushNotificationsToggle />
       </section>
 
       <CalendarSyncSection />
