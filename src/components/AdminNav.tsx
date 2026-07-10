@@ -28,13 +28,13 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin", label: "Prenotazioni", icon: "bookings" },
       { href: "/admin/agenda", label: "Agenda", icon: "agenda" },
-      { href: "/admin/bookings/new", label: "Nuovo appuntamento", icon: "new" },
+      { href: "/admin/bookings/new", label: "Appuntamento", icon: "new" },
     ],
   },
   {
     items: [
-      { href: "/admin/appointment-types", label: "Calendario servizi", icon: "types" },
-      { href: "/admin/schedule", label: "Planning Orario", icon: "schedule" },
+      { href: "/admin/appointment-types", label: "Servizi", icon: "types" },
+      { href: "/admin/schedule", label: "Planning", icon: "schedule" },
     ],
   },
   {
