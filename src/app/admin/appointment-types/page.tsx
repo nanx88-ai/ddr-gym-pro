@@ -1,10 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import {
-  btnDanger,
-  btnNeutral,
   btnPositive,
   card,
   checkbox,
@@ -18,6 +15,7 @@ import {
   trBorder,
 } from "@/lib/ui";
 import { useToast } from "@/components/Toast";
+import { ActionsRow, IconButton, IconLink } from "@/components/IconAction";
 import { useConfirm } from "@/components/ConfirmDialog";
 
 interface AppointmentType {
@@ -262,31 +260,17 @@ export default function AdminAppointmentTypesPage() {
                 Richiede approvazione
               </label>
 
-              <div className="mt-3 flex flex-wrap gap-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-                <Link
-                  href={`/admin/schedule?appointmentTypeId=${t.id}`}
-                  className={`flex-1 text-center ${btnNeutral}`}
-                >
-                  Orario
-                </Link>
-                <Link
-                  href={`/admin/calendar?appointmentTypeId=${t.id}`}
-                  className={`flex-1 text-center ${btnNeutral}`}
-                >
-                  Calendario
-                </Link>
-                <button
-                  onClick={() => updateField(t.id, { active: !t.active })}
-                  className={`flex-1 ${btnNeutral}`}
-                >
-                  {t.active ? "Disattiva" : "Riattiva"}
-                </button>
-                <button
-                  onClick={() => remove(t)}
-                  className={`flex-1 ${btnDanger}`}
-                >
-                  Elimina
-                </button>
+              <div className="mt-3 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+                <ActionsRow>
+                  <IconLink href={`/admin/schedule?appointmentTypeId=${t.id}`} icon="schedule" label="Orario" />
+                  <IconLink href={`/admin/calendar?appointmentTypeId=${t.id}`} icon="calendar" label="Calendario" />
+                  <IconButton
+                    onClick={() => updateField(t.id, { active: !t.active })}
+                    icon={t.active ? "deactivate" : "activate"}
+                    label={t.active ? "Disattiva" : "Riattiva"}
+                  />
+                  <IconButton onClick={() => remove(t)} icon="delete" label="Elimina" tone="danger" />
+                </ActionsRow>
               </div>
             </div>
           ))}
@@ -369,29 +353,16 @@ export default function AdminAppointmentTypesPage() {
                     </span>
                   </td>
                   <td className={td}>
-                    <div className="flex flex-wrap gap-2">
-                      <Link
-                        href={`/admin/schedule?appointmentTypeId=${t.id}`}
-                        className={btnNeutral}
-                      >
-                        Orario
-                      </Link>
-                      <Link
-                        href={`/admin/calendar?appointmentTypeId=${t.id}`}
-                        className={btnNeutral}
-                      >
-                        Calendario
-                      </Link>
-                      <button
+                    <ActionsRow>
+                      <IconLink href={`/admin/schedule?appointmentTypeId=${t.id}`} icon="schedule" label="Orario" />
+                      <IconLink href={`/admin/calendar?appointmentTypeId=${t.id}`} icon="calendar" label="Calendario" />
+                      <IconButton
                         onClick={() => updateField(t.id, { active: !t.active })}
-                        className={btnNeutral}
-                      >
-                        {t.active ? "Disattiva" : "Riattiva"}
-                      </button>
-                      <button onClick={() => remove(t)} className={btnDanger}>
-                        Elimina
-                      </button>
-                    </div>
+                        icon={t.active ? "deactivate" : "activate"}
+                        label={t.active ? "Disattiva" : "Riattiva"}
+                      />
+                      <IconButton onClick={() => remove(t)} icon="delete" label="Elimina" tone="danger" />
+                    </ActionsRow>
                   </td>
                 </tr>
               ))}

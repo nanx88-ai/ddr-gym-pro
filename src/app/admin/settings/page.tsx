@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import {
-  btnDanger,
   btnNeutral,
   btnPositive,
   btnPrimary,
@@ -17,6 +16,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import PushNotificationsToggle from "@/components/PushNotificationsToggle";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { ActionsRow, IconButton } from "@/components/IconAction";
 
 /**
  * Sync calendario admin (Google/Apple) via feed ICS sottoscrivibile, senza
@@ -322,26 +322,21 @@ export default function AdminSettingsPage() {
                   onChange={(e) => updatePair(i, { value: e.target.value })}
                   className={input}
                 />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setPairs((prev) => prev.filter((_, idx) => idx !== i))
-                  }
-                  className={btnDanger}
-                >
-                  &times;
-                </button>
+                <IconButton
+                  onClick={() => setPairs((prev) => prev.filter((_, idx) => idx !== i))}
+                  icon="remove"
+                  label="Rimuovi campo"
+                  tone="danger"
+                />
               </div>
             ))}
-            <button
-              type="button"
-              onClick={() =>
-                setPairs((prev) => [...prev, { key: "", value: "" }])
-              }
-              className={btnNeutral}
-            >
-              + Aggiungi campo
-            </button>
+            <ActionsRow>
+              <IconButton
+                onClick={() => setPairs((prev) => [...prev, { key: "", value: "" }])}
+                icon="add"
+                label="Aggiungi campo"
+              />
+            </ActionsRow>
           </div>
 
           <button type="submit" disabled={creating} className={btnPositive}>
@@ -371,20 +366,14 @@ export default function AdminSettingsPage() {
                     "nessun campo"}
                 </div>
               </div>
-              <div className="flex gap-2">
-                <button
+              <ActionsRow>
+                <IconButton
                   onClick={() => toggleActive(integ)}
-                  className={btnNeutral}
-                >
-                  {integ.active ? "Disattiva" : "Riattiva"}
-                </button>
-                <button
-                  onClick={() => remove(integ.id, integ.name)}
-                  className={btnDanger}
-                >
-                  Elimina
-                </button>
-              </div>
+                  icon={integ.active ? "deactivate" : "activate"}
+                  label={integ.active ? "Disattiva" : "Riattiva"}
+                />
+                <IconButton onClick={() => remove(integ.id, integ.name)} icon="delete" label="Elimina" tone="danger" />
+              </ActionsRow>
             </div>
           ))}
           {!loading && integrations.length === 0 && (

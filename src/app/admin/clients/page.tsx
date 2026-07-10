@@ -3,9 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { STATUS_COLORS, STATUS_LABELS } from "@/lib/format";
-import { btnDanger, btnNeutral, card, checkbox, input, pageSubtitle, pageTitle, tableHeadBg, tableWrap, td, th, trBorder } from "@/lib/ui";
+import { card, checkbox, input, pageSubtitle, pageTitle, tableHeadBg, tableWrap, td, th, trBorder } from "@/lib/ui";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { ActionsRow, IconButton, IconLink } from "@/components/IconAction";
 
 interface Client {
   id: string;
@@ -141,24 +142,22 @@ export default function AdminClientsPage() {
                   {c._count.bookings} prenotazion{c._count.bookings === 1 ? "e" : "i"}
                 </span>
               </div>
-              <div className="mt-3 flex flex-wrap gap-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-                <Link href={`/admin/clients/${c.id}`} className={`flex-1 text-center ${btnNeutral}`}>
-                  Dettagli
-                </Link>
-                {c.status !== "ARCHIVED" && (
-                  <button onClick={() => togglePause(c)} className={`flex-1 ${btnNeutral}`}>
-                    {c.status === "ACTIVE" ? "Pausa" : "Riattiva"}
-                  </button>
-                )}
-                {c.status === "ARCHIVED" ? (
-                  <button onClick={() => unarchive(c)} className={`flex-1 ${btnNeutral}`}>
-                    Riattiva
-                  </button>
-                ) : (
-                  <button onClick={() => archive(c)} className={`flex-1 ${btnDanger}`}>
-                    Archivia
-                  </button>
-                )}
+              <div className="mt-3 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+                <ActionsRow>
+                  <IconLink href={`/admin/clients/${c.id}`} icon="expand" label="Espandi" />
+                  {c.status !== "ARCHIVED" && (
+                    <IconButton
+                      onClick={() => togglePause(c)}
+                      icon={c.status === "ACTIVE" ? "pause" : "resume"}
+                      label={c.status === "ACTIVE" ? "Pausa" : "Riattiva"}
+                    />
+                  )}
+                  {c.status === "ARCHIVED" ? (
+                    <IconButton onClick={() => unarchive(c)} icon="unarchive" label="Riattiva" />
+                  ) : (
+                    <IconButton onClick={() => archive(c)} icon="archive" label="Archivia" tone="danger" />
+                  )}
+                </ActionsRow>
               </div>
             </div>
           ))}
@@ -196,25 +195,21 @@ export default function AdminClientsPage() {
                     </span>
                   </td>
                   <td className={td}>
-                    <div className="flex flex-wrap gap-2">
-                      <Link href={`/admin/clients/${c.id}`} className={btnNeutral}>
-                        Dettagli
-                      </Link>
+                    <ActionsRow>
+                      <IconLink href={`/admin/clients/${c.id}`} icon="expand" label="Espandi" />
                       {c.status !== "ARCHIVED" && (
-                        <button onClick={() => togglePause(c)} className={btnNeutral}>
-                          {c.status === "ACTIVE" ? "Pausa" : "Riattiva"}
-                        </button>
+                        <IconButton
+                          onClick={() => togglePause(c)}
+                          icon={c.status === "ACTIVE" ? "pause" : "resume"}
+                          label={c.status === "ACTIVE" ? "Pausa" : "Riattiva"}
+                        />
                       )}
                       {c.status === "ARCHIVED" ? (
-                        <button onClick={() => unarchive(c)} className={btnNeutral}>
-                          Riattiva
-                        </button>
+                        <IconButton onClick={() => unarchive(c)} icon="unarchive" label="Riattiva" />
                       ) : (
-                        <button onClick={() => archive(c)} className={btnDanger}>
-                          Archivia
-                        </button>
+                        <IconButton onClick={() => archive(c)} icon="archive" label="Archivia" tone="danger" />
                       )}
-                    </div>
+                    </ActionsRow>
                   </td>
                 </tr>
               ))}

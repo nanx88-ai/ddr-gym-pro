@@ -3,8 +3,6 @@
 import { useEffect, useState } from "react";
 import { formatCurrency } from "@/lib/format";
 import {
-  btnDanger,
-  btnNeutral,
   btnPositive,
   card,
   input,
@@ -18,6 +16,7 @@ import {
 } from "@/lib/ui";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { ActionsRow, IconButton } from "@/components/IconAction";
 
 interface PriceListItem {
   id: string;
@@ -236,19 +235,15 @@ export default function AdminPriceListPage() {
                   {formatCurrency(item.unitPrice)}
                 </span>
               </div>
-              <div className="mt-3 flex gap-2 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-                <button
-                  onClick={() => toggleActive(item)}
-                  className={`flex-1 ${btnNeutral}`}
-                >
-                  {item.active ? "Disattiva" : "Riattiva"}
-                </button>
-                <button
-                  onClick={() => remove(item)}
-                  className={`flex-1 ${btnDanger}`}
-                >
-                  Elimina
-                </button>
+              <div className="mt-3 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+                <ActionsRow>
+                  <IconButton
+                    onClick={() => toggleActive(item)}
+                    icon={item.active ? "deactivate" : "activate"}
+                    label={item.active ? "Disattiva" : "Riattiva"}
+                  />
+                  <IconButton onClick={() => remove(item)} icon="delete" label="Elimina" tone="danger" />
+                </ActionsRow>
               </div>
             </div>
           ))}
@@ -294,20 +289,14 @@ export default function AdminPriceListPage() {
                     </span>
                   </td>
                   <td className={td}>
-                    <div className="flex flex-wrap gap-2">
-                      <button
+                    <ActionsRow>
+                      <IconButton
                         onClick={() => toggleActive(item)}
-                        className={btnNeutral}
-                      >
-                        {item.active ? "Disattiva" : "Riattiva"}
-                      </button>
-                      <button
-                        onClick={() => remove(item)}
-                        className={btnDanger}
-                      >
-                        Elimina
-                      </button>
-                    </div>
+                        icon={item.active ? "deactivate" : "activate"}
+                        label={item.active ? "Disattiva" : "Riattiva"}
+                      />
+                      <IconButton onClick={() => remove(item)} icon="delete" label="Elimina" tone="danger" />
+                    </ActionsRow>
                   </td>
                 </tr>
               ))}
