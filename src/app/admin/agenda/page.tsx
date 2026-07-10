@@ -19,8 +19,18 @@ import {
 } from "date-fns";
 import { it } from "date-fns/locale";
 import { formatTime, STATUS_COLORS, STATUS_LABELS } from "@/lib/format";
-import { btnDanger, btnNeutral, btnNeutral as btnGhost, btnPositive, card, input, pageSubtitle, pageTitle } from "@/lib/ui";
+import {
+  btnDanger,
+  btnNeutral,
+  btnNeutral as btnGhost,
+  btnPositive,
+  card,
+  input,
+  pageSubtitle,
+  pageTitle,
+} from "@/lib/ui";
 import { useToast } from "@/components/Toast";
+import { useConfirm } from "@/components/ConfirmDialog";
 import AttendanceToggle from "@/components/AttendanceToggle";
 
 interface AppointmentType {
@@ -55,6 +65,7 @@ function dateKey(d: Date) {
 
 export default function AdminAgendaPage() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [view, setView] = useState<ViewMode>("day");
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [status, setStatus] = useState("");
@@ -64,7 +75,8 @@ export default function AdminAgendaPage() {
   const [types, setTypes] = useState<AppointmentType[]>([]);
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
-  const activeFilterCount = (status ? 1 : 0) + (appointmentTypeId ? 1 : 0) + (search.trim() ? 1 : 0);
+  const activeFilterCount =
+    (status ? 1 : 0) + (appointmentTypeId ? 1 : 0) + (search.trim() ? 1 : 0);
 
   useEffect(() => {
     fetch("/api/admin/appointment-types?all=1")
@@ -73,7 +85,8 @@ export default function AdminAgendaPage() {
   }, []);
 
   const range = useMemo(() => {
-    if (view === "day") return { start: startOfDay(selectedDate), end: endOfDay(selectedDate) };
+    if (view === "day")
+      return { start: startOfDay(selectedDate), end: endOfDay(selectedDate) };
     if (view === "week")
       return {
         start: startOfWeek(selectedDate, { weekStartsOn: 1 }),
@@ -134,14 +147,16 @@ export default function AdminAgendaPage() {
 
   async function updateStatus(id: string, newStatus: string) {
     const confirmMsg = DISRUPTIVE_CONFIRM[newStatus];
-    if (confirmMsg && !window.confirm(confirmMsg)) return;
+    if (confirmMsg && !(await confirm(confirmMsg))) return;
     await fetch(`/api/admin/bookings/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status: newStatus }),
     });
     toast.success(STATUS_TOAST[newStatus] ?? "Stato aggiornato.");
-    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, status: newStatus } : b)));
+    setBookings((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, status: newStatus } : b)),
+    );
   }
 
   async function markAttendance(id: string, attended: boolean) {
@@ -151,21 +166,25 @@ export default function AdminAgendaPage() {
       body: JSON.stringify({ attended }),
     });
     toast.success(attended ? "Presenza aggiornata." : "Assenza segnata.");
-    setBookings((prev) => prev.map((b) => (b.id === id ? { ...b, attended } : b)));
+    setBookings((prev) =>
+      prev.map((b) => (b.id === id ? { ...b, attended } : b)),
+    );
   }
 
   return (
     <div>
       <h1 className={pageTitle}>Agenda</h1>
-      <p className={pageSubtitle}>Vista d&apos;insieme delle prenotazioni per giorno, settimana o mese.</p>
+      <p className={pageSubtitle}>
+        Vista d&apos;insieme delle prenotazioni per giorno, settimana o mese.
+      </p>
 
       <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1 rounded-md border border-neutral-200 bg-neutral-100 p-1 dark:border-neutral-800 dark:bg-neutral-900">
+        <div className="flex gap-1 border border-neutral-200 bg-neutral-100 p-1 dark:border-neutral-800 dark:bg-neutral-900">
           {(["day", "week", "month"] as ViewMode[]).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
+              className={`px-3 py-1 text-sm font-medium transition-colors ${
                 view === v
                   ? "bg-yellow-400 text-neutral-900"
                   : "text-neutral-600 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-800"
@@ -180,7 +199,10 @@ export default function AdminAgendaPage() {
           <button onClick={() => step(-1)} className={btnNeutral}>
             &larr;
           </button>
-          <button onClick={() => setSelectedDate(new Date())} className={btnNeutral}>
+          <button
+            onClick={() => setSelectedDate(new Date())}
+            className={btnNeutral}
+          >
             Oggi
           </button>
           <button onClick={() => step(1)} className={btnNeutral}>
@@ -200,11 +222,11 @@ export default function AdminAgendaPage() {
         <button
           type="button"
           onClick={() => setFiltersOpen((o) => !o)}
-          className="flex items-center gap-1.5 rounded-md border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+          className="flex items-center gap-1.5 border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
         >
           Filtri
           {activeFilterCount > 0 && (
-            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-yellow-400 px-1 text-[10px] font-semibold text-neutral-900">
+            <span className="flex h-4 min-w-4 items-center justify-center bg-yellow-400 px-1 text-[10px] font-semibold text-neutral-900">
               {activeFilterCount}
             </span>
           )}
@@ -215,27 +237,41 @@ export default function AdminAgendaPage() {
             strokeWidth="2"
             className={`h-3.5 w-3.5 transition-transform ${filtersOpen ? "rotate-180" : ""}`}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M6 9l6 6 6-6"
+            />
           </svg>
         </button>
       </div>
 
       {filtersOpen && (
-        <div className={`${card} mb-4 grid grid-cols-1 gap-2 p-3 sm:grid-cols-3`}>
+        <div
+          className={`${card} mb-4 grid grid-cols-1 gap-2 p-3 sm:grid-cols-3`}
+        >
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Cerca per nome, cognome o email..."
             className={`${input} w-full`}
           />
-          <select value={status} onChange={(e) => setStatus(e.target.value)} className={`${input} w-full`}>
+          <select
+            value={status}
+            onChange={(e) => setStatus(e.target.value)}
+            className={`${input} w-full`}
+          >
             {STATUS_OPTIONS.map((s) => (
               <option key={s.value} value={s.value}>
                 {s.label}
               </option>
             ))}
           </select>
-          <select value={appointmentTypeId} onChange={(e) => setAppointmentTypeId(e.target.value)} className={`${input} w-full`}>
+          <select
+            value={appointmentTypeId}
+            onChange={(e) => setAppointmentTypeId(e.target.value)}
+            className={`${input} w-full`}
+          >
             <option value="">Tutti i servizi</option>
             {types.map((t) => (
               <option key={t.id} value={t.id}>
@@ -257,7 +293,12 @@ export default function AdminAgendaPage() {
       )}
 
       {!loading && view === "week" && (
-        <WeekGrid rangeStart={range.start} byDay={byDay} onDayClick={goToDay} onUpdateStatus={updateStatus} />
+        <WeekGrid
+          rangeStart={range.start}
+          byDay={byDay}
+          onDayClick={goToDay}
+          onUpdateStatus={updateStatus}
+        />
       )}
 
       {!loading && view === "month" && (
@@ -269,7 +310,9 @@ export default function AdminAgendaPage() {
 
 function StatusBadge({ status }: { status: string }) {
   return (
-    <span className={`shrink-0 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[status]}`}>
+    <span
+      className={`shrink-0 px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[status]}`}
+    >
       {STATUS_LABELS[status] ?? status}
     </span>
   );
@@ -286,7 +329,9 @@ function DayList({
 }) {
   if (bookings.length === 0) {
     return (
-      <p className={`${card} px-4 py-8 text-center text-sm text-neutral-500 dark:text-neutral-400`}>
+      <p
+        className={`${card} px-4 py-8 text-center text-sm text-neutral-500 dark:text-neutral-400`}
+      >
         Nessuna prenotazione per questo giorno.
       </p>
     );
@@ -298,7 +343,10 @@ function DayList({
         .slice()
         .sort((a, b) => a.startTime.localeCompare(b.startTime))
         .map((b) => (
-          <div key={b.id} className={`${card} flex flex-wrap items-center justify-between gap-3 p-3`}>
+          <div
+            key={b.id}
+            className={`${card} flex flex-wrap items-center justify-between gap-3 p-3`}
+          >
             <div className="flex items-center gap-3">
               <span className="w-14 shrink-0 text-sm font-semibold text-neutral-900 dark:text-white">
                 {formatTime(b.startTime)}
@@ -316,20 +364,32 @@ function DayList({
               <StatusBadge status={b.status} />
               {b.status === "PENDING_APPROVAL" && (
                 <>
-                  <button onClick={() => onUpdateStatus(b.id, "APPROVED")} className={btnPositive}>
+                  <button
+                    onClick={() => onUpdateStatus(b.id, "APPROVED")}
+                    className={btnPositive}
+                  >
                     Approva
                   </button>
-                  <button onClick={() => onUpdateStatus(b.id, "REJECTED")} className={btnDanger}>
+                  <button
+                    onClick={() => onUpdateStatus(b.id, "REJECTED")}
+                    className={btnDanger}
+                  >
                     Rifiuta
                   </button>
                 </>
               )}
               {["APPROVED", "RESCHEDULED"].includes(b.status) && (
                 <>
-                  <button onClick={() => onUpdateStatus(b.id, "CANCELLED")} className={btnGhost}>
+                  <button
+                    onClick={() => onUpdateStatus(b.id, "CANCELLED")}
+                    className={btnGhost}
+                  >
                     Annulla
                   </button>
-                  <AttendanceToggle attended={b.attended} onChange={(attended) => onMarkAttendance(b.id, attended)} />
+                  <AttendanceToggle
+                    attended={b.attended}
+                    onChange={(attended) => onMarkAttendance(b.id, attended)}
+                  />
                 </>
               )}
             </div>
@@ -349,33 +409,45 @@ function WeekGrid({
   onDayClick: (d: Date) => void;
   onUpdateStatus: (id: string, s: string) => void;
 }) {
-  const days = eachDayOfInterval({ start: rangeStart, end: addDays(rangeStart, 6) });
+  const days = eachDayOfInterval({
+    start: rangeStart,
+    end: addDays(rangeStart, 6),
+  });
 
   return (
     <div className="grid grid-cols-1 gap-2 sm:grid-cols-7">
       {days.map((d) => {
         const key = dateKey(d);
-        const items = (byDay.get(key) ?? []).slice().sort((a, b) => a.startTime.localeCompare(b.startTime));
+        const items = (byDay.get(key) ?? [])
+          .slice()
+          .sort((a, b) => a.startTime.localeCompare(b.startTime));
         return (
           <div key={key} className={`${card} p-2`}>
             <button
               onClick={() => onDayClick(d)}
-              className={`mb-2 flex w-full items-center justify-between rounded-md px-1.5 py-1 text-left text-xs font-semibold uppercase transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
-                isToday(d) ? "text-yellow-600 dark:text-yellow-400" : "text-neutral-500 dark:text-neutral-400"
+              className={`mb-2 flex w-full items-center justify-between px-1.5 py-1 text-left text-xs font-semibold uppercase transition-colors hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
+                isToday(d)
+                  ? "text-yellow-600 dark:text-yellow-400"
+                  : "text-neutral-500 dark:text-neutral-400"
               }`}
             >
               <span>{format(d, "EEE d", { locale: it })}</span>
               {items.length > 0 && (
-                <span className="rounded-full bg-neutral-200 px-1.5 text-[10px] font-semibold text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200">
+                <span className="bg-neutral-200 px-1.5 text-[10px] font-semibold text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200">
                   {items.length}
                 </span>
               )}
             </button>
             <div className="max-h-64 space-y-1 overflow-y-auto">
               {items.map((b) => (
-                <div key={b.id} className="rounded-md border border-neutral-100 px-2 py-1 text-xs dark:border-neutral-800">
+                <div
+                  key={b.id}
+                  className="border border-neutral-100 px-2 py-1 text-xs dark:border-neutral-800"
+                >
                   <div className="flex items-center justify-between gap-1">
-                    <span className="font-medium text-neutral-900 dark:text-white">{formatTime(b.startTime)}</span>
+                    <span className="font-medium text-neutral-900 dark:text-white">
+                      {formatTime(b.startTime)}
+                    </span>
                     <StatusBadge status={b.status} />
                   </div>
                   <div className="truncate text-neutral-600 dark:text-neutral-300">
@@ -383,7 +455,11 @@ function WeekGrid({
                   </div>
                 </div>
               ))}
-              {items.length === 0 && <p className="px-1 text-xs text-neutral-400 dark:text-neutral-600">-</p>}
+              {items.length === 0 && (
+                <p className="px-1 text-xs text-neutral-400 dark:text-neutral-600">
+                  -
+                </p>
+              )}
             </div>
           </div>
         );
@@ -417,13 +493,15 @@ function MonthGrid({
         {days.map((d) => {
           const key = dateKey(d);
           const items = byDay.get(key) ?? [];
-          const pending = items.filter((b) => b.status === "PENDING_APPROVAL").length;
+          const pending = items.filter(
+            (b) => b.status === "PENDING_APPROVAL",
+          ).length;
           const inMonth = isSameMonth(d, month);
           return (
             <button
               key={key}
               onClick={() => onDayClick(d)}
-              className={`flex min-h-20 flex-col items-start rounded-lg border p-2 text-left transition-colors sm:min-h-20 ${
+              className={`flex min-h-20 flex-col items-start border p-2 text-left transition-colors sm:min-h-20 ${
                 !inMonth
                   ? "border-transparent text-neutral-300 dark:text-neutral-700"
                   : isToday(d)
@@ -431,13 +509,20 @@ function MonthGrid({
                     : "border-neutral-100 hover:border-neutral-300 dark:border-neutral-800 dark:hover:border-neutral-600"
               }`}
             >
-              <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300 sm:text-xs">{d.getDate()}</span>
+              <span className="text-sm font-medium text-neutral-700 dark:text-neutral-300 sm:text-xs">
+                {d.getDate()}
+              </span>
               {items.length > 0 && (
-                <span className="mt-1 rounded-full bg-neutral-200 px-1.5 py-0.5 text-xs font-semibold text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200 sm:text-[10px]">
+                <span className="mt-1 bg-neutral-200 px-1.5 py-0.5 text-xs font-semibold text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200 sm:text-[10px]">
                   {items.length}
                 </span>
               )}
-              {pending > 0 && <span className="mt-1 h-2 w-2 rounded-full bg-amber-500" title={`${pending} in attesa`} />}
+              {pending > 0 && (
+                <span
+                  className="mt-1 h-2 w-2 bg-amber-500"
+                  title={`${pending} in attesa`}
+                />
+              )}
             </button>
           );
         })}

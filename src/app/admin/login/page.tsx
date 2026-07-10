@@ -47,14 +47,20 @@ function LoginForm() {
         Accesso staff <span className="text-yellow-400">.</span>
       </h1>
       {error && (
-        <div className="mb-4 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300">
+        <div className="mb-4 border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300">
           {error}
         </div>
       )}
       <form onSubmit={handleSubmit} className="space-y-4">
         <label className="block">
           <span className={label}>Email</span>
-          <input required type="email" value={email} onChange={(e) => setEmail(e.target.value)} className={input} />
+          <input
+            required
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            className={input}
+          />
         </label>
         <label className="block">
           <span className={label}>Password</span>
@@ -66,11 +72,17 @@ function LoginForm() {
             className={input}
           />
         </label>
-        <button type="submit" disabled={loading} className={`w-full ${btnPrimary}`}>
+        <button
+          type="submit"
+          disabled={loading}
+          className={`w-full ${btnPrimary}`}
+        >
           {loading ? "Accesso in corso..." : "Accedi"}
         </button>
       </form>
-      <p className="mt-4 text-xs text-neutral-500">Credenziali seed: admin@palestra.local / admin123</p>
+      <p className="mt-4 text-xs text-neutral-500">
+        Credenziali seed: admin@palestra.local / admin123
+      </p>
     </main>
   );
 }

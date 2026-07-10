@@ -15,16 +15,21 @@ import {
 } from "@/lib/ui";
 import ThemeToggle from "@/components/ThemeToggle";
 import { useToast } from "@/components/Toast";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 /**
  * Sync calendario admin (Google/Apple) via feed ICS sottoscrivibile, senza
- * OAuth: Google Calendar -> "Aggiungi calendario" -> "Da URL"; Apple Calendar
- * -> "Nuovo abbonamento calendario". L'app di calendario ricontrolla l'URL
- * periodicamente (di solito ogni poche ore), quindi non e' realtime.
+ * OAuth: Google Calendar ->"Aggiungi calendario"->"Da URL"; Apple Calendar
+ * ->"Nuovo abbonamento calendario". L'app di calendario ricontrolla l'URL
+ * periodicamente (di solito ogni poche ore), quindi non e'realtime.
  */
 function CalendarSyncSection() {
   const toast = useToast();
-  const [urls, setUrls] = useState<{ httpsUrl: string; webcalUrl: string } | null>(null);
+  const confirm = useConfirm();
+  const [urls, setUrls] = useState<{
+    httpsUrl: string;
+    webcalUrl: string;
+  } | null>(null);
   const [regenerating, setRegenerating] = useState(false);
 
   async function load() {
@@ -37,7 +42,12 @@ function CalendarSyncSection() {
   }, []);
 
   async function regenerate() {
-    if (!window.confirm("Rigenerare il link? Quello vecchio smettera' di funzionare e dovrai risottoscriverti.")) return;
+    if (
+      !(await confirm(
+        "Rigenerare il link? Quello vecchio smettera'di funzionare e dovrai risottoscriverti.",
+      ))
+    )
+      return;
     setRegenerating(true);
     await fetch("/api/admin/calendar-feed", { method: "POST" });
     await load();
@@ -53,26 +63,43 @@ function CalendarSyncSection() {
 
   return (
     <section className={`${card} mb-6 p-4`}>
-      <h2 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">Sincronizza calendario</h2>
+      <h2 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">
+        Sincronizza calendario
+      </h2>
       <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
-        Sottoscrivi questo link in Google Calendar (&quot;Aggiungi calendario&quot; &rarr; &quot;Da URL&quot;) o Apple
-        Calendar (&quot;Nuovo abbonamento calendario&quot;) per vedere gli appuntamenti confermati. L&apos;aggiornamento
-        non e&apos; istantaneo: dipende da quanto spesso l&apos;app di calendario ricontrolla il link.
+        Sottoscrivi questo link in Google Calendar (&quot;Aggiungi
+        calendario&quot; &rarr; &quot;Da URL&quot;) o Apple Calendar
+        (&quot;Nuovo abbonamento calendario&quot;) per vedere gli appuntamenti
+        confermati. L&apos;aggiornamento non e&apos; istantaneo: dipende da
+        quanto spesso l&apos;app di calendario ricontrolla il link.
       </p>
 
       {urls && (
         <div className="space-y-2">
           <div className="flex flex-wrap gap-2">
-            <input readOnly value={urls.httpsUrl} className={`${input} flex-1`} onFocus={(e) => e.target.select()} />
+            <input
+              readOnly
+              value={urls.httpsUrl}
+              className={`${input} flex-1`}
+              onFocus={(e) => e.target.select()}
+            />
             <button type="button" onClick={copy} className={btnNeutral}>
               Copia link
             </button>
           </div>
           <div className="flex flex-wrap gap-3 text-xs">
-            <a href={urls.webcalUrl} className="text-yellow-600 hover:underline dark:text-yellow-400">
+            <a
+              href={urls.webcalUrl}
+              className="text-yellow-600 hover:underline dark:text-yellow-400"
+            >
               Apri in Apple Calendar (webcal)
             </a>
-            <button type="button" onClick={regenerate} disabled={regenerating} className="text-red-500 hover:underline disabled:opacity-50">
+            <button
+              type="button"
+              onClick={regenerate}
+              disabled={regenerating}
+              className="text-red-500 hover:underline disabled:opacity-50"
+            >
               Rigenera link (invalida quello vecchio)
             </button>
           </div>
@@ -91,11 +118,31 @@ interface Integration {
 }
 
 const TYPE_OPTIONS = [
-  { value: "smtp", label: "Email (SMTP)", hint: "es. host, port, user, password, from" },
-  { value: "google_oauth", label: "Google OAuth (login utenti)", hint: "es. client_id, client_secret, redirect_uri" },
-  { value: "google_calendar", label: "Google Calendar", hint: "es. client_id, client_secret" },
-  { value: "aruba", label: "Aruba Fatturazione Elettronica", hint: "es. api_key, username, password" },
-  { value: "fattureincloud", label: "Fatture in Cloud", hint: "es. api_key, company_id" },
+  {
+    value: "smtp",
+    label: "Email (SMTP)",
+    hint: "es. host, port, user, password, from",
+  },
+  {
+    value: "google_oauth",
+    label: "Google OAuth (login utenti)",
+    hint: "es. client_id, client_secret, redirect_uri",
+  },
+  {
+    value: "google_calendar",
+    label: "Google Calendar",
+    hint: "es. client_id, client_secret",
+  },
+  {
+    value: "aruba",
+    label: "Aruba Fatturazione Elettronica",
+    hint: "es. api_key, username, password",
+  },
+  {
+    value: "fattureincloud",
+    label: "Fatture in Cloud",
+    hint: "es. api_key, company_id",
+  },
   { value: "custom", label: "Altro / personalizzata", hint: "chiavi libere" },
 ];
 
@@ -125,7 +172,9 @@ export default function AdminSettingsPage() {
   }, []);
 
   function updatePair(index: number, patch: Partial<KV>) {
-    setPairs((prev) => prev.map((p, i) => (i === index ? { ...p, ...patch } : p)));
+    setPairs((prev) =>
+      prev.map((p, i) => (i === index ? { ...p, ...patch } : p)),
+    );
   }
 
   async function handleCreate(e: React.FormEvent) {
@@ -133,7 +182,9 @@ export default function AdminSettingsPage() {
     setError(null);
     setCreating(true);
 
-    const config = Object.fromEntries(pairs.filter((p) => p.key.trim()).map((p) => [p.key.trim(), p.value]));
+    const config = Object.fromEntries(
+      pairs.filter((p) => p.key.trim()).map((p) => [p.key.trim(), p.value]),
+    );
 
     const res = await fetch("/api/admin/integrations", {
       method: "POST",
@@ -158,12 +209,16 @@ export default function AdminSettingsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ active: !integration.active }),
     });
-    toast.success(integration.active ? "Integrazione disattivata." : "Integrazione attivata.");
+    toast.success(
+      integration.active
+        ? "Integrazione disattivata."
+        : "Integrazione attivata.",
+    );
     load();
   }
 
   async function remove(id: string, name: string) {
-    if (!window.confirm(`Eliminare l'integrazione "${name}"?`)) return;
+    if (!(await confirm(`Eliminare l'integrazione"${name}"?`))) return;
     await fetch(`/api/admin/integrations/${id}`, { method: "DELETE" });
     toast.success("Integrazione eliminata.");
     load();
@@ -174,14 +229,20 @@ export default function AdminSettingsPage() {
   return (
     <div className="max-w-3xl">
       <h1 className={pageTitle}>Impostazioni</h1>
-      <p className={pageSubtitle}>Aspetto, integrazioni API, esportazione dati e backup.</p>
+      <p className={pageSubtitle}>
+        Aspetto, integrazioni API, esportazione dati e backup.
+      </p>
 
       {error && <div className={errorBox}>{error}</div>}
 
       <section className={`${card} mb-6 p-4`}>
-        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">Aspetto</h2>
+        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
+          Aspetto
+        </h2>
         <div className="flex items-center gap-3">
-          <span className="text-sm text-neutral-600 dark:text-neutral-300">Tema dell&apos;interfaccia admin</span>
+          <span className="text-sm text-neutral-600 dark:text-neutral-300">
+            Tema dell&apos;interfaccia admin
+          </span>
           <ThemeToggle />
         </div>
       </section>
@@ -189,22 +250,38 @@ export default function AdminSettingsPage() {
       <CalendarSyncSection />
 
       <section className={`${card} mb-6 p-4`}>
-        <h2 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">API e integrazioni</h2>
+        <h2 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">
+          API e integrazioni
+        </h2>
         <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
-          Chiavi salvate direttamente da qui invece che nei file di configurazione del server. Aruba, Fatture in
-          Cloud, email (SMTP), Google OAuth e Google Calendar sono predisposti come stub finche&apos; non colleghi le
-          chiavi reali: vedi la sezione Fatture per i provider di invio e la nota sulla sync calendario piu&apos; sotto.
+          Chiavi salvate direttamente da qui invece che nei file di
+          configurazione del server. Aruba, Fatture in Cloud, email (SMTP),
+          Google OAuth e Google Calendar sono predisposti come stub finche&apos;
+          non colleghi le chiavi reali: vedi la sezione Fatture per i provider
+          di invio e la nota sulla sync calendario piu&apos; sotto.
         </p>
 
-        <form onSubmit={handleCreate} className="mb-4 space-y-3 rounded-md border border-neutral-200 p-3 dark:border-neutral-800">
+        <form
+          onSubmit={handleCreate}
+          className="mb-4 space-y-3 border border-neutral-200 p-3 dark:border-neutral-800"
+        >
           <div className="flex flex-wrap gap-3">
             <label className="block">
               <span className={label}>Nome</span>
-              <input required value={name} onChange={(e) => setName(e.target.value)} className={`${input} w-48`} />
+              <input
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className={`${input} w-48`}
+              />
             </label>
             <label className="block">
               <span className={label}>Tipo</span>
-              <select value={type} onChange={(e) => setType(e.target.value)} className={`${input} w-64`}>
+              <select
+                value={type}
+                onChange={(e) => setType(e.target.value)}
+                className={`${input} w-64`}
+              >
                 {TYPE_OPTIONS.map((t) => (
                   <option key={t.value} value={t.value}>
                     {t.label}
@@ -213,7 +290,11 @@ export default function AdminSettingsPage() {
               </select>
             </label>
           </div>
-          {selectedType && <p className="text-xs text-neutral-500 dark:text-neutral-400">Campi tipici: {selectedType.hint}</p>}
+          {selectedType && (
+            <p className="text-xs text-neutral-500 dark:text-neutral-400">
+              Campi tipici: {selectedType.hint}
+            </p>
+          )}
 
           <div className="space-y-2">
             {pairs.map((p, i) => (
@@ -233,7 +314,9 @@ export default function AdminSettingsPage() {
                 />
                 <button
                   type="button"
-                  onClick={() => setPairs((prev) => prev.filter((_, idx) => idx !== i))}
+                  onClick={() =>
+                    setPairs((prev) => prev.filter((_, idx) => idx !== i))
+                  }
                   className={btnDanger}
                 >
                   &times;
@@ -242,7 +325,9 @@ export default function AdminSettingsPage() {
             ))}
             <button
               type="button"
-              onClick={() => setPairs((prev) => [...prev, { key: "", value: "" }])}
+              onClick={() =>
+                setPairs((prev) => [...prev, { key: "", value: "" }])
+              }
               className={btnNeutral}
             >
               + Aggiungi campo
@@ -258,35 +343,52 @@ export default function AdminSettingsPage() {
           {integrations.map((integ) => (
             <div
               key={integ.id}
-              className="flex items-center justify-between rounded-md border border-neutral-200 p-3 text-sm dark:border-neutral-800"
+              className="flex items-center justify-between border border-neutral-200 p-3 text-sm dark:border-neutral-800"
             >
               <div>
-                <span className="font-medium text-neutral-900 dark:text-white">{integ.name}</span>{" "}
+                <span className="font-medium text-neutral-900 dark:text-white">
+                  {integ.name}
+                </span>
+                {""}
                 <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                  ({TYPE_OPTIONS.find((t) => t.value === integ.type)?.label ?? integ.type})
+                  (
+                  {TYPE_OPTIONS.find((t) => t.value === integ.type)?.label ??
+                    integ.type}
+                  )
                 </span>
                 <div className="mt-1 text-xs text-neutral-400 dark:text-neutral-500">
-                  {Object.keys(JSON.parse(integ.config)).join(", ") || "nessun campo"}
+                  {Object.keys(JSON.parse(integ.config)).join(",") ||
+                    "nessun campo"}
                 </div>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => toggleActive(integ)} className={btnNeutral}>
+                <button
+                  onClick={() => toggleActive(integ)}
+                  className={btnNeutral}
+                >
                   {integ.active ? "Disattiva" : "Riattiva"}
                 </button>
-                <button onClick={() => remove(integ.id, integ.name)} className={btnDanger}>
+                <button
+                  onClick={() => remove(integ.id, integ.name)}
+                  className={btnDanger}
+                >
                   Elimina
                 </button>
               </div>
             </div>
           ))}
           {!loading && integrations.length === 0 && (
-            <p className="text-sm text-neutral-500 dark:text-neutral-400">Nessuna integrazione configurata.</p>
+            <p className="text-sm text-neutral-500 dark:text-neutral-400">
+              Nessuna integrazione configurata.
+            </p>
           )}
         </div>
       </section>
 
       <section className={`${card} mb-6 p-4`}>
-        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">Esporta dati (CSV)</h2>
+        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
+          Esporta dati (CSV)
+        </h2>
         <div className="flex flex-wrap gap-2">
           <a href="/api/admin/export/clients" className={btnNeutral}>
             Clienti
@@ -301,11 +403,17 @@ export default function AdminSettingsPage() {
       </section>
 
       <section className={`${card} p-4`}>
-        <h2 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">Backup</h2>
+        <h2 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">
+          Backup
+        </h2>
         <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
-          Scarica una copia completa del database (file .db). Conservala in un posto sicuro.
+          Scarica una copia completa del database (file .db). Conservala in un
+          posto sicuro.
         </p>
-        <a href="/api/admin/settings/backup" className={`inline-block ${btnPrimary}`}>
+        <a
+          href="/api/admin/settings/backup"
+          className={`inline-block ${btnPrimary}`}
+        >
           Scarica backup
         </a>
       </section>

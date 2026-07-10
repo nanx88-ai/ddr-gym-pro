@@ -3,7 +3,14 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { formatCurrency, STATUS_COLORS, STATUS_LABELS } from "@/lib/format";
-import { btnNeutral, btnPrimary, card, input, pageSubtitle, pageTitle } from "@/lib/ui";
+import {
+  btnNeutral,
+  btnPrimary,
+  card,
+  input,
+  pageSubtitle,
+  pageTitle,
+} from "@/lib/ui";
 import { INVOICE_PROVIDER_OPTIONS } from "@/lib/invoicing-provider-options";
 
 interface LineItem {
@@ -57,7 +64,11 @@ interface InvoiceDetail {
   };
 }
 
-export default function AdminInvoiceDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function AdminInvoiceDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const [invoice, setInvoice] = useState<InvoiceDetail | null>(null);
   const [loading, setLoading] = useState(true);
@@ -99,15 +110,23 @@ export default function AdminInvoiceDetailPage({ params }: { params: Promise<{ i
     load();
   }
 
-  if (loading) return <p className="text-sm text-neutral-500">Caricamento...</p>;
-  if (!invoice) return <p className="text-sm text-neutral-500">Fattura non trovata.</p>;
+  if (loading)
+    return <p className="text-sm text-neutral-500">Caricamento...</p>;
+  if (!invoice)
+    return <p className="text-sm text-neutral-500">Fattura non trovata.</p>;
 
   const { client } = invoice;
-  const clientDisplayName = client.clientKind === "AZIENDA" && client.businessName ? client.businessName : `${client.firstName} ${client.lastName}`;
+  const clientDisplayName =
+    client.clientKind === "AZIENDA" && client.businessName
+      ? client.businessName
+      : `${client.firstName} ${client.lastName}`;
 
   return (
     <div className="max-w-3xl">
-      <Link href="/admin/invoices" className="mb-3 inline-block text-sm text-neutral-500 dark:text-neutral-400 hover:underline print:hidden">
+      <Link
+        href="/admin/invoices"
+        className="mb-3 inline-block text-sm text-neutral-500 dark:text-neutral-400 hover:underline print:hidden"
+      >
         &larr; Torna alle fatture
       </Link>
 
@@ -115,8 +134,10 @@ export default function AdminInvoiceDetailPage({ params }: { params: Promise<{ i
         <div>
           <h1 className={pageTitle}>Fattura {invoice.number}</h1>
           <p className={pageSubtitle}>
-            Stato:{" "}
-            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[invoice.status]}`}>
+            Stato:{""}
+            <span
+              className={`px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[invoice.status]}`}
+            >
               {STATUS_LABELS[invoice.status] ?? invoice.status}
             </span>
           </p>
@@ -127,61 +148,84 @@ export default function AdminInvoiceDetailPage({ params }: { params: Promise<{ i
       </div>
 
       {/* Documento stampabile */}
-      <div className={`${card} mb-6 bg-white p-8 text-neutral-900 print:border-0 print:shadow-none`}>
+      <div
+        className={`${card} mb-6 bg-white p-8 text-neutral-900 print:border-0 print:shadow-none`}
+      >
         <div className="mb-6 flex items-start justify-between">
           <div>
             <h2 className="text-lg font-bold">Fattura {invoice.number}</h2>
-            <p className="text-sm text-neutral-600">Data emissione: {new Date(invoice.issueDate).toLocaleDateString("it-IT")}</p>
             <p className="text-sm text-neutral-600">
-              Periodo: {new Date(invoice.periodStart).toLocaleDateString("it-IT")} &ndash;{" "}
+              Data emissione:{" "}
+              {new Date(invoice.issueDate).toLocaleDateString("it-IT")}
+            </p>
+            <p className="text-sm text-neutral-600">
+              Periodo:{" "}
+              {new Date(invoice.periodStart).toLocaleDateString("it-IT")}{" "}
+              &ndash;{""}
               {new Date(invoice.periodEnd).toLocaleDateString("it-IT")}
             </p>
           </div>
         </div>
 
         <div className="mb-6">
-          <h3 className="mb-1 text-xs font-semibold uppercase text-neutral-500">Destinatario</h3>
+          <h3 className="mb-1 text-xs font-semibold uppercase text-neutral-500">
+            Destinatario
+          </h3>
           <p className="font-medium">{clientDisplayName}</p>
-          {client.fiscalCode && <p className="text-sm">CF: {client.fiscalCode}</p>}
-          {client.vatNumber && <p className="text-sm">P.IVA: {client.vatNumber}</p>}
+          {client.fiscalCode && (
+            <p className="text-sm">CF: {client.fiscalCode}</p>
+          )}
+          {client.vatNumber && (
+            <p className="text-sm">P.IVA: {client.vatNumber}</p>
+          )}
           {client.address && (
             <p className="text-sm">
-              {client.address}, {client.zipCode} {client.city} ({client.province}) {client.country}
+              {client.address}, {client.zipCode} {client.city} (
+              {client.province}) {client.country}
             </p>
           )}
           <p className="text-sm">{client.email}</p>
           {client.pec && <p className="text-sm">PEC: {client.pec}</p>}
-          {client.sdiCode && <p className="text-sm">Codice SDI: {client.sdiCode}</p>}
+          {client.sdiCode && (
+            <p className="text-sm">Codice SDI: {client.sdiCode}</p>
+          )}
           {!client.fiscalCode && !client.vatNumber && (
             <p className="mt-1 text-xs text-amber-700">
-              Dati fiscali incompleti: completa l&apos;anagrafica cliente prima dell&apos;invio ufficiale.
+              Dati fiscali incompleti: completa l&apos;anagrafica cliente prima
+              dell&apos;invio ufficiale.
             </p>
           )}
         </div>
 
         <div className="mb-4 overflow-x-auto">
-        <table className="w-full text-sm">
-          <thead>
-            <tr className="border-b border-neutral-300 text-left text-xs uppercase text-neutral-500">
-              <th className="py-1">Descrizione</th>
-              <th className="py-1 text-right">Qta</th>
-              <th className="py-1 text-right">Prezzo</th>
-              <th className="py-1 text-right">IVA</th>
-              <th className="py-1 text-right">Importo</th>
-            </tr>
-          </thead>
-          <tbody>
-            {invoice.lineItems.map((li) => (
-              <tr key={li.id} className="border-b border-neutral-100">
-                <td className="py-1">{li.description}</td>
-                <td className="py-1 text-right">{li.quantity}</td>
-                <td className="py-1 text-right">{formatCurrency(li.unitPrice)}</td>
-                <td className="py-1 text-right">{li.vatNature ? li.vatNature : `${li.vatRate}%`}</td>
-                <td className="py-1 text-right">{formatCurrency(li.amount)}</td>
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-neutral-300 text-left text-xs uppercase text-neutral-500">
+                <th className="py-1">Descrizione</th>
+                <th className="py-1 text-right">Qta</th>
+                <th className="py-1 text-right">Prezzo</th>
+                <th className="py-1 text-right">IVA</th>
+                <th className="py-1 text-right">Importo</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {invoice.lineItems.map((li) => (
+                <tr key={li.id} className="border-b border-neutral-100">
+                  <td className="py-1">{li.description}</td>
+                  <td className="py-1 text-right">{li.quantity}</td>
+                  <td className="py-1 text-right">
+                    {formatCurrency(li.unitPrice)}
+                  </td>
+                  <td className="py-1 text-right">
+                    {li.vatNature ? li.vatNature : `${li.vatRate}%`}
+                  </td>
+                  <td className="py-1 text-right">
+                    {formatCurrency(li.amount)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         <div className="ml-auto max-w-xs space-y-1 text-sm">
@@ -201,14 +245,20 @@ export default function AdminInvoiceDetailPage({ params }: { params: Promise<{ i
       </div>
 
       <section className={`${card} mb-6 p-4 print:hidden`}>
-        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">Invio</h2>
+        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
+          Invio
+        </h2>
         {error && (
-          <div className="mb-3 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300">
+          <div className="mb-3 border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300">
             {error}
           </div>
         )}
         <form onSubmit={handleSend} className="flex flex-wrap items-end gap-3">
-          <select value={provider} onChange={(e) => setProvider(e.target.value)} className={`${input} w-72`}>
+          <select
+            value={provider}
+            onChange={(e) => setProvider(e.target.value)}
+            className={`${input} w-72`}
+          >
             {INVOICE_PROVIDER_OPTIONS.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.label}
@@ -220,28 +270,53 @@ export default function AdminInvoiceDetailPage({ params }: { params: Promise<{ i
           </button>
         </form>
         <p className="mt-2 text-xs text-neutral-500">
-          Aruba e Fatture in Cloud sono predisposti come integrazioni future: al momento restituiscono un errore
-          esplicito perche&apos; non collegati a nessuna API reale. Usa &quot;Manuale&quot; per segnare la fattura come inviata.
+          Aruba e Fatture in Cloud sono predisposti come integrazioni future: al
+          momento restituiscono un errore esplicito perche&apos; non collegati a
+          nessuna API reale. Usa &quot;Manuale&quot; per segnare la fattura come
+          inviata.
         </p>
       </section>
 
       <section className={`${card} p-4 print:hidden`}>
-        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">Esiti degli invii</h2>
+        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
+          Esiti degli invii
+        </h2>
         <div className="space-y-2">
           {invoice.submissions.map((s) => (
-            <div key={s.id} className="rounded-md border border-neutral-200 dark:border-neutral-800 p-3 text-sm">
+            <div
+              key={s.id}
+              className="border border-neutral-200 dark:border-neutral-800 p-3 text-sm"
+            >
               <div className="flex items-center justify-between">
-                <span className="font-medium text-neutral-900 dark:text-white">{s.provider}</span>
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[s.status]}`}>
+                <span className="font-medium text-neutral-900 dark:text-white">
+                  {s.provider}
+                </span>
+                <span
+                  className={`px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[s.status]}`}
+                >
                   {STATUS_LABELS[s.status] ?? s.status}
                 </span>
               </div>
-              <div className="mt-1 text-xs text-neutral-500">{new Date(s.createdAt).toLocaleString("it-IT")}</div>
-              {s.errorMessage && <div className="mt-1 text-xs text-red-400">{s.errorMessage}</div>}
-              {s.externalId && <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">ID esterno: {s.externalId}</div>}
+              <div className="mt-1 text-xs text-neutral-500">
+                {new Date(s.createdAt).toLocaleString("it-IT")}
+              </div>
+              {s.errorMessage && (
+                <div className="mt-1 text-xs text-red-400">
+                  {s.errorMessage}
+                </div>
+              )}
+              {s.externalId && (
+                <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                  ID esterno: {s.externalId}
+                </div>
+              )}
             </div>
           ))}
-          {invoice.submissions.length === 0 && <p className="text-sm text-neutral-500">Nessun tentativo di invio.</p>}
+          {invoice.submissions.length === 0 && (
+            <p className="text-sm text-neutral-500">
+              Nessun tentativo di invio.
+            </p>
+          )}
         </div>
       </section>
     </div>

@@ -4,8 +4,8 @@
  * Toggle presente/assente per una prenotazione, riusato ovunque compaia un
  * elenco di appuntamenti di un cliente (Prenotazioni, Agenda, scheda
  * cliente). Di default si presume la presenza (attended === null si mostra
- * come "Presente"): l'admin puo' segnare l'assenza in qualsiasi momento, e
- * tornare indietro altrettanto facilmente, e' sempre reversibile.
+ * come"Presente"): l'admin puo'segnare l'assenza in qualsiasi momento, e
+ * tornare indietro altrettanto facilmente, e'sempre reversibile.
  */
 export default function AttendanceToggle({
   attended,
@@ -20,7 +20,7 @@ export default function AttendanceToggle({
   const pad = size === "xs" ? "px-2 py-1 text-xs" : "px-2.5 py-1.5 text-xs";
 
   return (
-    <div className="flex overflow-hidden rounded-md border border-neutral-300 dark:border-neutral-700">
+    <div className="flex overflow-hidden border border-neutral-300 dark:border-neutral-700">
       <button
         type="button"
         onClick={() => onChange(true)}

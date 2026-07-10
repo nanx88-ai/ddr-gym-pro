@@ -16,7 +16,14 @@ import {
   startOfWeek,
 } from "date-fns";
 import { it } from "date-fns/locale";
-import { btnDanger, btnNeutral, btnPositive, btnPrimary, card, input } from "@/lib/ui";
+import {
+  btnDanger,
+  btnNeutral,
+  btnPositive,
+  btnPrimary,
+  card,
+  input,
+} from "@/lib/ui";
 
 interface AppointmentType {
   id: string;
@@ -35,7 +42,12 @@ interface DaySlot {
   confirmed: number;
   pending: number;
   spotsLeft: number;
-  bookings: { id: string; status: string; clientName: string; clientEmail: string }[];
+  bookings: {
+    id: string;
+    status: string;
+    clientName: string;
+    clientEmail: string;
+  }[];
 }
 
 interface DayDetail {
@@ -97,9 +109,12 @@ function CalendarPageContent() {
     <div>
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="mb-1 text-xl font-bold text-neutral-900 dark:text-white">Calendario</h1>
+          <h1 className="mb-1 text-xl font-bold text-neutral-900 dark:text-white">
+            Calendario
+          </h1>
           <p className="text-sm text-neutral-500 dark:text-neutral-400">
-            Vista giorno per giorno: disattiva o cambia la capienza di ogni singolo slot.
+            Vista giorno per giorno: disattiva o cambia la capienza di ogni
+            singolo slot.
           </p>
         </div>
         <select
@@ -116,12 +131,12 @@ function CalendarPageContent() {
       </div>
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1 rounded-md border border-neutral-200 bg-neutral-100 p-1 dark:border-neutral-800 dark:bg-neutral-900">
+        <div className="flex gap-1 border border-neutral-200 bg-neutral-100 p-1 dark:border-neutral-800 dark:bg-neutral-900">
           {(["day", "week", "month"] as ViewMode[]).map((v) => (
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`rounded px-3 py-1 text-sm font-medium transition-colors ${
+              className={`px-3 py-1 text-sm font-medium transition-colors ${
                 view === v
                   ? "bg-yellow-400 text-neutral-900"
                   : "text-neutral-600 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-800"
@@ -136,7 +151,10 @@ function CalendarPageContent() {
           <button onClick={() => step(-1)} className={btnNeutral}>
             &larr;
           </button>
-          <button onClick={() => setSelectedDate(new Date())} className={btnNeutral}>
+          <button
+            onClick={() => setSelectedDate(new Date())}
+            className={btnNeutral}
+          >
             Oggi
           </button>
           <button onClick={() => step(1)} className={btnNeutral}>
@@ -150,27 +168,49 @@ function CalendarPageContent() {
         </div>
       </div>
 
-      {!appointmentTypeId && <p className="text-sm text-neutral-500">Nessun calendario disponibile.</p>}
+      {!appointmentTypeId && (
+        <p className="text-sm text-neutral-500">
+          Nessun calendario disponibile.
+        </p>
+      )}
 
-      {appointmentTypeId && view === "day" && <DayView appointmentTypeId={appointmentTypeId} date={selectedDate} />}
+      {appointmentTypeId && view === "day" && (
+        <DayView appointmentTypeId={appointmentTypeId} date={selectedDate} />
+      )}
       {appointmentTypeId && view === "week" && (
-        <WeekView appointmentTypeId={appointmentTypeId} date={selectedDate} onSelectDay={goToDay} />
+        <WeekView
+          appointmentTypeId={appointmentTypeId}
+          date={selectedDate}
+          onSelectDay={goToDay}
+        />
       )}
       {appointmentTypeId && view === "month" && (
-        <MonthView appointmentTypeId={appointmentTypeId} date={selectedDate} onSelectDay={goToDay} />
+        <MonthView
+          appointmentTypeId={appointmentTypeId}
+          date={selectedDate}
+          onSelectDay={goToDay}
+        />
       )}
     </div>
   );
 }
 
-function DayView({ appointmentTypeId, date }: { appointmentTypeId: string; date: Date }) {
+function DayView({
+  appointmentTypeId,
+  date,
+}: {
+  appointmentTypeId: string;
+  date: Date;
+}) {
   const [detail, setDetail] = useState<DayDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
-    const res = await fetch(`/api/admin/calendar/day?appointmentTypeId=${appointmentTypeId}&date=${dateKey(date)}`);
+    const res = await fetch(
+      `/api/admin/calendar/day?appointmentTypeId=${appointmentTypeId}&date=${dateKey(date)}`,
+    );
     const json = await res.json();
     setDetail(json);
     setLoading(false);
@@ -225,16 +265,21 @@ function DayView({ appointmentTypeId, date }: { appointmentTypeId: string; date:
 
   async function resetOverride(slot: DaySlot) {
     if (!slot.overrideId) return;
-    await fetch(`/api/admin/slot-overrides/${slot.overrideId}`, { method: "DELETE" });
+    await fetch(`/api/admin/slot-overrides/${slot.overrideId}`, {
+      method: "DELETE",
+    });
     load();
   }
 
-  if (loading) return <p className="text-sm text-neutral-500">Caricamento...</p>;
+  if (loading)
+    return <p className="text-sm text-neutral-500">Caricamento...</p>;
   if (!detail) return null;
 
   if (!detail.isOpen) {
     return (
-      <div className={`${card} p-6 text-center text-sm text-neutral-500 dark:text-neutral-400`}>
+      <div
+        className={`${card} p-6 text-center text-sm text-neutral-500 dark:text-neutral-400`}
+      >
         Giorno chiuso{detail.note ? `: ${detail.note}` : "."}
       </div>
     );
@@ -243,7 +288,7 @@ function DayView({ appointmentTypeId, date }: { appointmentTypeId: string; date:
   return (
     <div>
       {error && (
-        <div className="mb-4 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300">
+        <div className="mb-4 border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300">
           {error}
         </div>
       )}
@@ -253,7 +298,9 @@ function DayView({ appointmentTypeId, date }: { appointmentTypeId: string; date:
             key={slot.time}
             className={`flex flex-wrap items-center gap-3 p-3 ${slot.isDisabled ? "opacity-50" : ""}`}
           >
-            <div className="w-16 font-mono text-sm font-medium text-neutral-900 dark:text-white">{slot.time}</div>
+            <div className="w-16 font-mono text-sm font-medium text-neutral-900 dark:text-white">
+              {slot.time}
+            </div>
 
             <label className="flex items-center gap-1 text-xs text-neutral-500 dark:text-neutral-400">
               Capienza
@@ -266,25 +313,36 @@ function DayView({ appointmentTypeId, date }: { appointmentTypeId: string; date:
                 className={`${input} w-16 py-1`}
               />
               {slot.overrideId && slot.capacity !== slot.defaultCapacity && (
-                <span className="text-yellow-400">(default {slot.defaultCapacity})</span>
+                <span className="text-yellow-400">
+                  (default {slot.defaultCapacity})
+                </span>
               )}
             </label>
 
             <div className="text-xs text-neutral-500 dark:text-neutral-400">
-              <span className="text-green-400">{slot.confirmed} confermati</span>
-              {slot.pending > 0 && <span className="ml-2 text-yellow-400">{slot.pending} in attesa</span>}
+              <span className="text-green-400">
+                {slot.confirmed} confermati
+              </span>
+              {slot.pending > 0 && (
+                <span className="ml-2 text-yellow-400">
+                  {slot.pending} in attesa
+                </span>
+              )}
               <span className="ml-2">{slot.spotsLeft} liberi</span>
             </div>
 
             {slot.bookings.length > 0 && (
               <div className="text-xs text-neutral-500">
-                {slot.bookings.map((b) => b.clientName).join(", ")}
+                {slot.bookings.map((b) => b.clientName).join(",")}
               </div>
             )}
 
             <div className="ml-auto flex gap-2">
               {slot.overrideId && (
-                <button onClick={() => resetOverride(slot)} className={btnNeutral}>
+                <button
+                  onClick={() => resetOverride(slot)}
+                  className={btnNeutral}
+                >
                   Ripristina
                 </button>
               )}
@@ -298,7 +356,9 @@ function DayView({ appointmentTypeId, date }: { appointmentTypeId: string; date:
           </div>
         ))}
         {detail.slots.length === 0 && (
-          <p className="p-6 text-center text-sm text-neutral-500">Nessuno slot generato per questo giorno.</p>
+          <p className="p-6 text-center text-sm text-neutral-500">
+            Nessuno slot generato per questo giorno.
+          </p>
         )}
       </div>
     </div>
@@ -319,22 +379,26 @@ function WeekView({
 
   useEffect(() => {
     const weekStart = startOfWeek(date, { weekStartsOn: 1 });
-    const weekDays = eachDayOfInterval({ start: weekStart, end: addDays(weekStart, 6) });
+    const weekDays = eachDayOfInterval({
+      start: weekStart,
+      end: addDays(weekStart, 6),
+    });
 
     setLoading(true);
     Promise.all(
       weekDays.map((d) =>
-        fetch(`/api/admin/calendar/day?appointmentTypeId=${appointmentTypeId}&date=${dateKey(d)}`).then((res) =>
-          res.json()
-        )
-      )
+        fetch(
+          `/api/admin/calendar/day?appointmentTypeId=${appointmentTypeId}&date=${dateKey(d)}`,
+        ).then((res) => res.json()),
+      ),
     ).then((results) => {
       setDays(results);
       setLoading(false);
     });
   }, [appointmentTypeId, date]);
 
-  if (loading) return <p className="text-sm text-neutral-500">Caricamento...</p>;
+  if (loading)
+    return <p className="text-sm text-neutral-500">Caricamento...</p>;
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
@@ -348,15 +412,19 @@ function WeekView({
               isToday(d) ? "border-yellow-400" : ""
             }`}
           >
-            <div className="mb-2 text-sm font-medium capitalize text-neutral-900 dark:text-white">{format(d, "EEEE d", { locale: it })}</div>
+            <div className="mb-2 text-sm font-medium capitalize text-neutral-900 dark:text-white">
+              {format(d, "EEEE d", { locale: it })}
+            </div>
             {!day.isOpen ? (
-              <div className="text-xs text-neutral-500">Chiuso{day.note ? `: ${day.note}` : ""}</div>
+              <div className="text-xs text-neutral-500">
+                Chiuso{day.note ? `: ${day.note}` : ""}
+              </div>
             ) : (
               <div className="space-y-1">
                 {day.slots.map((slot) => (
                   <div
                     key={slot.time}
-                    className={`flex items-center justify-between rounded px-1.5 py-0.5 text-xs ${
+                    className={`flex items-center justify-between px-1.5 py-0.5 text-xs ${
                       slot.isDisabled
                         ? "bg-neutral-200 text-neutral-500 line-through dark:bg-neutral-800 dark:text-neutral-500"
                         : slot.spotsLeft === 0
@@ -367,10 +435,16 @@ function WeekView({
                     }`}
                   >
                     <span>{slot.time}</span>
-                    <span>{slot.isDisabled ? "off" : `${slot.spotsLeft}/${slot.capacity}`}</span>
+                    <span>
+                      {slot.isDisabled
+                        ? "off"
+                        : `${slot.spotsLeft}/${slot.capacity}`}
+                    </span>
                   </div>
                 ))}
-                {day.slots.length === 0 && <div className="text-xs text-neutral-600">Nessuno slot</div>}
+                {day.slots.length === 0 && (
+                  <div className="text-xs text-neutral-600">Nessuno slot</div>
+                )}
               </div>
             )}
           </button>
@@ -395,7 +469,9 @@ function MonthView({
   useEffect(() => {
     setLoading(true);
     const monthParam = format(date, "yyyy-MM");
-    fetch(`/api/admin/calendar/month?appointmentTypeId=${appointmentTypeId}&month=${monthParam}`)
+    fetch(
+      `/api/admin/calendar/month?appointmentTypeId=${appointmentTypeId}&month=${monthParam}`,
+    )
       .then((res) => res.json())
       .then((json) => {
         setDays(json.days ?? []);
@@ -403,7 +479,8 @@ function MonthView({
       });
   }, [appointmentTypeId, date]);
 
-  if (loading) return <p className="text-sm text-neutral-500">Caricamento...</p>;
+  if (loading)
+    return <p className="text-sm text-neutral-500">Caricamento...</p>;
 
   const byDate = new Map(days.map((d) => [d.date, d]));
   const gridStart = startOfWeek(startOfMonth(date), { weekStartsOn: 1 });
@@ -429,16 +506,26 @@ function MonthView({
                 !inMonth ? "opacity-30" : ""
               } ${isToday(d) ? "border-yellow-400" : ""} ${isSameDay(d, date) ? "ring-1 ring-yellow-400" : ""}`}
             >
-              <span className="text-xs font-medium text-neutral-900 dark:text-white">{format(d, "d")}</span>
+              <span className="text-xs font-medium text-neutral-900 dark:text-white">
+                {format(d, "d")}
+              </span>
               {summary && summary.isOpen ? (
                 <span className="mt-1 text-[11px] text-neutral-500 dark:text-neutral-400">
-                  {summary.bookingsCount > 0 && <span className="text-green-400">{summary.bookingsCount} pren.</span>}
+                  {summary.bookingsCount > 0 && (
+                    <span className="text-green-400">
+                      {summary.bookingsCount} pren.
+                    </span>
+                  )}
                   {summary.disabledSlots > 0 && (
-                    <span className="block text-red-400">{summary.disabledSlots} off</span>
+                    <span className="block text-red-400">
+                      {summary.disabledSlots} off
+                    </span>
                   )}
                 </span>
               ) : (
-                <span className="mt-1 text-[11px] text-neutral-600">chiuso</span>
+                <span className="mt-1 text-[11px] text-neutral-600">
+                  chiuso
+                </span>
               )}
             </button>
           );

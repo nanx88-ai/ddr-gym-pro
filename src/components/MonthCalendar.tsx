@@ -25,7 +25,7 @@ interface MonthCalendarProps {
   onSelect: (iso: string) => void;
   /** Date (iso) completamente piene/chiuse: vengono mostrate desaturate e non selezionabili. */
   fullDates?: Set<string>;
-  /** Chiamato quando l'utente cambia mese, cosi' il chiamante puo' ricaricare `fullDates`. */
+  /** Chiamato quando l'utente cambia mese, cosi'il chiamante puo'ricaricare`fullDates`. */
   onMonthChange?: (monthIso: string) => void;
 }
 
@@ -35,8 +35,15 @@ interface MonthCalendarProps {
  * disponibile. Sostituisce lo strip orizzontale di giorni, poco leggibile su
  * mobile.
  */
-export default function MonthCalendar({ selected, onSelect, fullDates, onMonthChange }: MonthCalendarProps) {
-  const [month, setMonth] = useState(() => startOfMonth(selected ? new Date(selected) : new Date()));
+export default function MonthCalendar({
+  selected,
+  onSelect,
+  fullDates,
+  onMonthChange,
+}: MonthCalendarProps) {
+  const [month, setMonth] = useState(() =>
+    startOfMonth(selected ? new Date(selected) : new Date()),
+  );
   const today = startOfDay(new Date());
 
   useEffect(() => {
@@ -57,7 +64,7 @@ export default function MonthCalendar({ selected, onSelect, fullDates, onMonthCh
           type="button"
           onClick={() => setMonth((m) => subMonths(m, 1))}
           aria-label="Mese precedente"
-          className="flex h-11 w-11 items-center justify-center rounded-full text-lg text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
+          className="flex h-11 w-11 items-center justify-center text-lg text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
         >
           &larr;
         </button>
@@ -68,7 +75,7 @@ export default function MonthCalendar({ selected, onSelect, fullDates, onMonthCh
           type="button"
           onClick={() => setMonth((m) => addMonths(m, 1))}
           aria-label="Mese successivo"
-          className="flex h-11 w-11 items-center justify-center rounded-full text-lg text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
+          className="flex h-11 w-11 items-center justify-center text-lg text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
         >
           &rarr;
         </button>
@@ -96,7 +103,7 @@ export default function MonthCalendar({ selected, onSelect, fullDates, onMonthCh
                 type="button"
                 disabled={disabled}
                 onClick={() => onSelect(iso)}
-                className={`flex min-h-11 flex-col items-center justify-center rounded-xl text-base font-medium transition-colors sm:text-sm ${
+                className={`flex min-h-11 flex-col items-center justify-center text-base font-medium transition-colors sm:text-sm ${
                   !inMonth
                     ? "invisible"
                     : isPast
@@ -113,7 +120,7 @@ export default function MonthCalendar({ selected, onSelect, fullDates, onMonthCh
                 {day.getDate()}
               </button>
             );
-          })
+          }),
         )}
       </div>
     </div>

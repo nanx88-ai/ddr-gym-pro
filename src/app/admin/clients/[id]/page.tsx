@@ -3,22 +3,42 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { formatCurrency, formatDateTime, STATUS_COLORS, STATUS_LABELS } from "@/lib/format";
-import { btnDanger, btnNeutral, btnPositive, btnPrimary, card, input, label, pageSubtitle, pageTitle } from "@/lib/ui";
+import {
+  formatCurrency,
+  formatDateTime,
+  STATUS_COLORS,
+  STATUS_LABELS,
+} from "@/lib/format";
+import {
+  btnDanger,
+  btnNeutral,
+  btnPositive,
+  btnPrimary,
+  card,
+  input,
+  label,
+  pageSubtitle,
+  pageTitle,
+} from "@/lib/ui";
 import { useToast } from "@/components/Toast";
+import { useConfirm } from "@/components/ConfirmDialog";
 import AttendanceToggle from "@/components/AttendanceToggle";
 
 /**
- * Affidabilita' del cliente: quota di prenotazioni concluse (confermate,
+ * Affidabilita'del cliente: quota di prenotazioni concluse (confermate,
  * spostate, annullate, non presentato) che si sono chiuse bene (confermata e
  * presenza non segnata come assente), rispetto al totale. Le richieste
- * ancora in attesa non contano ne' a favore ne' contro.
+ * ancora in attesa non contano ne'a favore ne'contro.
  */
 function ReliabilityBadge({ bookings }: { bookings: Booking[] }) {
-  const finalized = bookings.filter((b) => ["APPROVED", "RESCHEDULED", "REJECTED", "CANCELLED"].includes(b.status));
+  const finalized = bookings.filter((b) =>
+    ["APPROVED", "RESCHEDULED", "REJECTED", "CANCELLED"].includes(b.status),
+  );
   if (finalized.length === 0) return null;
 
-  const rescheduled = finalized.filter((b) => b.status === "RESCHEDULED").length;
+  const rescheduled = finalized.filter(
+    (b) => b.status === "RESCHEDULED",
+  ).length;
   const cancelled = finalized.filter((b) => b.status === "CANCELLED").length;
   const noShow = finalized.filter((b) => b.attended === false).length;
   const negative = rescheduled + cancelled + noShow;
@@ -33,12 +53,17 @@ function ReliabilityBadge({ bookings }: { bookings: Booking[] }) {
 
   return (
     <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
-      <span className={`rounded-full px-2.5 py-1 text-xs font-semibold ${color}`}>Affidabilita': {rate}%</span>
+      <span className={`px-2.5 py-1 text-xs font-semibold ${color}`}>
+        Affidabilita': {rate}%
+      </span>
       <span className="text-xs text-neutral-500 dark:text-neutral-400">
-        su {finalized.length} prenotazion{finalized.length === 1 ? "e" : "i"} concluse
-        {rescheduled > 0 && ` · ${rescheduled} spostat${rescheduled === 1 ? "a" : "e"}`}
-        {cancelled > 0 && ` · ${cancelled} annullat${cancelled === 1 ? "a" : "e"}`}
-        {noShow > 0 && ` · ${noShow} assenz${noShow === 1 ? "a" : "e"}`}
+        su {finalized.length} prenotazion{finalized.length === 1 ? "e" : "i"}{" "}
+        concluse
+        {rescheduled > 0 &&
+          `· ${rescheduled} spostat${rescheduled === 1 ? "a" : "e"}`}
+        {cancelled > 0 &&
+          `· ${cancelled} annullat${cancelled === 1 ? "a" : "e"}`}
+        {noShow > 0 && `· ${noShow} assenz${noShow === 1 ? "a" : "e"}`}
       </span>
     </div>
   );
@@ -112,10 +137,15 @@ interface ClientDetail {
   reminders: Reminder[];
 }
 
-export default function AdminClientDetailPage({ params }: { params: Promise<{ id: string }> }) {
+export default function AdminClientDetailPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = use(params);
   const router = useRouter();
   const toast = useToast();
+  const confirm = useConfirm();
   const [client, setClient] = useState<ClientDetail | null>(null);
   const [priceList, setPriceList] = useState<PriceListItem[]>([]);
   const [loading, setLoading] = useState(true);
@@ -150,10 +180,10 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
 
   const now = new Date();
   const [periodStart, setPeriodStart] = useState(
-    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`
+    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`,
   );
   const [periodEnd, setPeriodEnd] = useState(
-    `${now.getFullYear()}-${String(now.getMonth() + 2).padStart(2, "0")}-01`
+    `${now.getFullYear()}-${String(now.getMonth() + 2).padStart(2, "0")}-01`,
   );
 
   async function load() {
@@ -220,7 +250,12 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
     const res = await fetch("/api/admin/billing-profiles", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ clientId: id, priceListItemId, billingType, active: true }),
+      body: JSON.stringify({
+        clientId: id,
+        priceListItemId,
+        billingType,
+        active: true,
+      }),
     });
     setSavingBilling(false);
     if (!res.ok) {
@@ -237,7 +272,13 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ attended }),
     });
-    toast.success(attended === true ? "Presenza segnata." : attended === false ? "Assenza segnata." : "Presenza azzerata.");
+    toast.success(
+      attended === true
+        ? "Presenza segnata."
+        : attended === false
+          ? "Assenza segnata."
+          : "Presenza azzerata.",
+    );
     load();
   }
 
@@ -265,7 +306,7 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
   }
 
   async function deleteReminder(reminderId: string) {
-    if (!window.confirm("Eliminare questa scadenza?")) return;
+    if (!(await confirm("Eliminare questa scadenza?"))) return;
     await fetch(`/api/admin/reminders/${reminderId}`, { method: "DELETE" });
     toast.success("Scadenza eliminata.");
     load();
@@ -293,9 +334,9 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
   async function removeClient() {
     if (!client) return;
     if (
-      !window.confirm(
-        `Eliminare definitivamente ${client.firstName} ${client.lastName}? L'operazione non e' reversibile.`
-      )
+      !(await confirm(
+        `Eliminare definitivamente ${client.firstName} ${client.lastName}? L'operazione non e'reversibile.`,
+      ))
     ) {
       return;
     }
@@ -309,12 +350,17 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
     router.push("/admin/clients");
   }
 
-  if (loading) return <p className="text-sm text-neutral-500">Caricamento...</p>;
-  if (!client) return <p className="text-sm text-neutral-500">Cliente non trovato.</p>;
+  if (loading)
+    return <p className="text-sm text-neutral-500">Caricamento...</p>;
+  if (!client)
+    return <p className="text-sm text-neutral-500">Cliente non trovato.</p>;
 
   return (
     <div className="max-w-4xl">
-      <Link href="/admin/clients" className="mb-3 inline-block text-sm text-neutral-500 dark:text-neutral-400 hover:underline">
+      <Link
+        href="/admin/clients"
+        className="mb-3 inline-block text-sm text-neutral-500 dark:text-neutral-400 hover:underline"
+      >
         &larr; Torna ai clienti
       </Link>
       <div className="flex flex-wrap items-start justify-between gap-2">
@@ -334,19 +380,23 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
       <ReliabilityBadge bookings={client.bookings} />
 
       {error && (
-        <div className="mb-4 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300">
+        <div className="mb-4 border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300">
           {error}
         </div>
       )}
 
       <section className={`${card} mb-6 p-4`}>
-        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">Dati anagrafici e fiscali</h2>
+        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
+          Dati anagrafici e fiscali
+        </h2>
         <form onSubmit={saveFiscal} className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className={label}>Tipo cliente</span>
             <select
               value={fiscal.clientKind}
-              onChange={(e) => setFiscal({ ...fiscal, clientKind: e.target.value })}
+              onChange={(e) =>
+                setFiscal({ ...fiscal, clientKind: e.target.value })
+              }
               className={input}
             >
               <option value="PRIVATO">Privato</option>
@@ -368,7 +418,9 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
                 <span className={label}>Ragione sociale</span>
                 <input
                   value={fiscal.businessName}
-                  onChange={(e) => setFiscal({ ...fiscal, businessName: e.target.value })}
+                  onChange={(e) =>
+                    setFiscal({ ...fiscal, businessName: e.target.value })
+                  }
                   className={input}
                 />
               </label>
@@ -376,7 +428,9 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
                 <span className={label}>Partita IVA</span>
                 <input
                   value={fiscal.vatNumber}
-                  onChange={(e) => setFiscal({ ...fiscal, vatNumber: e.target.value })}
+                  onChange={(e) =>
+                    setFiscal({ ...fiscal, vatNumber: e.target.value })
+                  }
                   className={input}
                 />
               </label>
@@ -387,7 +441,9 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
             <span className={label}>Codice fiscale</span>
             <input
               value={fiscal.fiscalCode}
-              onChange={(e) => setFiscal({ ...fiscal, fiscalCode: e.target.value })}
+              onChange={(e) =>
+                setFiscal({ ...fiscal, fiscalCode: e.target.value })
+              }
               className={input}
             />
           </label>
@@ -395,7 +451,9 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
             <span className={label}>Indirizzo</span>
             <input
               value={fiscal.address}
-              onChange={(e) => setFiscal({ ...fiscal, address: e.target.value })}
+              onChange={(e) =>
+                setFiscal({ ...fiscal, address: e.target.value })
+              }
               className={input}
             />
           </label>
@@ -403,7 +461,9 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
             <span className={label}>CAP</span>
             <input
               value={fiscal.zipCode}
-              onChange={(e) => setFiscal({ ...fiscal, zipCode: e.target.value })}
+              onChange={(e) =>
+                setFiscal({ ...fiscal, zipCode: e.target.value })
+              }
               className={input}
             />
           </label>
@@ -419,7 +479,9 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
             <span className={label}>Provincia</span>
             <input
               value={fiscal.province}
-              onChange={(e) => setFiscal({ ...fiscal, province: e.target.value })}
+              onChange={(e) =>
+                setFiscal({ ...fiscal, province: e.target.value })
+              }
               className={input}
               maxLength={2}
             />
@@ -428,7 +490,9 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
             <span className={label}>Paese</span>
             <input
               value={fiscal.country}
-              onChange={(e) => setFiscal({ ...fiscal, country: e.target.value })}
+              onChange={(e) =>
+                setFiscal({ ...fiscal, country: e.target.value })
+              }
               className={input}
             />
           </label>
@@ -444,14 +508,20 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
             <span className={label}>Codice destinatario SDI</span>
             <input
               value={fiscal.sdiCode}
-              onChange={(e) => setFiscal({ ...fiscal, sdiCode: e.target.value })}
+              onChange={(e) =>
+                setFiscal({ ...fiscal, sdiCode: e.target.value })
+              }
               className={input}
               maxLength={7}
             />
           </label>
 
           <div className="col-span-2">
-            <button type="submit" disabled={savingFiscal} className={btnPrimary}>
+            <button
+              type="submit"
+              disabled={savingFiscal}
+              className={btnPrimary}
+            >
               {savingFiscal ? "Salvataggio..." : "Salva dati fiscali"}
             </button>
           </div>
@@ -459,11 +529,17 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
       </section>
 
       <section className={`${card} mb-6 p-4`}>
-        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">Profilo di fatturazione</h2>
+        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
+          Profilo di fatturazione
+        </h2>
         <form onSubmit={saveBilling} className="flex flex-wrap items-end gap-3">
           <label className="block">
             <span className={label}>Voce di listino</span>
-            <select value={priceListItemId} onChange={(e) => setPriceListItemId(e.target.value)} className={`${input} w-56`}>
+            <select
+              value={priceListItemId}
+              onChange={(e) => setPriceListItemId(e.target.value)}
+              className={`${input} w-56`}
+            >
               {priceList.map((p) => (
                 <option key={p.id} value={p.id}>
                   {p.name} ({formatCurrency(p.unitPrice)})
@@ -473,7 +549,11 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
           </label>
           <label className="block">
             <span className={label}>Regola di conteggio</span>
-            <select value={billingType} onChange={(e) => setBillingType(e.target.value)} className={`${input} w-56`}>
+            <select
+              value={billingType}
+              onChange={(e) => setBillingType(e.target.value)}
+              className={`${input} w-56`}
+            >
               <option value="PER_ACCESS">Per accessi effettivi</option>
               <option value="FLAT">Importo fisso per periodo</option>
             </select>
@@ -484,8 +564,11 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
         </form>
         {priceList.length === 0 && (
           <p className="mt-2 text-xs text-neutral-500">
-            Nessuna voce di listino disponibile: creane una in{" "}
-            <Link href="/admin/price-list" className="text-yellow-400 hover:underline">
+            Nessuna voce di listino disponibile: creane una in{""}
+            <Link
+              href="/admin/price-list"
+              className="text-yellow-400 hover:underline"
+            >
               Listino
             </Link>
             .
@@ -494,32 +577,56 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
       </section>
 
       <section className={`${card} mb-6 p-4`}>
-        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">Storico prenotazioni e presenze</h2>
+        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
+          Storico prenotazioni e presenze
+        </h2>
         <div className="space-y-1">
           {client.bookings.map((b) => (
-            <div key={b.id} className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 dark:border-neutral-800 py-2 last:border-0">
+            <div
+              key={b.id}
+              className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 dark:border-neutral-800 py-2 last:border-0"
+            >
               <div>
-                <span className="text-sm capitalize text-neutral-900 dark:text-white">{formatDateTime(b.startTime)}</span>{" "}
-                <span className="text-xs text-neutral-500">{b.appointmentType.name}</span>{" "}
-                <span className={`ml-1 rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[b.status]}`}>
+                <span className="text-sm capitalize text-neutral-900 dark:text-white">
+                  {formatDateTime(b.startTime)}
+                </span>
+                {""}
+                <span className="text-xs text-neutral-500">
+                  {b.appointmentType.name}
+                </span>
+                {""}
+                <span
+                  className={`ml-1 px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[b.status]}`}
+                >
                   {STATUS_LABELS[b.status] ?? b.status}
                 </span>
               </div>
-              <AttendanceToggle attended={b.attended} onChange={(attended) => setAttendance(b.id, attended)} />
+              <AttendanceToggle
+                attended={b.attended}
+                onChange={(attended) => setAttendance(b.id, attended)}
+              />
             </div>
           ))}
-          {client.bookings.length === 0 && <p className="text-sm text-neutral-500">Nessuna prenotazione.</p>}
+          {client.bookings.length === 0 && (
+            <p className="text-sm text-neutral-500">Nessuna prenotazione.</p>
+          )}
         </div>
       </section>
 
       <section className={`${card} mb-6 p-4`}>
-        <h2 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">Scadenze</h2>
+        <h2 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">
+          Scadenze
+        </h2>
         <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
-          Es. fine abbonamento, certificato medico: titolo e descrizione a scelta. Un cron giornaliero avvisa te e il
-          cliente via email quando manca il numero di giorni indicato.
+          Es. fine abbonamento, certificato medico: titolo e descrizione a
+          scelta. Un cron giornaliero avvisa te e il cliente via email quando
+          manca il numero di giorni indicato.
         </p>
 
-        <form onSubmit={addReminder} className="mb-4 grid grid-cols-2 gap-3 rounded-md border border-neutral-200 p-3 dark:border-neutral-800 sm:grid-cols-4">
+        <form
+          onSubmit={addReminder}
+          className="mb-4 grid grid-cols-2 gap-3 border border-neutral-200 p-3 dark:border-neutral-800 sm:grid-cols-4"
+        >
           <label className="col-span-2 block sm:col-span-1">
             <span className={label}>Titolo</span>
             <input
@@ -547,7 +654,9 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
               min={0}
               max={90}
               value={reminderNotifyDays}
-              onChange={(e) => setReminderNotifyDays(Number(e.target.value) || 0)}
+              onChange={(e) =>
+                setReminderNotifyDays(Number(e.target.value) || 0)
+              }
               className={input}
             />
           </label>
@@ -560,7 +669,11 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
             />
           </label>
           <div className="col-span-2 sm:col-span-4">
-            <button type="submit" disabled={addingReminder} className={btnPositive}>
+            <button
+              type="submit"
+              disabled={addingReminder}
+              className={btnPositive}
+            >
               {addingReminder ? "Aggiunta..." : "Aggiungi scadenza"}
             </button>
           </div>
@@ -573,38 +686,56 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
               className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 py-2 last:border-0 dark:border-neutral-800"
             >
               <div>
-                <span className="text-sm font-medium text-neutral-900 dark:text-white">{r.title}</span>{" "}
+                <span className="text-sm font-medium text-neutral-900 dark:text-white">
+                  {r.title}
+                </span>
+                {""}
                 <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                  scade il {new Date(r.dueDate).toLocaleDateString("it-IT")} · avviso {r.notifyDaysBefore}g prima
+                  scade il {new Date(r.dueDate).toLocaleDateString("it-IT")} ·
+                  avviso {r.notifyDaysBefore}g prima
                 </span>
                 {r.description && (
-                  <div className="text-xs text-neutral-500 dark:text-neutral-400">{r.description}</div>
+                  <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                    {r.description}
+                  </div>
                 )}
               </div>
               <div className="flex items-center gap-2">
                 {r.notifiedAt ? (
-                  <span className="rounded-full bg-neutral-200 px-2 py-0.5 text-xs font-medium text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300">
+                  <span className="bg-neutral-200 px-2 py-0.5 text-xs font-medium text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300">
                     Notificata
                   </span>
                 ) : (
-                  <span className="rounded-full bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-400/15 dark:text-yellow-300">
+                  <span className="bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-400/15 dark:text-yellow-300">
                     In attesa
                   </span>
                 )}
-                <button onClick={() => deleteReminder(r.id)} className={btnDanger}>
+                <button
+                  onClick={() => deleteReminder(r.id)}
+                  className={btnDanger}
+                >
                   Elimina
                 </button>
               </div>
             </div>
           ))}
-          {client.reminders.length === 0 && <p className="text-sm text-neutral-500">Nessuna scadenza impostata.</p>}
+          {client.reminders.length === 0 && (
+            <p className="text-sm text-neutral-500">
+              Nessuna scadenza impostata.
+            </p>
+          )}
         </div>
       </section>
 
       <section className={`${card} p-4`}>
-        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">Fatture</h2>
+        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
+          Fatture
+        </h2>
 
-        <form onSubmit={generateInvoice} className="mb-4 flex flex-wrap items-end gap-3">
+        <form
+          onSubmit={generateInvoice}
+          className="mb-4 flex flex-wrap items-end gap-3"
+        >
           <label className="block">
             <span className={label}>Da</span>
             <input
@@ -623,11 +754,17 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
               className={`${input} w-40`}
             />
           </label>
-          <button type="submit" disabled={generating || !client.billingProfile} className={btnPositive}>
+          <button
+            type="submit"
+            disabled={generating || !client.billingProfile}
+            className={btnPositive}
+          >
             {generating ? "Generazione..." : "Genera fattura"}
           </button>
           {!client.billingProfile && (
-            <span className="text-xs text-neutral-500">Imposta prima un profilo di fatturazione.</span>
+            <span className="text-xs text-neutral-500">
+              Imposta prima un profilo di fatturazione.
+            </span>
           )}
         </form>
 
@@ -636,24 +773,36 @@ export default function AdminClientDetailPage({ params }: { params: Promise<{ id
             <Link
               key={inv.id}
               href={`/admin/invoices/${inv.id}`}
-              className="flex items-center justify-between rounded-md border-b border-neutral-200 dark:border-neutral-800 py-2 text-sm last:border-0 hover:bg-neutral-100 dark:hover:bg-neutral-800/50"
+              className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 py-2 text-sm last:border-0 hover:bg-neutral-100 dark:hover:bg-neutral-800/50"
             >
               <div>
-                <span className="font-medium text-neutral-900 dark:text-white">{inv.number}</span>{" "}
+                <span className="font-medium text-neutral-900 dark:text-white">
+                  {inv.number}
+                </span>
+                {""}
                 <span className="text-xs text-neutral-500">
-                  {new Date(inv.periodStart).toLocaleDateString("it-IT")} &ndash;{" "}
+                  {new Date(inv.periodStart).toLocaleDateString("it-IT")}{" "}
+                  &ndash;{""}
                   {new Date(inv.periodEnd).toLocaleDateString("it-IT")}
                 </span>
               </div>
               <div className="flex items-center gap-3">
-                <span className="text-neutral-700 dark:text-neutral-300">{formatCurrency(inv.total)}</span>
-                <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[inv.status]}`}>
+                <span className="text-neutral-700 dark:text-neutral-300">
+                  {formatCurrency(inv.total)}
+                </span>
+                <span
+                  className={`px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[inv.status]}`}
+                >
                   {STATUS_LABELS[inv.status] ?? inv.status}
                 </span>
               </div>
             </Link>
           ))}
-          {client.invoices.length === 0 && <p className="text-sm text-neutral-500">Nessuna fattura generata.</p>}
+          {client.invoices.length === 0 && (
+            <p className="text-sm text-neutral-500">
+              Nessuna fattura generata.
+            </p>
+          )}
         </div>
       </section>
     </div>

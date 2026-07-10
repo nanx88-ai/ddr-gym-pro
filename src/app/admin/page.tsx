@@ -18,6 +18,7 @@ import {
   trBorder,
 } from "@/lib/ui";
 import { useToast } from "@/components/Toast";
+import { useConfirm } from "@/components/ConfirmDialog";
 import AttendanceToggle from "@/components/AttendanceToggle";
 
 interface RescheduleRequest {
@@ -35,7 +36,12 @@ interface Booking {
   isRecurring: boolean;
   source: string;
   attended: boolean | null;
-  client: { firstName: string; lastName: string; email: string; status: string };
+  client: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    status: string;
+  };
   appointmentType: { name: string };
   rescheduleRequests: RescheduleRequest[];
 }
@@ -57,6 +63,7 @@ const filterField = `${input} w-full`;
 
 export default function AdminBookingsPage() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [filter, setFilter] = useState("");
   const [loading, setLoading] = useState(true);
@@ -68,7 +75,9 @@ export default function AdminBookingsPage() {
 
   async function load() {
     setLoading(true);
-    const res = await fetch(`/api/admin/bookings${filter ? `?status=${filter}` : ""}`);
+    const res = await fetch(
+      `/api/admin/bookings${filter ? `?status=${filter}` : ""}`,
+    );
     const json = await res.json();
     setBookings(json.bookings ?? []);
     setLoading(false);
@@ -91,7 +100,9 @@ export default function AdminBookingsPage() {
     const q = search.trim().toLowerCase();
     const filtered = q
       ? bookings.filter((b) =>
-          `${b.client.firstName} ${b.client.lastName} ${b.client.email}`.toLowerCase().includes(q)
+          `${b.client.firstName} ${b.client.lastName} ${b.client.email}`
+            .toLowerCase()
+            .includes(q),
         )
       : bookings;
 
@@ -103,13 +114,20 @@ export default function AdminBookingsPage() {
       }
       const dir = sortDir === "asc" ? 1 : -1;
       if (sortBy === "date") {
-        return dir * (new Date(a.startTime).getTime() - new Date(b.startTime).getTime());
+        return (
+          dir *
+          (new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+        );
       }
       return dir * a.status.localeCompare(b.status);
     });
   }, [bookings, search, sortBy, sortDir, pendingFirst]);
 
-  const activeFilterCount = (filter ? 1 : 0) + (sortBy !== "date" ? 1 : 0) + (sortDir !== "asc" ? 1 : 0) + (!pendingFirst ? 1 : 0);
+  const activeFilterCount =
+    (filter ? 1 : 0) +
+    (sortBy !== "date" ? 1 : 0) +
+    (sortDir !== "asc" ? 1 : 0) +
+    (!pendingFirst ? 1 : 0);
 
   const DISRUPTIVE_CONFIRM: Record<string, string> = {
     REJECTED: "Rifiutare questa richiesta di prenotazione?",
@@ -123,7 +141,7 @@ export default function AdminBookingsPage() {
 
   async function updateStatus(id: string, status: string) {
     const confirmMsg = DISRUPTIVE_CONFIRM[status];
-    if (confirmMsg && !window.confirm(confirmMsg)) return;
+    if (confirmMsg && !(await confirm(confirmMsg))) return;
     await fetch(`/api/admin/bookings/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -139,12 +157,21 @@ export default function AdminBookingsPage() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ attended }),
     });
-    toast.success(attended === false ? "Assenza segnata." : "Presenza aggiornata.");
+    toast.success(
+      attended === false ? "Assenza segnata." : "Presenza aggiornata.",
+    );
     load();
   }
 
-  async function decideReschedule(requestId: string, decision: "APPROVE" | "REJECT") {
-    if (decision === "REJECT" && !window.confirm("Rifiutare questa richiesta di spostamento?")) return;
+  async function decideReschedule(
+    requestId: string,
+    decision: "APPROVE" | "REJECT",
+  ) {
+    if (
+      decision === "REJECT" &&
+      !(await confirm("Rifiutare questa richiesta di spostamento?"))
+    )
+      return;
     const res = await fetch(`/api/admin/reschedule/${requestId}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
@@ -155,7 +182,11 @@ export default function AdminBookingsPage() {
       toast.error(json.error ?? "Errore durante l'operazione.");
       return;
     }
-    toast.success(decision === "APPROVE" ? "Spostamento approvato." : "Spostamento rifiutato.");
+    toast.success(
+      decision === "APPROVE"
+        ? "Spostamento approvato."
+        : "Spostamento rifiutato.",
+    );
     load();
   }
 
@@ -163,16 +194,29 @@ export default function AdminBookingsPage() {
     const req = b.rescheduleRequests[0];
     if (b.status !== "RESCHEDULE_REQUESTED" || !req) return null;
     return (
-      <div className="mt-3 rounded-md border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-900/50 dark:bg-blue-950/30">
+      <div className="mt-3 border border-blue-200 bg-blue-50 p-3 text-sm dark:border-blue-900/50 dark:bg-blue-950/30">
         <p className="text-blue-800 dark:text-blue-300">
-          Richiesta nuovo orario: <span className="font-medium capitalize">{formatDateTime(req.requestedStartTime)}</span>
+          Richiesta nuovo orario:{" "}
+          <span className="font-medium capitalize">
+            {formatDateTime(req.requestedStartTime)}
+          </span>
         </p>
-        {req.reason && <p className="mt-0.5 text-xs italic text-blue-700 dark:text-blue-400">&quot;{req.reason}&quot;</p>}
+        {req.reason && (
+          <p className="mt-0.5 text-xs italic text-blue-700 dark:text-blue-400">
+            &quot;{req.reason}&quot;
+          </p>
+        )}
         <div className="mt-2 flex flex-wrap gap-2">
-          <button onClick={() => decideReschedule(req.id, "APPROVE")} className={btnPositive}>
+          <button
+            onClick={() => decideReschedule(req.id, "APPROVE")}
+            className={btnPositive}
+          >
             Approva spostamento
           </button>
-          <button onClick={() => decideReschedule(req.id, "REJECT")} className={btnDanger}>
+          <button
+            onClick={() => decideReschedule(req.id, "REJECT")}
+            className={btnDanger}
+          >
             Rifiuta spostamento
           </button>
         </div>
@@ -185,20 +229,34 @@ export default function AdminBookingsPage() {
       <div className="flex flex-wrap items-center gap-2">
         {b.status === "PENDING_APPROVAL" && (
           <>
-            <button onClick={() => updateStatus(b.id, "APPROVED")} className={btnPositive}>
+            <button
+              onClick={() => updateStatus(b.id, "APPROVED")}
+              className={btnPositive}
+            >
               Approva
             </button>
-            <button onClick={() => updateStatus(b.id, "REJECTED")} className={btnDanger}>
+            <button
+              onClick={() => updateStatus(b.id, "REJECTED")}
+              className={btnDanger}
+            >
               Rifiuta
             </button>
           </>
         )}
-        {["APPROVED", "RESCHEDULED", "RESCHEDULE_REQUESTED"].includes(b.status) && (
+        {["APPROVED", "RESCHEDULED", "RESCHEDULE_REQUESTED"].includes(
+          b.status,
+        ) && (
           <>
-            <button onClick={() => updateStatus(b.id, "CANCELLED")} className={btnNeutral}>
+            <button
+              onClick={() => updateStatus(b.id, "CANCELLED")}
+              className={btnNeutral}
+            >
               Annulla
             </button>
-            <AttendanceToggle attended={b.attended} onChange={(attended) => markAttendance(b.id, attended)} />
+            <AttendanceToggle
+              attended={b.attended}
+              onChange={(attended) => markAttendance(b.id, attended)}
+            />
           </>
         )}
       </div>
@@ -208,7 +266,9 @@ export default function AdminBookingsPage() {
   return (
     <div>
       <h1 className={pageTitle}>Prenotazioni</h1>
-      <p className={pageSubtitle}>Approva, rifiuta o annulla le richieste ricevute.</p>
+      <p className={pageSubtitle}>
+        Approva, rifiuta o annulla le richieste ricevute.
+      </p>
 
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <input
@@ -220,11 +280,11 @@ export default function AdminBookingsPage() {
         <button
           type="button"
           onClick={() => setFiltersOpen((o) => !o)}
-          className="flex items-center gap-1.5 rounded-md border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+          className="flex items-center gap-1.5 border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
         >
           Filtri
           {activeFilterCount > 0 && (
-            <span className="flex h-4 min-w-4 items-center justify-center rounded-full bg-yellow-400 px-1 text-[10px] font-semibold text-neutral-900">
+            <span className="flex h-4 min-w-4 items-center justify-center bg-yellow-400 px-1 text-[10px] font-semibold text-neutral-900">
               {activeFilterCount}
             </span>
           )}
@@ -235,14 +295,24 @@ export default function AdminBookingsPage() {
             strokeWidth="2"
             className={`h-3.5 w-3.5 transition-transform ${filtersOpen ? "rotate-180" : ""}`}
           >
-            <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              d="M6 9l6 6 6-6"
+            />
           </svg>
         </button>
       </div>
 
       {filtersOpen && (
-        <div className={`${card} mb-4 grid grid-cols-2 gap-2 p-3 sm:grid-cols-4`}>
-          <select value={filter} onChange={(e) => setFilter(e.target.value)} className={filterField}>
+        <div
+          className={`${card} mb-4 grid grid-cols-2 gap-2 p-3 sm:grid-cols-4`}
+        >
+          <select
+            value={filter}
+            onChange={(e) => setFilter(e.target.value)}
+            className={filterField}
+          >
             {STATUS_OPTIONS.map((f) => (
               <option key={f.value} value={f.value}>
                 {f.label}
@@ -250,7 +320,11 @@ export default function AdminBookingsPage() {
             ))}
           </select>
 
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)} className={filterField}>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value as SortBy)}
+            className={filterField}
+          >
             <option value="date">Ordina per data</option>
             <option value="status">Ordina per stato</option>
           </select>
@@ -280,12 +354,14 @@ export default function AdminBookingsPage() {
       {loading && <p className="text-sm text-neutral-500">Caricamento...</p>}
 
       {!loading && visibleBookings.length === 0 && (
-        <p className={`${card} px-4 py-8 text-center text-sm text-neutral-500 dark:text-neutral-400`}>
+        <p
+          className={`${card} px-4 py-8 text-center text-sm text-neutral-500 dark:text-neutral-400`}
+        >
           Nessuna prenotazione.
         </p>
       )}
 
-      {/* Mobile: schede, una per prenotazione (una tabella qui e' illeggibile su schermi stretti) */}
+      {/* Mobile: schede, una per prenotazione (una tabella qui e'illeggibile su schermi stretti) */}
       {!loading && visibleBookings.length > 0 && (
         <div className="space-y-3 sm:hidden">
           {visibleBookings.map((b) => (
@@ -295,19 +371,29 @@ export default function AdminBookingsPage() {
                   <div className="font-medium text-neutral-900 dark:text-white">
                     {b.client.firstName} {b.client.lastName}
                   </div>
-                  <div className="text-xs text-neutral-500 dark:text-neutral-400">{b.client.email}</div>
+                  <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                    {b.client.email}
+                  </div>
                   {b.client.status === "PAUSED" && (
-                    <span className="text-xs text-yellow-500 dark:text-yellow-400">Cliente in pausa</span>
+                    <span className="text-xs text-yellow-500 dark:text-yellow-400">
+                      Cliente in pausa
+                    </span>
                   )}
                 </div>
-                <span className={`shrink-0 rounded-full px-2 py-1 text-xs font-medium ${STATUS_COLORS[b.status]}`}>
+                <span
+                  className={`shrink-0 px-2 py-1 text-xs font-medium ${STATUS_COLORS[b.status]}`}
+                >
                   {STATUS_LABELS[b.status] ?? b.status}
                 </span>
               </div>
 
               <div className="mt-3 flex items-center justify-between text-sm">
-                <span className="text-neutral-700 dark:text-neutral-200">{b.appointmentType.name}</span>
-                <span className="capitalize text-neutral-500 dark:text-neutral-400">{formatDateTime(b.startTime)}</span>
+                <span className="text-neutral-700 dark:text-neutral-200">
+                  {b.appointmentType.name}
+                </span>
+                <span className="capitalize text-neutral-500 dark:text-neutral-400">
+                  {formatDateTime(b.startTime)}
+                </span>
               </div>
 
               <RescheduleBanner b={b} />
@@ -340,13 +426,23 @@ export default function AdminBookingsPage() {
                     <div className="font-medium text-neutral-900 dark:text-white">
                       {b.client.firstName} {b.client.lastName}
                     </div>
-                    <div className="text-xs text-neutral-500 dark:text-neutral-400">{b.client.email}</div>
-                    {b.client.status === "PAUSED" && <span className="text-xs text-yellow-400">Cliente in pausa</span>}
+                    <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                      {b.client.email}
+                    </div>
+                    {b.client.status === "PAUSED" && (
+                      <span className="text-xs text-yellow-400">
+                        Cliente in pausa
+                      </span>
+                    )}
                   </td>
                   <td className={td}>{b.appointmentType.name}</td>
-                  <td className={`${td} capitalize`}>{formatDateTime(b.startTime)}</td>
+                  <td className={`${td} capitalize`}>
+                    {formatDateTime(b.startTime)}
+                  </td>
                   <td className={td}>
-                    <span className={`rounded-full px-2 py-1 text-xs font-medium ${STATUS_COLORS[b.status]}`}>
+                    <span
+                      className={`px-2 py-1 text-xs font-medium ${STATUS_COLORS[b.status]}`}
+                    >
                       {STATUS_LABELS[b.status] ?? b.status}
                     </span>
                   </td>

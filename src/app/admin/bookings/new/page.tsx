@@ -28,7 +28,8 @@ export default function AdminNewBookingPage() {
       .then((res) => res.json())
       .then((json) => {
         setTypes(json.appointmentTypes ?? []);
-        if (json.appointmentTypes?.[0]) setAppointmentTypeId(json.appointmentTypes[0].id);
+        if (json.appointmentTypes?.[0])
+          setAppointmentTypeId(json.appointmentTypes[0].id);
       });
   }, []);
 
@@ -43,7 +44,9 @@ export default function AdminNewBookingPage() {
     }
 
     const startTime = new Date(`${date}T${time}:00`);
-    const endTime = new Date(startTime.getTime() + type.durationMinutes * 60000);
+    const endTime = new Date(
+      startTime.getTime() + type.durationMinutes * 60000,
+    );
 
     setSubmitting(true);
     const res = await fetch("/api/admin/bookings", {
@@ -75,7 +78,7 @@ export default function AdminNewBookingPage() {
       <h1 className={pageTitle}>Nuovo appuntamento</h1>
 
       {error && (
-        <div className="mb-4 rounded-md border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300">
+        <div className="mb-4 border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300">
           {error}
         </div>
       )}
@@ -83,7 +86,11 @@ export default function AdminNewBookingPage() {
       <form onSubmit={handleSubmit} className="space-y-4">
         <label className="block">
           <span className={label}>Tipo di appuntamento (calendario)</span>
-          <select value={appointmentTypeId} onChange={(e) => setAppointmentTypeId(e.target.value)} className={input}>
+          <select
+            value={appointmentTypeId}
+            onChange={(e) => setAppointmentTypeId(e.target.value)}
+            className={input}
+          >
             {types.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name} ({t.durationMinutes} min)
@@ -127,20 +134,41 @@ export default function AdminNewBookingPage() {
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className={label}>Data</span>
-            <input required type="date" value={date} onChange={(e) => setDate(e.target.value)} className={input} />
+            <input
+              required
+              type="date"
+              value={date}
+              onChange={(e) => setDate(e.target.value)}
+              className={input}
+            />
           </label>
           <label className="block">
             <span className={label}>Ora</span>
-            <input required type="time" value={time} onChange={(e) => setTime(e.target.value)} className={input} />
+            <input
+              required
+              type="time"
+              value={time}
+              onChange={(e) => setTime(e.target.value)}
+              className={input}
+            />
           </label>
         </div>
 
         <label className="block">
           <span className={label}>Note (facoltativo)</span>
-          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className={input} rows={3} />
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className={input}
+            rows={3}
+          />
         </label>
 
-        <button type="submit" disabled={submitting} className={`w-full ${btnPositive}`}>
+        <button
+          type="submit"
+          disabled={submitting}
+          className={`w-full ${btnPositive}`}
+        >
           {submitting ? "Creazione in corso..." : "Crea appuntamento"}
         </button>
       </form>

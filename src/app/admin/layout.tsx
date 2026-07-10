@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation";
 import NotificationBell from "@/components/NotificationBell";
 import PwaRegister from "@/components/PwaRegister";
 import { ToastProvider } from "@/components/Toast";
+import { ConfirmDialogProvider, useConfirm } from "@/components/ConfirmDialog";
 
 type IconKey =
   | "bookings"
@@ -29,45 +30,57 @@ interface NavItem {
 }
 
 interface NavGroup {
-  label: string;
   items: NavItem[];
 }
 
 const NAV_GROUPS: NavGroup[] = [
   {
-    label: "Appuntamenti",
     items: [
       { href: "/admin", label: "Prenotazioni", icon: "bookings" },
       { href: "/admin/agenda", label: "Agenda", icon: "agenda" },
-      { href: "/admin/calendar", label: "Calendario", icon: "calendar" },
-      { href: "/admin/schedule", label: "Orario settimanale", icon: "schedule" },
-      { href: "/admin/appointment-types", label: "Calendari/servizi", icon: "types" },
       { href: "/admin/bookings/new", label: "Nuovo appuntamento", icon: "new" },
     ],
   },
   {
-    label: "Anagrafica & Fatturazione",
     items: [
-      { href: "/admin/clients", label: "Clienti", icon: "clients" },
-      { href: "/admin/price-list", label: "Listino", icon: "priceList" },
-      { href: "/admin/invoices", label: "Fatture", icon: "invoices" },
+      {
+        href: "/admin/appointment-types",
+        label: "Calendario servizi",
+        icon: "types",
+      },
+      { href: "/admin/schedule", label: "Planning Orario", icon: "schedule" },
     ],
   },
   {
-    label: "Impostazioni",
     items: [
+      { href: "/admin/price-list", label: "Listino", icon: "priceList" },
+      { href: "/admin/clients", label: "Clienti", icon: "clients" },
+      { href: "/admin/invoices", label: "Fatture", icon: "invoices" },
       { href: "/admin/stats", label: "Statistiche", icon: "stats" },
+    ],
+  },
+  {
+    items: [
       { href: "/admin/settings", label: "Impostazioni", icon: "settings" },
     ],
   },
 ];
 
 const ICON_PATHS: Record<IconKey, React.ReactNode> = {
-  bookings: <path strokeLinecap="round" strokeLinejoin="round" d="M9 3.5h6a1 1 0 0 1 1 1V5h1a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h1v-.5a1 1 0 0 1 1-1ZM8 12h8M8 16h5" />,
+  bookings: (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M9 3.5h6a1 1 0 0 1 1 1V5h1a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h1v-.5a1 1 0 0 1 1-1ZM8 12h8M8 16h5"
+    />
+  ),
   agenda: (
     <>
       <rect x="3.5" y="5" width="17" height="16" rx="2" />
-      <path strokeLinecap="round" d="M8 3v4M16 3v4M3.5 10h17M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01" />
+      <path
+        strokeLinecap="round"
+        d="M8 3v4M16 3v4M3.5 10h17M8 14h.01M12 14h.01M16 14h.01M8 17h.01M12 17h.01"
+      />
     </>
   ),
   calendar: (
@@ -76,7 +89,13 @@ const ICON_PATHS: Record<IconKey, React.ReactNode> = {
       <path strokeLinecap="round" d="M8 3v4M16 3v4M3.5 10h17" />
     </>
   ),
-  reschedule: <path strokeLinecap="round" strokeLinejoin="round" d="M7 7h11l-3-3m3 3-3 3M17 17H6l3 3m-3-3 3-3" />,
+  reschedule: (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M7 7h11l-3-3m3 3-3 3M17 17H6l3 3m-3-3 3-3"
+    />
+  ),
   schedule: (
     <>
       <circle cx="12" cy="12" r="8.5" />
@@ -100,7 +119,11 @@ const ICON_PATHS: Record<IconKey, React.ReactNode> = {
   clients: (
     <>
       <circle cx="9" cy="8" r="3" />
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3.5 20a5.5 5.5 0 0 1 11 0M16 9a2.5 2.5 0 1 0 0-5M18.5 20a4.5 4.5 0 0 0-4-4.46" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M3.5 20a5.5 5.5 0 0 1 11 0M16 9a2.5 2.5 0 1 0 0-5M18.5 20a4.5 4.5 0 0 0-4-4.46"
+      />
     </>
   ),
   priceList: (
@@ -112,11 +135,21 @@ const ICON_PATHS: Record<IconKey, React.ReactNode> = {
   ),
   invoices: (
     <>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M6.5 3.5h8l3 3v14h-11z" />
+      <path
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        d="M6.5 3.5h8l3 3v14h-11z"
+      />
       <path strokeLinecap="round" d="M9 10.5h6M9 14h6M9 17.5h4" />
     </>
   ),
-  stats: <path strokeLinecap="round" strokeLinejoin="round" d="M4 20V10M10 20V4M16 20v-7M20 20H4" />,
+  stats: (
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M4 20V10M10 20V4M16 20v-7M20 20H4"
+    />
+  ),
   settings: (
     <>
       <circle cx="12" cy="12" r="3" />
@@ -138,7 +171,13 @@ const ICON_PATHS: Record<IconKey, React.ReactNode> = {
 
 function NavIcon({ icon }: { icon: IconKey }) {
   return (
-    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5 shrink-0">
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.8"
+      className="h-5 w-5 shrink-0"
+    >
       {ICON_PATHS[icon]}
     </svg>
   );
@@ -157,23 +196,24 @@ function NavContent({
 }) {
   return (
     <>
-      {NAV_GROUPS.map((group) => (
-        <div key={group.label} className="mb-5">
-          {!collapsed && (
-            <div className="mb-1 px-2 text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
-              {group.label}
-            </div>
-          )}
+      {NAV_GROUPS.map((group, i) => (
+        <div
+          key={i}
+          className={`mb-3 pb-3 ${i > 0 ? "border-t border-neutral-200 pt-3 dark:border-neutral-800" : ""}`}
+        >
           <nav className="space-y-0.5">
             {group.items.map((item) => {
-              const isActive = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
+              const isActive =
+                item.href === "/admin"
+                  ? pathname === "/admin"
+                  : pathname.startsWith(item.href);
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={onNavigate}
                   title={collapsed ? item.label : undefined}
-                  className={`group relative flex items-center gap-2.5 rounded-md px-2 py-2 text-sm transition-colors sm:py-1.5 ${
+                  className={`group relative flex items-center gap-2.5 px-2 py-2 text-sm transition-colors sm:py-1.5 ${
                     collapsed ? "justify-center" : ""
                   } ${
                     isActive
@@ -184,7 +224,7 @@ function NavContent({
                   <NavIcon icon={item.icon} />
                   {!collapsed && <span>{item.label}</span>}
                   {collapsed && (
-                    <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 dark:bg-neutral-700">
+                    <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap bg-neutral-900 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 dark:bg-neutral-700">
                       {item.label}
                     </span>
                   )}
@@ -202,14 +242,14 @@ function NavContent({
             onLogout();
           }}
           title={collapsed ? "Esci" : undefined}
-          className={`group relative flex w-full items-center gap-2.5 rounded-md px-2 py-2 text-left text-sm text-red-500 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30 sm:py-1.5 ${
+          className={`group relative flex w-full items-center gap-2.5 px-2 py-2 text-left text-sm text-red-500 transition-colors hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-950/30 sm:py-1.5 ${
             collapsed ? "justify-center" : ""
           }`}
         >
           <NavIcon icon="logout" />
           {!collapsed && <span>Esci</span>}
           {collapsed && (
-            <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md bg-neutral-900 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 dark:bg-neutral-700">
+            <span className="pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap bg-neutral-900 px-2 py-1 text-xs font-medium text-white opacity-0 shadow-lg transition-opacity group-hover:opacity-100 dark:bg-neutral-700">
               Esci
             </span>
           )}
@@ -221,7 +261,22 @@ function NavContent({
 
 const SIDEBAR_COLLAPSED_KEY = "koalendar_admin_sidebar_collapsed";
 
-export default function AdminLayout({ children }: { children: React.ReactNode }) {
+export default function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <ToastProvider>
+      <ConfirmDialogProvider>
+        <AdminLayoutInner>{children}</AdminLayoutInner>
+      </ConfirmDialogProvider>
+    </ToastProvider>
+  );
+}
+
+function AdminLayoutInner({ children }: { children: React.ReactNode }) {
+  const confirm = useConfirm();
   const pathname = usePathname();
   const router = useRouter();
   const isLogin = pathname === "/admin/login";
@@ -245,7 +300,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   }
 
   async function handleLogout() {
-    if (!window.confirm("Confermi di voler uscire?")) return;
+    if (!(await confirm("Confermi di voler uscire?"))) return;
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/admin/login");
     router.refresh();
@@ -253,14 +308,13 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
   if (isLogin) {
     return (
-      <ToastProvider>
-        <div className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">{children}</div>
-      </ToastProvider>
+      <div className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
+        {children}
+      </div>
     );
   }
 
   return (
-    <ToastProvider>
     <div className="min-h-screen bg-neutral-50 text-neutral-900 dark:bg-neutral-950 dark:text-neutral-100">
       <PwaRegister />
       <header className="sticky top-0 z-30 border-b border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900">
@@ -269,14 +323,30 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <button
               onClick={() => setMobileNavOpen(true)}
               aria-label="Apri menu"
-              className="-ml-1 flex h-11 w-11 items-center justify-center rounded-md text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800 sm:hidden"
+              className="-ml-1 flex h-11 w-11 items-center justify-center text-neutral-600 hover:bg-neutral-100 dark:text-neutral-300 dark:hover:bg-neutral-800 sm:hidden"
             >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                className="h-5 w-5"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M4 6h16M4 12h16M4 18h16"
+                />
               </svg>
             </button>
-            <Link href="/admin" className="font-semibold text-neutral-900 dark:text-white">
-              Palestra <span className="text-yellow-500 dark:text-yellow-400">Admin</span>
+            <Link
+              href="/admin"
+              className="font-semibold text-neutral-900 dark:text-white"
+            >
+              DDR{" "}
+              <span className="text-yellow-500 dark:text-yellow-400">
+                Academy
+              </span>
             </Link>
           </div>
           <div className="flex items-center gap-1 sm:gap-2">
@@ -287,21 +357,40 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
 
       {mobileNavOpen && (
         <div className="fixed inset-0 z-40 sm:hidden">
-          <div className="absolute inset-0 bg-black/40" onClick={() => setMobileNavOpen(false)} />
+          <div
+            className="absolute inset-0 bg-black/40"
+            onClick={() => setMobileNavOpen(false)}
+          />
           <div className="absolute inset-y-0 left-0 w-72 max-w-[85vw] overflow-y-auto bg-white px-3 py-4 shadow-xl dark:bg-neutral-900">
             <div className="mb-3 flex items-center justify-between px-2">
-              <span className="font-semibold text-neutral-900 dark:text-white">Menu</span>
+              <span className="font-semibold text-neutral-900 dark:text-white">
+                Menu
+              </span>
               <button
                 onClick={() => setMobileNavOpen(false)}
                 aria-label="Chiudi menu"
-                className="flex h-11 w-11 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
+                className="flex h-11 w-11 items-center justify-center text-neutral-500 hover:bg-neutral-100 dark:text-neutral-400 dark:hover:bg-neutral-800"
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-5 w-5">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 6l12 12M18 6l-12 12" />
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  className="h-5 w-5"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M6 6l12 12M18 6l-12 12"
+                  />
                 </svg>
               </button>
             </div>
-            <NavContent pathname={pathname} onNavigate={() => setMobileNavOpen(false)} onLogout={handleLogout} />
+            <NavContent
+              pathname={pathname}
+              onNavigate={() => setMobileNavOpen(false)}
+              onLogout={handleLogout}
+            />
           </div>
         </div>
       )}
@@ -312,12 +401,16 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             collapsed ? "w-14 px-2" : "w-56 px-3"
           }`}
         >
-          <NavContent pathname={pathname} onLogout={handleLogout} collapsed={collapsed} />
+          <NavContent
+            pathname={pathname}
+            onLogout={handleLogout}
+            collapsed={collapsed}
+          />
 
           <button
             onClick={toggleCollapsed}
             title={collapsed ? "Espandi menu" : "Comprimi menu"}
-            className={`mt-2 flex w-full items-center gap-2.5 rounded-md border-t border-neutral-200 px-2 pt-3 text-sm text-neutral-400 transition-colors hover:text-neutral-700 dark:border-neutral-800 dark:text-neutral-500 dark:hover:text-neutral-200 ${
+            className={`mt-2 flex w-full items-center gap-2.5 border-t border-neutral-200 px-2 pt-3 text-sm text-neutral-400 transition-colors hover:text-neutral-700 dark:border-neutral-800 dark:text-neutral-500 dark:hover:text-neutral-200 ${
               collapsed ? "justify-center" : ""
             }`}
           >
@@ -328,7 +421,11 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
               strokeWidth="2"
               className={`h-4 w-4 shrink-0 transition-transform ${collapsed ? "rotate-180" : ""}`}
             >
-              <path strokeLinecap="round" strokeLinejoin="round" d="M15 6l-6 6 6 6" />
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M15 6l-6 6 6 6"
+              />
             </svg>
             {!collapsed && <span>Comprimi</span>}
           </button>
@@ -339,6 +436,5 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         </main>
       </div>
     </div>
-    </ToastProvider>
   );
 }
