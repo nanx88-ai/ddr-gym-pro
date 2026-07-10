@@ -54,8 +54,10 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
               <button
                 type="button"
                 onClick={() => close(true)}
-                className={`min-h-11 px-3 py-2 text-sm font-medium text-white ${
-                  options.danger ? "bg-red-600 hover:bg-red-500" : "bg-yellow-400 text-neutral-900 hover:bg-yellow-300"
+                className={`min-h-11 px-3 py-2 text-sm font-medium ${
+                  options.danger
+                    ? "bg-red-600 text-white hover:bg-red-500"
+                    : "bg-yellow-400 text-neutral-900 hover:bg-yellow-300"
                 }`}
               >
                 {options.confirmLabel ?? "Conferma"}
