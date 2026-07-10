@@ -156,17 +156,24 @@ export async function createCustomBooking(input: CreateBookingInput) {
   if (initialStatus === BOOKING_STATUS.APPROVED) {
     const { sendBookingConfirmationEmail } = await import("@/lib/mailer");
     sendBookingConfirmationEmail(booking).catch((err) => console.error("[booking-rules] invio email fallito:", err));
-  } else {
-    // In attesa di approvazione: l'admin va avvisato subito, anche a PWA
-    // chiusa/in background, cosi' non scopre la richiesta solo al prossimo
-    // giro di polling del campanello.
-    const { sendAdminPush } = await import("@/lib/push");
-    sendAdminPush({
-      title: "Nuova richiesta di prenotazione",
-      body: `${booking.client.firstName} ${booking.client.lastName} - ${booking.appointmentType.name}`,
-      url: "/admin?status=PENDING_APPROVAL",
-    }).catch((err) => console.error("[booking-rules] invio push fallito:", err));
   }
+
+  // L'admin va avvisato per OGNI nuova prenotazione, non solo quelle da
+  // approvare: cambia solo il testo/link della notifica.
+  const { sendAdminPush } = await import("@/lib/push");
+  sendAdminPush(
+    initialStatus === BOOKING_STATUS.APPROVED
+      ? {
+          title: "Nuova prenotazione confermata",
+          body: `${booking.client.firstName} ${booking.client.lastName} - ${booking.appointmentType.name}`,
+          url: "/admin",
+        }
+      : {
+          title: "Nuova richiesta di prenotazione",
+          body: `${booking.client.firstName} ${booking.client.lastName} - ${booking.appointmentType.name}`,
+          url: "/admin?status=PENDING_APPROVAL",
+        }
+  ).catch((err) => console.error("[booking-rules] invio push fallito:", err));
 
   return booking;
 }

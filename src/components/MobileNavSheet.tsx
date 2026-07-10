@@ -7,27 +7,28 @@ import { NAV_GROUPS, NavIcon } from "@/components/AdminNav";
 const DRAG_OPEN_THRESHOLD = 50;
 const DRAG_CLOSE_THRESHOLD = 70;
 const BAR_HEIGHT = 52;
-// Zona morta sotto la barra collassata: nera, senza handler, cosi' la
-// gesture "swipe up" di iOS per chiudere le app non entra in conflitto col
+// Zona morta sotto la barra collassata: senza handler, cosi' la gesture
+// "swipe up" di iOS per chiudere le app non entra in conflitto col
 // trascinamento del nostro menu. L'Apple HIG riserva 34pt alla home
 // indicator sui device senza tasto Home (env(safe-area-inset-bottom));
 // aggiungiamo un margine di 8pt di cuscinetto. Su device piu' vecchi/Android
 // senza quell'inset usiamo comunque 34px come minimo di sicurezza.
 const BOTTOM_DEAD_ZONE = "calc(max(env(safe-area-inset-bottom), 34px) + 8px)";
 
-const BG_BASE = "#0D0D0D";
-const BG_CELL = "#1A1A1A";
-const LINE = "#2A2A2A";
-const YELLOW = "#F5C400";
-const RED = "#E53935";
+const SURFACE = "bg-white dark:bg-[#0D0D0D]";
+const LINE = "border-neutral-200 dark:border-[#2A2A2A]";
+const CELL = "bg-neutral-100 dark:bg-[#1A1A1A]";
+const TEXT_MUTED = "text-neutral-500 dark:text-neutral-400";
+const TEXT_LABEL = "text-neutral-700 dark:text-neutral-300";
+const TEXT_CELL = "text-neutral-800 dark:text-[#E0E0E0]";
 
 /**
  * Menu principale da mobile: non un burger+drawer laterale, ma una bottom
  * bar sempre visibile a tutta larghezza che si trascina (o si tocca) verso
  * l'alto per aprire una scheda a schermo intero con le sezioni a griglia,
- * stile "ERP dark block": griglia rigida a celle piene separate da linee
- * 1px, zero border-radius, zero ombre/gradienti, stato attivo = riempimento
- * giallo pieno.
+ * stile "ERP block": griglia rigida a celle piene separate da linee 1px,
+ * zero border-radius, zero ombre/gradienti, stato attivo = riempimento
+ * giallo pieno. Segue il tema chiaro/scuro dell'admin (classe .dark).
  */
 export default function MobileNavSheet({
   pathname,
@@ -77,12 +78,12 @@ export default function MobileNavSheet({
       {/* Overlay a tutto schermo, piu' marcato di quello del pannello notifiche */}
       {open && <div className="fixed inset-0 z-40 bg-black/80" onClick={() => setOpen(false)} />}
 
-      {/* Barra collassata: sollevata dal bordo, con zona nera non interattiva
+      {/* Barra collassata: sollevata dal bordo, con zona morta non interattiva
           sotto per non entrare in conflitto con la gesture bar iOS */}
       {!open && (
         <div
-          className="fixed inset-x-0 bottom-0 z-40"
-          style={{ backgroundColor: BG_BASE, height: `calc(${BAR_HEIGHT}px + ${BOTTOM_DEAD_ZONE})` }}
+          className={`fixed inset-x-0 bottom-0 z-40 ${SURFACE}`}
+          style={{ height: `calc(${BAR_HEIGHT}px + ${BOTTOM_DEAD_ZONE})` }}
         >
           <button
             type="button"
@@ -90,13 +91,13 @@ export default function MobileNavSheet({
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
-            className="flex w-full touch-none items-center gap-3 border-t px-4"
-            style={{ backgroundColor: BG_BASE, borderColor: LINE, height: BAR_HEIGHT }}
+            className={`flex w-full touch-none items-center gap-3 border-t px-4 ${SURFACE} ${LINE}`}
+            style={{ height: BAR_HEIGHT }}
             aria-label="Apri menu"
           >
-            <span className="h-1 w-8 shrink-0" style={{ backgroundColor: LINE }} />
-            <span className="text-xs font-semibold uppercase tracking-wide text-neutral-300">Menu</span>
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="ml-auto h-4 w-4 text-neutral-500">
+            <span className={`h-1 w-8 shrink-0 border ${LINE}`} />
+            <span className={`text-xs font-semibold uppercase tracking-wide ${TEXT_LABEL}`}>Menu</span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className={`ml-auto h-4 w-4 ${TEXT_MUTED}`}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M6 15l6-6 6 6" />
             </svg>
           </button>
@@ -107,10 +108,8 @@ export default function MobileNavSheet({
       {/* Scheda a schermo intero */}
       {open && (
         <div
-          className="fixed inset-x-0 bottom-0 z-50 flex max-h-[92vh] flex-col border-t"
+          className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[92vh] flex-col border-t ${SURFACE} ${LINE}`}
           style={{
-            backgroundColor: BG_BASE,
-            borderColor: LINE,
             transform: `translateY(${dragY}px)`,
             transition: dragState.current?.dragging ? "none" : "transform 0.2s ease-out",
           }}
@@ -125,14 +124,14 @@ export default function MobileNavSheet({
             aria-label="Chiudi menu"
           >
             <div className="flex justify-center pt-2.5 pb-1.5">
-              <span className="h-1 w-10" style={{ backgroundColor: LINE }} />
+              <span className={`h-1 w-10 border ${LINE}`} />
             </div>
             <div className="px-4 pb-2.5">
-              <span className="text-xs font-semibold uppercase tracking-wide text-neutral-300">Menu</span>
+              <span className={`text-xs font-semibold uppercase tracking-wide ${TEXT_LABEL}`}>Menu</span>
             </div>
           </button>
 
-          <div className="flex-1 overflow-y-auto border-t" style={{ borderColor: LINE }}>
+          <div className={`flex-1 overflow-y-auto border-t ${LINE}`}>
             <div className="grid grid-cols-3">
               {gridItems.map((item) => {
                 const isActive = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
@@ -141,12 +140,9 @@ export default function MobileNavSheet({
                     key={item.href}
                     href={item.href}
                     onClick={() => setOpen(false)}
-                    className="flex aspect-square flex-col items-center justify-center gap-2 border p-2 text-center"
-                    style={{
-                      backgroundColor: isActive ? YELLOW : BG_CELL,
-                      borderColor: LINE,
-                      color: isActive ? "#0D0D0D" : "#E0E0E0",
-                    }}
+                    className={`flex aspect-square flex-col items-center justify-center gap-2 border p-2 text-center ${LINE} ${
+                      isActive ? "bg-yellow-400 text-neutral-900" : `${CELL} ${TEXT_CELL}`
+                    }`}
                   >
                     <NavIcon icon={item.icon} />
                     <span className="text-[11px] font-semibold uppercase leading-tight tracking-wide">{item.label}</span>
@@ -157,12 +153,11 @@ export default function MobileNavSheet({
           </div>
 
           {/* Bottom action bar: neutro a sinistra, distruttivo a destra, divisi da una linea */}
-          <div className="flex border-t" style={{ borderColor: LINE, height: 52 }}>
+          <div className={`flex border-t ${LINE}`} style={{ height: 52 }}>
             <Link
               href="/admin/settings"
               onClick={() => setOpen(false)}
-              className="flex flex-1 items-center justify-center gap-2 border-r text-sm font-medium text-neutral-200"
-              style={{ borderColor: LINE }}
+              className={`flex flex-1 items-center justify-center gap-2 border-r text-sm font-medium ${LINE} ${TEXT_LABEL}`}
             >
               <NavIcon icon="settings" />
               Impostazioni
@@ -172,8 +167,7 @@ export default function MobileNavSheet({
                 setOpen(false);
                 onLogout();
               }}
-              className="flex flex-1 items-center justify-center gap-2 text-sm font-medium"
-              style={{ color: RED }}
+              className="flex flex-1 items-center justify-center gap-2 text-sm font-medium text-red-600 dark:text-red-400"
             >
               <NavIcon icon="logout" />
               Esci
@@ -181,7 +175,7 @@ export default function MobileNavSheet({
           </div>
 
           {/* Safe area piatta per la home indicator, nessun contenuto dentro */}
-          <div style={{ backgroundColor: BG_BASE, height: "env(safe-area-inset-bottom)" }} />
+          <div className={SURFACE} style={{ height: "env(safe-area-inset-bottom)" }} />
         </div>
       )}
     </div>
