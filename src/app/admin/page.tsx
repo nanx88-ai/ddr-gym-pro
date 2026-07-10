@@ -36,7 +36,9 @@ interface Booking {
   isRecurring: boolean;
   source: string;
   attended: boolean | null;
+  appointmentTypeId: string;
   client: {
+    id: string;
     firstName: string;
     lastName: string;
     email: string;
@@ -44,6 +46,11 @@ interface Booking {
   };
   appointmentType: { name: string };
   rescheduleRequests: RescheduleRequest[];
+}
+
+interface AppointmentTypeOption {
+  id: string;
+  name: string;
 }
 
 const STATUS_OPTIONS = [
@@ -72,6 +79,13 @@ export default function AdminBookingsPage() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [pendingFirst, setPendingFirst] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [appointmentTypeId, setAppointmentTypeId] = useState("");
+  const [recurring, setRecurring] = useState(""); // "" | "yes" | "no"
+  const [onlyRescheduleRequested, setOnlyRescheduleRequested] = useState(false);
+  const [clientId, setClientId] = useState("");
+  const [types, setTypes] = useState<AppointmentTypeOption[]>([]);
 
   async function load() {
     setLoading(true);
@@ -82,6 +96,12 @@ export default function AdminBookingsPage() {
     setBookings(json.bookings ?? []);
     setLoading(false);
   }
+
+  useEffect(() => {
+    fetch("/api/admin/appointment-types?all=1")
+      .then((res) => res.json())
+      .then((json) => setTypes(json.appointmentTypes ?? []));
+  }, []);
 
   useEffect(() => {
     const status = new URLSearchParams(window.location.search).get("status");
@@ -96,15 +116,28 @@ export default function AdminBookingsPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [filter]);
 
+  const clientOptions = useMemo(() => {
+    const map = new Map<string, string>();
+    for (const b of bookings) map.set(b.client.id, `${b.client.firstName} ${b.client.lastName}`);
+    return [...map.entries()].sort((a, b) => a[1].localeCompare(b[1]));
+  }, [bookings]);
+
   const visibleBookings = useMemo(() => {
     const q = search.trim().toLowerCase();
-    const filtered = q
+    let filtered = q
       ? bookings.filter((b) =>
           `${b.client.firstName} ${b.client.lastName} ${b.client.email}`
             .toLowerCase()
             .includes(q),
         )
       : bookings;
+
+    if (dateFrom) filtered = filtered.filter((b) => b.startTime >= dateFrom);
+    if (dateTo) filtered = filtered.filter((b) => b.startTime <= `${dateTo}T23:59:59`);
+    if (appointmentTypeId) filtered = filtered.filter((b) => b.appointmentTypeId === appointmentTypeId);
+    if (recurring) filtered = filtered.filter((b) => (recurring === "yes" ? b.isRecurring : !b.isRecurring));
+    if (onlyRescheduleRequested) filtered = filtered.filter((b) => b.rescheduleRequests.length > 0);
+    if (clientId) filtered = filtered.filter((b) => b.client.id === clientId);
 
     return [...filtered].sort((a, b) => {
       if (pendingFirst) {
@@ -121,13 +154,31 @@ export default function AdminBookingsPage() {
       }
       return dir * a.status.localeCompare(b.status);
     });
-  }, [bookings, search, sortBy, sortDir, pendingFirst]);
+  }, [
+    bookings,
+    search,
+    sortBy,
+    sortDir,
+    pendingFirst,
+    dateFrom,
+    dateTo,
+    appointmentTypeId,
+    recurring,
+    onlyRescheduleRequested,
+    clientId,
+  ]);
 
   const activeFilterCount =
     (filter ? 1 : 0) +
     (sortBy !== "date" ? 1 : 0) +
     (sortDir !== "asc" ? 1 : 0) +
-    (!pendingFirst ? 1 : 0);
+    (!pendingFirst ? 1 : 0) +
+    (dateFrom ? 1 : 0) +
+    (dateTo ? 1 : 0) +
+    (appointmentTypeId ? 1 : 0) +
+    (recurring ? 1 : 0) +
+    (onlyRescheduleRequested ? 1 : 0) +
+    (clientId ? 1 : 0);
 
   const DISRUPTIVE_CONFIRM: Record<string, string> = {
     REJECTED: "Rifiutare questa richiesta di prenotazione?",
@@ -347,6 +398,51 @@ export default function AdminBookingsPage() {
               className={checkbox}
             />
             In attesa in cima
+          </label>
+
+          <label className="block">
+            <span className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">Da</span>
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} className={filterField} />
+          </label>
+          <label className="block">
+            <span className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">A</span>
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)} className={filterField} />
+          </label>
+
+          <select value={appointmentTypeId} onChange={(e) => setAppointmentTypeId(e.target.value)} className={filterField}>
+            <option value="">Tutti i servizi</option>
+            {types.map((t) => (
+              <option key={t.id} value={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+
+          <select value={recurring} onChange={(e) => setRecurring(e.target.value)} className={filterField}>
+            <option value="">Ricorrenti e singole</option>
+            <option value="yes">Solo ricorrenti</option>
+            <option value="no">Solo singole</option>
+          </select>
+
+          <select value={clientId} onChange={(e) => setClientId(e.target.value)} className={filterField}>
+            <option value="">Tutti i clienti</option>
+            {clientOptions.map(([id, name]) => (
+              <option key={id} value={id}>
+                {name}
+              </option>
+            ))}
+          </select>
+
+          <label
+            className={`${filterField} flex items-center gap-2 border border-neutral-300 bg-neutral-100 font-medium text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200`}
+          >
+            <input
+              type="checkbox"
+              checked={onlyRescheduleRequested}
+              onChange={(e) => setOnlyRescheduleRequested(e.target.checked)}
+              className={checkbox}
+            />
+            Solo con spostamento richiesto
           </label>
         </div>
       )}
