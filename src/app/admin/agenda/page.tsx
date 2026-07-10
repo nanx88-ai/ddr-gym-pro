@@ -52,12 +52,13 @@ interface Booking {
 
 type ViewMode = "day" | "week" | "month";
 
+// Rifiutate e annullate non compaiono mai in agenda (l'agenda mostra chi
+// viene/verra'): niente da filtrare per quegli stati qui.
 const STATUS_OPTIONS = [
   { value: "", label: "Tutti gli stati" },
   { value: "PENDING_APPROVAL", label: "In attesa" },
   { value: "APPROVED", label: "Confermate" },
-  { value: "REJECTED", label: "Rifiutate" },
-  { value: "CANCELLED", label: "Annullate" },
+  { value: "RESCHEDULE_REQUESTED", label: "Spostamento richiesto" },
   { value: "RESCHEDULED", label: "Riprogrammate" },
 ];
 
@@ -305,7 +306,7 @@ export default function AdminAgendaPage() {
         <button
           type="button"
           onClick={() => setFiltersOpen((o) => !o)}
-          className="flex items-center gap-1.5 border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+          className="flex min-h-11 items-center gap-1.5 border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
         >
           Filtri
           {activeFilterCount > 0 && (

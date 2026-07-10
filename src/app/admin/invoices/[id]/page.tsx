@@ -257,7 +257,7 @@ export default function AdminInvoiceDetailPage({
           <select
             value={provider}
             onChange={(e) => setProvider(e.target.value)}
-            className={`${input} w-72`}
+            className={`${input} w-full sm:w-72`}
           >
             {INVOICE_PROVIDER_OPTIONS.map((p) => (
               <option key={p.id} value={p.id}>

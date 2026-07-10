@@ -99,6 +99,13 @@ interface CreateBookingInput {
   notes?: string;
   /** L'admin puo' registrare un appuntamento gia' avvenuto (walk-in, riconciliazione); il booking pubblico no. */
   allowPast?: boolean;
+  /**
+   * L'appuntamento creato dall'admin/trainer non conosce vincoli: niente
+   * controllo data passata, conflitto orario, slot disattivato o capienza
+   * massima. E' una decisione professionale, non una prenotazione
+   * self-service che deve difendersi da errori dell'utente pubblico.
+   */
+  bypassConstraints?: boolean;
 }
 
 /**
@@ -112,35 +119,41 @@ export async function createCustomBooking(input: CreateBookingInput) {
     where: { id: input.appointmentTypeId },
   });
 
-  if (!input.allowPast && input.startTime.getTime() <= Date.now()) {
-    throw new BookingRuleError("SLOT_PAST", "Questo slot e' gia' passato: scegli un orario futuro.");
-  }
+  if (!input.bypassConstraints) {
+    if (!input.allowPast && input.startTime.getTime() <= Date.now()) {
+      throw new BookingRuleError("SLOT_PAST", "Questo slot e' gia' passato: scegli un orario futuro.");
+    }
 
-  const conflict = await hasConflictingBooking(input.clientId, input.startTime);
-  if (conflict) {
-    throw new BookingRuleError(
-      "DUPLICATE_TIMESLOT",
-      "Hai gia' una prenotazione attiva in questa fascia oraria."
+    const conflict = await hasConflictingBooking(input.clientId, input.startTime);
+    if (conflict) {
+      throw new BookingRuleError(
+        "DUPLICATE_TIMESLOT",
+        "Hai gia' una prenotazione attiva in questa fascia oraria."
+      );
+    }
+
+    const { capacity, isDisabled } = await getEffectiveCapacity(
+      input.appointmentTypeId,
+      input.startTime,
+      appointmentType.capacity
     );
+    if (isDisabled) {
+      throw new BookingRuleError("SLOT_DISABLED", "Questo slot non e' disponibile per la prenotazione.");
+    }
+
+    const occupancy = await getSlotOccupancy(input.appointmentTypeId, input.startTime);
+    if (occupancy.total >= capacity) {
+      throw new BookingRuleError("SLOT_FULL", "Questo slot ha raggiunto la capacita' massima.");
+    }
   }
 
-  const { capacity, isDisabled } = await getEffectiveCapacity(
-    input.appointmentTypeId,
-    input.startTime,
-    appointmentType.capacity
-  );
-  if (isDisabled) {
-    throw new BookingRuleError("SLOT_DISABLED", "Questo slot non e' disponibile per la prenotazione.");
-  }
-
-  const occupancy = await getSlotOccupancy(input.appointmentTypeId, input.startTime);
-  if (occupancy.total >= capacity) {
-    throw new BookingRuleError("SLOT_FULL", "Questo slot ha raggiunto la capacita' massima.");
-  }
-
-  const initialStatus: BookingStatus = appointmentType.requiresApproval
-    ? BOOKING_STATUS.PENDING_APPROVAL
-    : BOOKING_STATUS.APPROVED;
+  // Un appuntamento creato dall'admin nasce sempre gia' confermato: e' lui
+  // stesso a deciderlo, non ha senso richiedere un'approvazione a se stesso.
+  const initialStatus: BookingStatus = input.bypassConstraints
+    ? BOOKING_STATUS.APPROVED
+    : appointmentType.requiresApproval
+      ? BOOKING_STATUS.PENDING_APPROVAL
+      : BOOKING_STATUS.APPROVED;
 
   const booking = await prisma.booking.create({
     data: {

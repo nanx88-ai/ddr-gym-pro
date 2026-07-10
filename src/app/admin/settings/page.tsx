@@ -151,6 +151,7 @@ type KV = { key: string; value: string };
 
 export default function AdminSettingsPage() {
   const toast = useToast();
+  const confirm = useConfirm();
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -290,7 +291,7 @@ export default function AdminSettingsPage() {
               <select
                 value={type}
                 onChange={(e) => setType(e.target.value)}
-                className={`${input} w-64`}
+                className={`${input} w-full sm:w-64`}
               >
                 {TYPE_OPTIONS.map((t) => (
                   <option key={t.value} value={t.value}>
@@ -308,19 +309,19 @@ export default function AdminSettingsPage() {
 
           <div className="space-y-2">
             {pairs.map((p, i) => (
-              <div key={i} className="flex gap-2">
+              <div key={i} className="flex flex-wrap gap-2">
                 <input
                   placeholder="chiave (es. host)"
                   value={p.key}
                   onChange={(e) => updatePair(i, { key: e.target.value })}
-                  className={`${input} w-48`}
+                  className={`${input} w-full sm:w-48 sm:flex-none`}
                 />
                 <input
                   placeholder="valore"
                   type="password"
                   value={p.value}
                   onChange={(e) => updatePair(i, { value: e.target.value })}
-                  className={input}
+                  className={`${input} min-w-0 flex-1`}
                 />
                 <IconButton
                   onClick={() => setPairs((prev) => prev.filter((_, idx) => idx !== i))}

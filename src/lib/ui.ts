@@ -26,8 +26,11 @@ export const card =
   "border border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900";
 export const cardPadded = `${card} p-4`;
 
+// text-base (16px) sotto sm: sotto i 16px iOS Safari fa zoom automatico al
+// focus dell'input, fastidioso e non richiesto qui - da sm: in su si torna a
+// text-sm per densita' su schermi piu' larghi dove lo zoom non scatta.
 export const input =
-  "w-full min-h-11 border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 placeholder-neutral-400 focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500 disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500 dark:focus:border-yellow-400 dark:focus:ring-yellow-400";
+  "w-full min-h-11 border border-neutral-300 bg-white px-3 py-2 text-base sm:text-sm text-neutral-900 placeholder-neutral-400 focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500 disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder-neutral-500 dark:focus:border-yellow-400 dark:focus:ring-yellow-400";
 
 export const label =
   "mb-1 block text-sm font-medium text-neutral-600 dark:text-neutral-300";

@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { btnPositive, input, label, pageTitle } from "@/lib/ui";
+import { btnPositive, checkbox, errorBox, input, label, pageSubtitle, pageTitle } from "@/lib/ui";
+import { expandWeeklyOccurrences, occurrenceCountEndDate, WEEKDAY_LABELS_FULL } from "@/lib/recurrence";
 
 interface AppointmentType {
   id: string;
@@ -20,6 +21,10 @@ export default function AdminNewBookingPage() {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("10:00");
   const [notes, setNotes] = useState("");
+  const [recurring, setRecurring] = useState(false);
+  const [endMethod, setEndMethod] = useState<"count" | "date">("count");
+  const [count, setCount] = useState(6);
+  const [endDate, setEndDate] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
 
@@ -28,10 +33,19 @@ export default function AdminNewBookingPage() {
       .then((res) => res.json())
       .then((json) => {
         setTypes(json.appointmentTypes ?? []);
-        if (json.appointmentTypes?.[0])
-          setAppointmentTypeId(json.appointmentTypes[0].id);
+        if (json.appointmentTypes?.[0]) setAppointmentTypeId(json.appointmentTypes[0].id);
       });
   }, []);
+
+  const dayOfWeek = date ? new Date(`${date}T00:00:00`).getDay() : 0;
+  const weekdayFull = WEEKDAY_LABELS_FULL[dayOfWeek];
+
+  const occurrences = (() => {
+    if (!recurring || !date) return [];
+    const end = endMethod === "count" ? occurrenceCountEndDate(date, count) : endDate;
+    if (!end) return [];
+    return expandWeeklyOccurrences(dayOfWeek, date, end, time);
+  })();
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -43,10 +57,18 @@ export default function AdminNewBookingPage() {
       return;
     }
 
-    const startTime = new Date(`${date}T${time}:00`);
-    const endTime = new Date(
-      startTime.getTime() + type.durationMinutes * 60000,
-    );
+    const starts = recurring ? occurrences : [new Date(`${date}T${time}:00`)];
+    if (starts.length === 0) {
+      setError("Nessuna data valida da creare: controlla la ricorrenza.");
+      return;
+    }
+
+    const items = starts.map((start) => ({
+      startTime: start.toISOString(),
+      endTime: new Date(start.getTime() + type.durationMinutes * 60000).toISOString(),
+      isRecurring: recurring,
+      recurrenceGroupId: recurring ? `${appointmentTypeId}-${date}-${time}` : undefined,
+    }));
 
     setSubmitting(true);
     const res = await fetch("/api/admin/bookings", {
@@ -57,9 +79,8 @@ export default function AdminNewBookingPage() {
         clientFirstName,
         clientLastName,
         appointmentTypeId,
-        startTime: startTime.toISOString(),
-        endTime: endTime.toISOString(),
         notes,
+        items,
       }),
     });
     const json = await res.json();
@@ -76,21 +97,17 @@ export default function AdminNewBookingPage() {
   return (
     <div className="max-w-md">
       <h1 className={pageTitle}>Nuovo appuntamento</h1>
+      <p className={pageSubtitle}>
+        Nessun vincolo qui: puoi registrare un appuntamento gia&apos; avvenuto, in un orario gia&apos; occupato, o
+        fuori dalle fasce configurate - decidi tu.
+      </p>
 
-      {error && (
-        <div className="mb-4 border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300">
-          {error}
-        </div>
-      )}
+      {error && <div className={errorBox}>{error}</div>}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <label className="block">
           <span className={label}>Tipo di appuntamento (calendario)</span>
-          <select
-            value={appointmentTypeId}
-            onChange={(e) => setAppointmentTypeId(e.target.value)}
-            className={input}
-          >
+          <select value={appointmentTypeId} onChange={(e) => setAppointmentTypeId(e.target.value)} className={input}>
             {types.map((t) => (
               <option key={t.id} value={t.id}>
                 {t.name} ({t.durationMinutes} min)
@@ -102,73 +119,89 @@ export default function AdminNewBookingPage() {
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className={label}>Nome cliente</span>
-            <input
-              required
-              value={clientFirstName}
-              onChange={(e) => setClientFirstName(e.target.value)}
-              className={input}
-            />
+            <input required value={clientFirstName} onChange={(e) => setClientFirstName(e.target.value)} className={input} />
           </label>
           <label className="block">
             <span className={label}>Cognome cliente</span>
-            <input
-              required
-              value={clientLastName}
-              onChange={(e) => setClientLastName(e.target.value)}
-              className={input}
-            />
+            <input required value={clientLastName} onChange={(e) => setClientLastName(e.target.value)} className={input} />
           </label>
         </div>
 
         <label className="block">
           <span className={label}>Email cliente</span>
-          <input
-            required
-            type="email"
-            value={clientEmail}
-            onChange={(e) => setClientEmail(e.target.value)}
-            className={input}
-          />
+          <input required type="email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className={input} />
         </label>
 
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className={label}>Data</span>
-            <input
-              required
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className={input}
-            />
+            <input required type="date" value={date} onChange={(e) => setDate(e.target.value)} className={input} />
           </label>
           <label className="block">
             <span className={label}>Ora</span>
-            <input
-              required
-              type="time"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              className={input}
-            />
+            <input required type="time" value={time} onChange={(e) => setTime(e.target.value)} className={input} />
           </label>
         </div>
 
-        <label className="block">
-          <span className={label}>Note (facoltativo)</span>
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className={input}
-            rows={3}
-          />
+        <label className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
+          <input type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} className={checkbox} />
+          Ricorrente (stesso giorno della settimana e ora)
         </label>
 
-        <button
-          type="submit"
-          disabled={submitting}
-          className={`w-full ${btnPositive}`}
-        >
+        {recurring && (
+          <div className="space-y-3 border border-neutral-200 p-3 dark:border-neutral-800">
+            <div className="flex gap-4 text-xs text-neutral-700 dark:text-neutral-200">
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  checked={endMethod === "count"}
+                  onChange={() => setEndMethod("count")}
+                  className="h-6 w-6 accent-yellow-400"
+                />
+                Numero di volte
+              </label>
+              <label className="flex items-center gap-2">
+                <input
+                  type="radio"
+                  checked={endMethod === "date"}
+                  onChange={() => setEndMethod("date")}
+                  className="h-6 w-6 accent-yellow-400"
+                />
+                Data di fine
+              </label>
+            </div>
+            {endMethod === "count" ? (
+              <label className="block">
+                <span className={label}>Quante volte</span>
+                <input
+                  type="number"
+                  min={2}
+                  max={52}
+                  value={count}
+                  onChange={(e) => setCount(Number(e.target.value) || 2)}
+                  className={input}
+                />
+              </label>
+            ) : (
+              <label className="block">
+                <span className={label}>Fino al</span>
+                <input type="date" min={date} value={endDate} onChange={(e) => setEndDate(e.target.value)} className={input} />
+              </label>
+            )}
+            {occurrences.length > 0 && (
+              <p className="text-xs text-neutral-500 dark:text-neutral-400">
+                Tutti i {weekdayFull} alle {time}: {occurrences.length} appuntamenti in totale.
+              </p>
+            )}
+          </div>
+        )}
+
+        <label className="block">
+          <span className={label}>Note (facoltativo)</span>
+          <textarea value={notes} onChange={(e) => setNotes(e.target.value)} className={input} rows={3} />
+        </label>
+
+        <button type="submit" disabled={submitting} className={`w-full ${btnPositive}`}>
           {submitting ? "Creazione in corso..." : "Crea appuntamento"}
         </button>
       </form>

@@ -23,6 +23,9 @@ export async function GET(request: NextRequest) {
   const bookings = await prisma.booking.findMany({
     where: {
       startTime: { gte: new Date(start), lte: new Date(end) },
+      // L'agenda mostra chi viene/verra': rifiutate e annullate non sono
+      // mai rilevanti qui, si cercano altrove (Prenotazioni).
+      status: { notIn: ["REJECTED", "CANCELLED"] },
       ...(status ? { status } : {}),
       ...(appointmentTypeId ? { appointmentTypeId } : {}),
       ...(q

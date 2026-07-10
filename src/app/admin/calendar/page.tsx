@@ -24,6 +24,7 @@ import {
   card,
   input,
 } from "@/lib/ui";
+import { IconButton } from "@/components/IconAction";
 
 interface AppointmentType {
   id: string;
@@ -130,41 +131,61 @@ function CalendarPageContent() {
         </select>
       </div>
 
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <div className="flex gap-1 border border-neutral-200 bg-neutral-100 p-1 dark:border-neutral-800 dark:bg-neutral-900">
-          {(["day", "week", "month"] as ViewMode[]).map((v) => (
+      <div className="mb-4 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900">
+          {(
+            [
+              { v: "day", icon: "viewDay", label: "Giorno" },
+              { v: "week", icon: "viewWeek", label: "Settimana" },
+              { v: "month", icon: "viewMonth", label: "Mese" },
+            ] as const
+          ).map(({ v, icon, label: viewLabel }) => (
             <button
               key={v}
               onClick={() => setView(v)}
-              className={`px-3 py-1 text-sm font-medium transition-colors ${
+              title={viewLabel}
+              aria-label={viewLabel}
+              className={`flex h-11 w-11 items-center justify-center transition-colors ${
                 view === v
                   ? "bg-yellow-400 text-neutral-900"
                   : "text-neutral-600 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-800"
               }`}
             >
-              {v === "day" ? "Giorno" : v === "week" ? "Settimana" : "Mese"}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+                {icon === "viewDay" && (
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M4 5.5h16M4 5.5v13a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-13M8 10h8M8 14h8"
+                  />
+                )}
+                {icon === "viewWeek" && (
+                  <>
+                    <rect x="3.5" y="4.5" width="4" height="15" />
+                    <rect x="10" y="4.5" width="4" height="15" />
+                    <rect x="16.5" y="4.5" width="4" height="15" />
+                  </>
+                )}
+                {icon === "viewMonth" && (
+                  <>
+                    <rect x="3.5" y="3.5" width="17" height="17" />
+                    <path strokeLinecap="round" d="M3.5 9h17M3.5 14.5h17M9 3.5v17M14.5 3.5v17" />
+                  </>
+                )}
+              </svg>
             </button>
           ))}
         </div>
 
-        <div className="flex items-center gap-2">
-          <button onClick={() => step(-1)} className={btnNeutral}>
-            &larr;
-          </button>
-          <button
-            onClick={() => setSelectedDate(new Date())}
-            className={btnNeutral}
-          >
-            Oggi
-          </button>
-          <button onClick={() => step(1)} className={btnNeutral}>
-            &rarr;
-          </button>
-          <span className="ml-2 text-sm font-medium capitalize text-neutral-900 dark:text-white">
+        <div className="flex items-center justify-center gap-2 sm:justify-end">
+          <IconButton icon="chevronLeft" label="Periodo precedente" onClick={() => step(-1)} />
+          <span className="min-w-[9rem] text-center text-sm font-semibold capitalize text-neutral-900 dark:text-white sm:min-w-[13rem]">
             {view === "month"
               ? format(selectedDate, "MMMM yyyy", { locale: it })
               : format(selectedDate, "EEEE d MMMM yyyy", { locale: it })}
           </span>
+          <IconButton icon="chevronRight" label="Periodo successivo" onClick={() => step(1)} />
+          <IconButton icon="today" label="Vai a oggi" onClick={() => setSelectedDate(new Date())} />
         </div>
       </div>
 
