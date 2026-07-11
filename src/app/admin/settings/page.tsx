@@ -16,7 +16,7 @@ import ThemeToggle from "@/components/ThemeToggle";
 import PushNotificationsToggle from "@/components/PushNotificationsToggle";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { ActionsRow, IconButton } from "@/components/IconAction";
+import { ActionsMenu, IconButton } from "@/components/IconAction";
 
 /**
  * Sync calendario admin (Google/Apple) via feed ICS sottoscrivibile, senza
@@ -229,7 +229,7 @@ export default function AdminSettingsPage() {
   const selectedType = TYPE_OPTIONS.find((t) => t.value === type);
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-5xl">
       <h1 className={pageTitle}>Impostazioni</h1>
       <p className={pageSubtitle}>
         Aspetto, integrazioni API, esportazione dati e backup.
@@ -237,26 +237,28 @@ export default function AdminSettingsPage() {
 
       {error && <div className={errorBox}>{error}</div>}
 
-      <section className={`${card} mb-6 p-4`}>
-        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
-          Aspetto
-        </h2>
-        <div className="flex items-center gap-3">
-          <span className="text-sm text-neutral-600 dark:text-neutral-300">
-            Tema dell&apos;interfaccia admin
-          </span>
-          <ThemeToggle />
-        </div>
-      </section>
+      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section className={`${card} p-4`}>
+          <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
+            Aspetto
+          </h2>
+          <div className="flex items-center gap-3">
+            <span className="text-sm text-neutral-600 dark:text-neutral-300">
+              Tema dell&apos;interfaccia admin
+            </span>
+            <ThemeToggle />
+          </div>
+        </section>
 
-      <section className={`${card} mb-6 p-4`}>
-        <h2 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">Notifiche push</h2>
-        <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
-          Notifiche native su questo dispositivo (anche a PWA chiusa/in background). Vanno attivate separatamente su
-          ogni telefono/computer da cui gestisci l&apos;admin.
-        </p>
-        <PushNotificationsToggle />
-      </section>
+        <section className={`${card} p-4`}>
+          <h2 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">Notifiche push</h2>
+          <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
+            Notifiche native su questo dispositivo (anche a PWA chiusa/in background). Vanno attivate separatamente
+            su ogni telefono/computer da cui gestisci l&apos;admin.
+          </p>
+          <PushNotificationsToggle />
+        </section>
+      </div>
 
       <CalendarSyncSection />
 
@@ -331,13 +333,13 @@ export default function AdminSettingsPage() {
                 />
               </div>
             ))}
-            <ActionsRow>
+            <div className="flex justify-end">
               <IconButton
                 onClick={() => setPairs((prev) => [...prev, { key: "", value: "" }])}
                 icon="add"
                 label="Aggiungi campo"
               />
-            </ActionsRow>
+            </div>
           </div>
 
           <button type="submit" disabled={creating} className={btnPositive}>
@@ -367,14 +369,17 @@ export default function AdminSettingsPage() {
                     "nessun campo"}
                 </div>
               </div>
-              <ActionsRow>
-                <IconButton
-                  onClick={() => toggleActive(integ)}
-                  icon={integ.active ? "deactivate" : "activate"}
-                  label={integ.active ? "Disattiva" : "Riattiva"}
-                />
-                <IconButton onClick={() => remove(integ.id, integ.name)} icon="delete" label="Elimina" tone="danger" />
-              </ActionsRow>
+              <ActionsMenu
+                actions={[
+                  {
+                    key: "toggle",
+                    icon: integ.active ? "pause" : "resume",
+                    label: integ.active ? "Disattiva" : "Riattiva",
+                    onClick: () => toggleActive(integ),
+                  },
+                  { key: "delete", icon: "delete", label: "Elimina", tone: "danger", onClick: () => remove(integ.id, integ.name) },
+                ]}
+              />
             </div>
           ))}
           {!loading && integrations.length === 0 && (
@@ -385,38 +390,40 @@ export default function AdminSettingsPage() {
         </div>
       </section>
 
-      <section className={`${card} mb-6 p-4`}>
-        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
-          Esporta dati (CSV)
-        </h2>
-        <div className="flex flex-wrap gap-2">
-          <a href="/api/admin/export/clients" className={btnNeutral}>
-            Clienti
-          </a>
-          <a href="/api/admin/export/bookings" className={btnNeutral}>
-            Prenotazioni
-          </a>
-          <a href="/api/admin/export/invoices" className={btnNeutral}>
-            Fatture
-          </a>
-        </div>
-      </section>
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <section className={`${card} p-4`}>
+          <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
+            Esporta dati (CSV)
+          </h2>
+          <div className="flex flex-wrap gap-2">
+            <a href="/api/admin/export/clients" className={btnNeutral}>
+              Clienti
+            </a>
+            <a href="/api/admin/export/bookings" className={btnNeutral}>
+              Prenotazioni
+            </a>
+            <a href="/api/admin/export/invoices" className={btnNeutral}>
+              Fatture
+            </a>
+          </div>
+        </section>
 
-      <section className={`${card} p-4`}>
-        <h2 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">
-          Backup
-        </h2>
-        <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
-          Scarica una copia completa del database (file .db). Conservala in un
-          posto sicuro.
-        </p>
-        <a
-          href="/api/admin/settings/backup"
-          className={`inline-block ${btnPrimary}`}
-        >
-          Scarica backup
-        </a>
-      </section>
+        <section className={`${card} p-4`}>
+          <h2 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">
+            Backup
+          </h2>
+          <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
+            Scarica una copia completa del database (file .db). Conservala in un
+            posto sicuro.
+          </p>
+          <a
+            href="/api/admin/settings/backup"
+            className={`inline-block ${btnPrimary}`}
+          >
+            Scarica backup
+          </a>
+        </section>
+      </div>
     </div>
   );
 }

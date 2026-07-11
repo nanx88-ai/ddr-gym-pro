@@ -202,7 +202,10 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         </aside>
 
         <main className="min-w-0 flex-1 px-3 py-4 sm:px-6 sm:py-6">
-          <div className="mx-auto max-w-5xl">{children}</div>
+          {/* Cap largo ma non illimitato: le pagine con tabelle/liste
+              sfruttano lo spazio su desktop, quelle con form stretti
+              impostano il proprio max-w piu' piccolo internamente. */}
+          <div className="mx-auto max-w-[1600px]">{children}</div>
         </main>
       </div>
     </div>
