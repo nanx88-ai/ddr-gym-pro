@@ -3,6 +3,7 @@
 import { useRef, useState } from "react";
 import Link from "next/link";
 import { NAV_GROUPS, NavIcon } from "@/components/AdminNav";
+import { toggleActive } from "@/lib/ui";
 
 const DRAG_OPEN_THRESHOLD = 50;
 const DRAG_CLOSE_THRESHOLD = 70;
@@ -15,12 +16,11 @@ const BAR_HEIGHT = 52;
 // senza quell'inset usiamo comunque 34px come minimo di sicurezza.
 const BOTTOM_DEAD_ZONE = "calc(max(env(safe-area-inset-bottom), 34px) + 8px)";
 
-const SURFACE = "bg-white dark:bg-[#0D0D0D]";
-const LINE = "border-neutral-200 dark:border-[#2A2A2A]";
-const CELL = "bg-neutral-100 dark:bg-[#1A1A1A]";
-const TEXT_MUTED = "text-neutral-500 dark:text-neutral-400";
+const SURFACE = "bg-white dark:bg-neutral-950";
+const LINE = "border-neutral-200 dark:border-neutral-800";
+const CELL = "bg-neutral-100 dark:bg-neutral-900";
 const TEXT_LABEL = "text-neutral-700 dark:text-neutral-300";
-const TEXT_CELL = "text-neutral-800 dark:text-[#E0E0E0]";
+const TEXT_CELL = "text-neutral-800 dark:text-neutral-200";
 
 /**
  * Menu principale da mobile: non un burger+drawer laterale, ma una bottom
@@ -87,7 +87,7 @@ export default function MobileNavSheet({
             onClick={() => setOpen(false)}
             className={`flex aspect-square flex-col items-center justify-center gap-2 border p-2 text-center transition-colors ${
               isActive
-                ? "border-yellow-500 bg-transparent text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900"
+                ? `bg-transparent ${toggleActive}`
                 : `${LINE} ${CELL} ${TEXT_CELL}`
             }`}
           >

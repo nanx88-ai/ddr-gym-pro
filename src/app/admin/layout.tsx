@@ -9,6 +9,7 @@ import PwaRegister from "@/components/PwaRegister";
 import { ToastProvider } from "@/components/Toast";
 import { ConfirmDialogProvider, useConfirm } from "@/components/ConfirmDialog";
 import { NAV_GROUPS, NavIcon } from "@/components/AdminNav";
+import { toggleActive } from "@/lib/ui";
 
 function NavContent({
   pathname,
@@ -44,7 +45,7 @@ function NavContent({
                     collapsed ? "justify-center" : ""
                   } ${
                     isActive
-                      ? "border-2 border-yellow-500 bg-transparent font-medium text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900"
+                      ? `border-2 bg-transparent font-medium ${toggleActive}`
                       : "border-2 border-transparent text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
                   }`}
                 >

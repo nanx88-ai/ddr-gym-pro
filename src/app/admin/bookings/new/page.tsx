@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { btnPositive, errorBox, input, label, pageSubtitle, pageTitle } from "@/lib/ui";
 import { Checkbox } from "@/components/Checkbox";
+import { SegmentedToggle } from "@/components/SegmentedToggle";
 import { expandWeeklyOccurrences, occurrenceCountEndDate, WEEKDAY_LABELS_FULL } from "@/lib/recurrence";
 
 interface AppointmentType {
@@ -151,30 +152,14 @@ export default function AdminNewBookingPage() {
 
         {recurring && (
           <div className="space-y-3 border-l-2 border-yellow-400/40 pl-3">
-            <div className="flex border border-neutral-200 p-1 dark:border-neutral-800">
-              <button
-                type="button"
-                onClick={() => setEndMethod("count")}
-                className={`flex-1 border-2 py-1.5 text-xs font-medium transition-colors ${
-                  endMethod === "count"
-                    ? "border-yellow-500 text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900"
-                    : "border-transparent text-neutral-500 dark:text-neutral-400"
-                }`}
-              >
-                Numero di volte
-              </button>
-              <button
-                type="button"
-                onClick={() => setEndMethod("date")}
-                className={`flex-1 border-2 py-1.5 text-xs font-medium transition-colors ${
-                  endMethod === "date"
-                    ? "border-yellow-500 text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900"
-                    : "border-transparent text-neutral-500 dark:text-neutral-400"
-                }`}
-              >
-                Data di fine
-              </button>
-            </div>
+            <SegmentedToggle
+              value={endMethod}
+              onChange={setEndMethod}
+              options={[
+                { value: "count", label: "Numero di volte" },
+                { value: "date", label: "Data di fine" },
+              ]}
+            />
             {endMethod === "count" ? (
               <label className="block">
                 <span className={label}>Quante volte</span>

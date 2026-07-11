@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { formatTime } from "@/lib/format";
+import { toggleActive } from "@/lib/ui";
 import {
   publicCard,
   publicInput,
@@ -24,6 +25,7 @@ function addYears(iso: string, years: number) {
   return toIsoDate(d);
 }
 import MonthCalendar from "@/components/MonthCalendar";
+import { SegmentedToggle } from "@/components/SegmentedToggle";
 
 const LOGO_URL =
   "https://uznyeraxjpgaxncytzki.supabase.co/storage/v1/object/public/assets/logo.png";
@@ -507,7 +509,7 @@ export default function HomePage() {
                             slot.full
                               ? "cursor-not-allowed border-neutral-100 bg-neutral-50 text-neutral-300 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-600"
                               : isPicked
-                                ? "border-yellow-500 bg-transparent text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900"
+                                ? `bg-transparent ${toggleActive}`
                                 : "border-neutral-200 bg-white text-neutral-900 hover:border-yellow-400 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:hover:border-yellow-400"
                           }`}
                         >
@@ -588,40 +590,15 @@ export default function HomePage() {
                           </button>
                         </div>
 
-                        <div className="mt-2 flex gap-2 border border-neutral-200 bg-neutral-50 p-1 dark:border-neutral-800 dark:bg-neutral-950">
-                          <button
-                            type="button"
-                            onClick={() =>
-                              updatePickedSlot(p.key, {
-                                recurring: false,
-                                confirmed: false,
-                              })
-                            }
-                            className={`flex-1 border-2 py-1.5 text-xs font-medium transition-colors ${
-                              !p.recurring
-                                ? "border-yellow-500 text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900"
-                                : "border-transparent text-neutral-500 dark:text-neutral-400"
-                            }`}
-                          >
-                            Singola
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() =>
-                              updatePickedSlot(p.key, {
-                                recurring: true,
-                                confirmed: false,
-                              })
-                            }
-                            className={`flex-1 border-2 py-1.5 text-xs font-medium transition-colors ${
-                              p.recurring
-                                ? "border-yellow-500 text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900"
-                                : "border-transparent text-neutral-500 dark:text-neutral-400"
-                            }`}
-                          >
-                            Ricorrente
-                          </button>
-                        </div>
+                        <SegmentedToggle
+                          className="mt-2"
+                          value={p.recurring ? "recurring" : "single"}
+                          onChange={(v) => updatePickedSlot(p.key, { recurring: v === "recurring", confirmed: false })}
+                          options={[
+                            { value: "single", label: "Singola" },
+                            { value: "recurring", label: "Ricorrente" },
+                          ]}
+                        />
 
                         {p.recurring && (
                           <div className="mt-3 space-y-3">

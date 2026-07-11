@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { card, input, pageSubtitle, pageTitle } from "@/lib/ui";
+import { card, input, pageSubtitle, pageTitle, toggleActive, toggleInactive } from "@/lib/ui";
 
 interface ActiveDay {
   dayOfWeek: number;
@@ -220,9 +220,7 @@ export default function AdminStatsPage() {
               type="button"
               onClick={() => applyPreset(p.key)}
               className={`min-h-11 border-2 px-3 py-1.5 text-xs font-medium transition-colors ${
-                activePreset === p.key
-                  ? "border-yellow-500 text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900"
-                  : "border-neutral-300 bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                activePreset === p.key ? toggleActive : toggleInactive
               }`}
             >
               {p.label}

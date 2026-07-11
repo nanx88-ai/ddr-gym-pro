@@ -17,6 +17,19 @@ export const btnNeutral =
 export const btnGhost =
   "min-h-11 px-3 py-2 text-sm font-medium text-neutral-500 hover:bg-neutral-100 hover:text-neutral-900 transition-colors dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-100";
 
+// Stato "attivo/selezionato" per chip, toggle e voci di nav (bordo colorato +
+// hover che riempie), sempre associato a una larghezza bordo scelta dal
+// chiamante (border / border-2). L'inattivo "chip neutro" e' per gruppi di
+// pulsanti autonomi (es. viste giorno/settimana/mese, pillole periodo); nei
+// toggle a segmenti dentro un contenitore gia' bordato usare invece
+// toggleInactiveGhost (sfondo trasparente, testo smorzato).
+export const toggleActive =
+  "border-yellow-500 text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900";
+export const toggleInactive =
+  "border-neutral-300 bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700";
+export const toggleInactiveGhost =
+  "border-transparent text-neutral-500 dark:text-neutral-400";
+
 export const linkText = "text-sm font-medium hover:underline";
 export const linkPositive = `${linkText} text-green-600 dark:text-green-400`;
 export const linkDanger = `${linkText} text-red-600 dark:text-red-400`;

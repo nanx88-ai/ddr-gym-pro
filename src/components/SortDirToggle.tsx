@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toggleActive, toggleInactive } from "@/lib/ui";
 
 /**
  * Bottone a 3 stati per la direzione di ordinamento su mobile, dove le
@@ -39,9 +40,7 @@ export function SortDirToggle({
       title={title}
       aria-label="Direzione ordinamento"
       className={`flex h-11 shrink-0 items-center justify-center border-2 px-3 text-xs font-semibold transition-colors ${
-        active
-          ? "border-yellow-500 text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900"
-          : "border-neutral-300 bg-neutral-100 text-neutral-500 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-400 dark:hover:bg-neutral-700"
+        active ? toggleActive : toggleInactive
       }`}
     >
       <span className={`inline-block transition-transform duration-150 ${flip ? "scale-y-0" : "scale-y-100"}`}>{label}</span>

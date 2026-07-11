@@ -23,6 +23,7 @@ import {
   btnPrimary,
   card,
   input,
+  toggleActive,
 } from "@/lib/ui";
 import { IconButton } from "@/components/IconAction";
 
@@ -147,7 +148,7 @@ function CalendarPageContent() {
               aria-label={viewLabel}
               className={`flex h-11 w-11 items-center justify-center border-2 transition-colors ${
                 view === v
-                  ? "border-yellow-500 text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900"
+                  ? toggleActive
                   : "border-transparent text-neutral-600 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-800"
               }`}
             >
