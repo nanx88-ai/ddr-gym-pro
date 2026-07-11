@@ -165,7 +165,7 @@ function SchedulePageContent() {
   }
 
   return (
-    <div className="max-w-3xl">
+    <div className="max-w-5xl">
       <h1 className={pageTitle}>Fasce orarie</h1>
       <p className={pageSubtitle}>
         Quante fasce vuoi per ogni giorno (es. 06:00&ndash;08:00, 09:00&ndash;11:00, 13:00&ndash;16:00): i buchi tra
@@ -201,31 +201,31 @@ function SchedulePageContent() {
 
       <section className={`${card} mb-8 p-4`}>
         <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">Fasce orarie settimanali</h2>
-        <div className="space-y-3">
+        <div className="grid grid-cols-1 gap-x-8 lg:grid-cols-2">
           {DAY_ORDER.map((dayOfWeek) => {
             const dayBands = bands.filter((b) => b.dayOfWeek === dayOfWeek).sort((a, b) => a.startTime.localeCompare(b.startTime));
             return (
-              <div key={dayOfWeek} className="border-b border-neutral-200 pb-3 last:border-0 dark:border-neutral-800">
-                <div className="mb-2 flex items-center justify-between">
+              <div key={dayOfWeek} className="border-b border-neutral-200 py-2.5 dark:border-neutral-800">
+                <div className="mb-1.5 flex items-center justify-between">
                   <span className="text-sm font-medium text-neutral-800 dark:text-neutral-100">{DAY_NAMES[dayOfWeek]}</span>
                   <IconButton icon="add" label="Aggiungi fascia" onClick={() => addBand(dayOfWeek)} />
                 </div>
                 {dayBands.length === 0 && <p className="text-xs text-neutral-400 dark:text-neutral-600">Chiuso</p>}
-                <div className="space-y-2">
+                <div className="space-y-1.5">
                   {dayBands.map((b) => (
-                    <div key={b.key} className="flex flex-wrap items-center gap-2">
+                    <div key={b.key} className="flex items-center gap-1.5">
                       <input
                         type="time"
                         value={b.startTime}
                         onChange={(e) => updateBand(b.key, { startTime: e.target.value })}
-                        className={`${input} w-28`}
+                        className={`${input} min-w-0 flex-1`}
                       />
-                      <span className="text-neutral-500">&ndash;</span>
+                      <span className="shrink-0 text-neutral-500">&ndash;</span>
                       <input
                         type="time"
                         value={b.endTime}
                         onChange={(e) => updateBand(b.key, { endTime: e.target.value })}
-                        className={`${input} w-28`}
+                        className={`${input} min-w-0 flex-1`}
                       />
                       <IconButton icon="remove" label="Rimuovi fascia" tone="danger" onClick={() => removeBand(b.key)} />
                     </div>

@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 
 const WEEKDAY_LABELS = ["Domenica", "Lunedi'", "Martedi'", "Mercoledi'", "Giovedi'", "Venerdi'", "Sabato"];
@@ -20,13 +20,27 @@ function monthKey(d: Date) {
  * teorici del periodo (con orari/eccezioni/override) per ogni servizio, un
  * calcolo pesante fuori scope per una prima versione di questa pagina.
  */
-export async function GET() {
+export async function GET(request: NextRequest) {
   const now = new Date();
   const startOfThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
   const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
+  // Filtro periodo facoltativo (default "perpetuo": nessun filtro, tutto lo
+  // storico). Applicato su startTime per restare coerente con come gia'
+  // filtra Agenda/Prenotazioni.
+  const fromParam = request.nextUrl.searchParams.get("from");
+  const toParam = request.nextUrl.searchParams.get("to");
+  const startTimeFilter =
+    fromParam || toParam
+      ? {
+          ...(fromParam ? { gte: new Date(fromParam) } : {}),
+          ...(toParam ? { lte: new Date(`${toParam}T23:59:59`) } : {}),
+        }
+      : undefined;
+
   const [bookings, rescheduleRequests] = await Promise.all([
     prisma.booking.findMany({
+      where: startTimeFilter ? { startTime: startTimeFilter } : undefined,
       select: {
         id: true,
         startTime: true,
@@ -41,6 +55,7 @@ export async function GET() {
       },
     }),
     prisma.rescheduleRequest.findMany({
+      where: startTimeFilter ? { booking: { startTime: startTimeFilter } } : undefined,
       select: {
         booking: {
           select: {

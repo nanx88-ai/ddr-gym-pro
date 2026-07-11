@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { card, pageSubtitle, pageTitle } from "@/lib/ui";
+import { card, input, pageSubtitle, pageTitle } from "@/lib/ui";
 
 interface ActiveDay {
   dayOfWeek: number;
@@ -99,16 +99,78 @@ function StatCard({ title, note, children }: { title: string; note?: string; chi
   );
 }
 
+function toIso(d: Date) {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+function addMonths(d: Date, n: number) {
+  return new Date(d.getFullYear(), d.getMonth() + n, d.getDate());
+}
+
+const REFRESH_MS = 60000;
+
 export default function AdminStatsPage() {
   const [stats, setStats] = useState<Stats | null>(null);
+  const [dateFrom, setDateFrom] = useState("");
+  const [dateTo, setDateTo] = useState("");
+  const [activePreset, setActivePreset] = useState("all");
+
+  function applyPreset(preset: string) {
+    setActivePreset(preset);
+    const today = new Date();
+    switch (preset) {
+      case "lastMonth":
+        setDateFrom(toIso(addMonths(today, -1)));
+        setDateTo(toIso(today));
+        break;
+      case "nextMonth":
+        setDateFrom(toIso(today));
+        setDateTo(toIso(addMonths(today, 1)));
+        break;
+      case "last3":
+        setDateFrom(toIso(addMonths(today, -3)));
+        setDateTo(toIso(today));
+        break;
+      case "next3":
+        setDateFrom(toIso(today));
+        setDateTo(toIso(addMonths(today, 3)));
+        break;
+      case "thisYear":
+        setDateFrom(toIso(new Date(today.getFullYear(), 0, 1)));
+        setDateTo(toIso(today));
+        break;
+      default:
+        setDateFrom("");
+        setDateTo("");
+    }
+  }
 
   useEffect(() => {
-    fetch("/api/admin/stats")
-      .then((res) => res.json())
-      .then(setStats);
-  }, []);
+    function load() {
+      const params = new URLSearchParams();
+      if (dateFrom) params.set("from", dateFrom);
+      if (dateTo) params.set("to", dateTo);
+      const qs = params.toString();
+      fetch(`/api/admin/stats${qs ? `?${qs}` : ""}`)
+        .then((res) => res.json())
+        .then(setStats);
+    }
+    load();
+    // Dati sempre aggiornati anche a pagina aperta a lungo (es. su un
+    // monitor in bacheca), senza dover ricaricare a mano.
+    const interval = setInterval(load, REFRESH_MS);
+    return () => clearInterval(interval);
+  }, [dateFrom, dateTo]);
 
   if (!stats) return <p className="text-sm text-neutral-500">Caricamento...</p>;
+
+  const PILLS = [
+    { key: "all", label: "Perpetuo" },
+    { key: "lastMonth", label: "Ultimo mese" },
+    { key: "nextMonth", label: "Prossimo mese" },
+    { key: "next3", label: "Prossimi 3 mesi" },
+    { key: "last3", label: "Ultimi 3 mesi" },
+    { key: "thisYear", label: "Questo anno" },
+  ];
 
   const maxDayCount = Math.max(1, ...stats.activeDays.map((d) => d.count));
   const maxClientCount = Math.max(1, ...stats.topClients.map((c) => c.count));
@@ -124,6 +186,50 @@ export default function AdminStatsPage() {
       <p className={pageSubtitle}>
         Basate su {stats.totalBookings} prenotazion{stats.totalBookings === 1 ? "e" : "i"} confermate, in attesa o riprogrammate.
       </p>
+
+      <div className="mb-3 flex flex-wrap gap-1.5">
+        {PILLS.map((p) => (
+          <button
+            key={p.key}
+            type="button"
+            onClick={() => applyPreset(p.key)}
+            className={`min-h-9 border px-3 py-1.5 text-xs font-medium ${
+              activePreset === p.key
+                ? "border-yellow-400 bg-yellow-400 text-neutral-900"
+                : "border-neutral-300 bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+            }`}
+          >
+            {p.label}
+          </button>
+        ))}
+      </div>
+
+      <div className="mb-6 flex flex-wrap items-end gap-2">
+        <label className="block">
+          <span className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">Da</span>
+          <input
+            type="date"
+            value={dateFrom}
+            onChange={(e) => {
+              setDateFrom(e.target.value);
+              setActivePreset("custom");
+            }}
+            className={`${input} w-40`}
+          />
+        </label>
+        <label className="block">
+          <span className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">A</span>
+          <input
+            type="date"
+            value={dateTo}
+            onChange={(e) => {
+              setDateTo(e.target.value);
+              setActivePreset("custom");
+            }}
+            className={`${input} w-40`}
+          />
+        </label>
+      </div>
 
       <div className="grid gap-4 sm:grid-cols-2">
         <StatCard title="Giorni piu' attivi">
