@@ -59,3 +59,31 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
 
   return NextResponse.json({ client });
 }
+
+/**
+ * Eliminazione definitiva: solo se il cliente non ha nessuna prenotazione o
+ * fattura, altrimenti si rischia di cancellare storico/documenti fiscali. In
+ * quel caso l'admin va indirizzato ad archiviare invece di eliminare.
+ */
+export async function DELETE(_request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
+  const { id } = await params;
+
+  const client = await prisma.client.findUnique({
+    where: { id },
+    select: { _count: { select: { bookings: true, invoices: true } } },
+  });
+  if (!client) {
+    return NextResponse.json({ error: "Cliente non trovato" }, { status: 404 });
+  }
+  if (client._count.bookings > 0 || client._count.invoices > 0) {
+    return NextResponse.json(
+      { error: "Questo cliente ha prenotazioni o fatture: archivialo invece di eliminarlo, per non perdere lo storico." },
+      { status: 409 }
+    );
+  }
+
+  await prisma.reminder.deleteMany({ where: { clientId: id } });
+  await prisma.billingProfile.deleteMany({ where: { clientId: id } });
+  await prisma.client.delete({ where: { id } });
+  return NextResponse.json({ ok: true });
+}

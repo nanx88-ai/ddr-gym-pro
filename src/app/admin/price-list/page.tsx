@@ -16,7 +16,7 @@ import {
 } from "@/lib/ui";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { ActionsRow, IconButton } from "@/components/IconAction";
+import { ActionsMenu } from "@/components/IconAction";
 
 interface PriceListItem {
   id: string;
@@ -99,6 +99,16 @@ export default function AdminPriceListPage() {
     load();
   }
 
+  async function updateField(item: PriceListItem, patch: Partial<PriceListItem>) {
+    await fetch(`/api/admin/price-list/${item.id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(patch),
+    });
+    toast.success("Voce aggiornata.");
+    load();
+  }
+
   async function remove(item: PriceListItem) {
     if (
       !(await confirm(
@@ -116,6 +126,18 @@ export default function AdminPriceListPage() {
     }
     toast.success("Voce eliminata.");
     load();
+  }
+
+  function priceActions(item: PriceListItem) {
+    return [
+      {
+        key: "toggle",
+        icon: item.active ? ("pause" as const) : ("resume" as const),
+        label: item.active ? "Disattiva" : "Riattiva",
+        onClick: () => toggleActive(item),
+      },
+      { key: "delete", icon: "delete" as const, label: "Elimina", tone: "danger" as const, onClick: () => remove(item) },
+    ];
   }
 
   return (
@@ -212,9 +234,14 @@ export default function AdminPriceListPage() {
           {items.map((item) => (
             <div key={item.id} className={`${card} p-4`}>
               <div className="flex items-start justify-between gap-2">
-                <span className="font-medium text-neutral-900 dark:text-white">
-                  {item.name}
-                </span>
+                <input
+                  defaultValue={item.name}
+                  onBlur={(e) => {
+                    const v = e.target.value.trim();
+                    if (v && v !== item.name) updateField(item, { name: v });
+                  }}
+                  className={`${input} flex-1 font-medium`}
+                />
                 <span
                   className={`shrink-0 px-2 py-1 text-xs font-medium ${
                     item.active
@@ -225,25 +252,52 @@ export default function AdminPriceListPage() {
                   {item.active ? "Attiva" : "Disattivata"}
                 </span>
               </div>
-              <div className="mt-2 flex items-center justify-between text-sm">
-                <span className="text-neutral-600 dark:text-neutral-300">
-                  {item.vatNature
-                    ? `Esente (${item.vatNature})`
-                    : `IVA ${item.vatRate}%`}
-                </span>
-                <span className="font-medium text-neutral-900 dark:text-white">
-                  {formatCurrency(item.unitPrice)}
-                </span>
-              </div>
-              <div className="mt-3 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-                <ActionsRow>
-                  <IconButton
-                    onClick={() => toggleActive(item)}
-                    icon={item.active ? "deactivate" : "activate"}
-                    label={item.active ? "Disattiva" : "Riattiva"}
+              <div className="mt-2 grid grid-cols-2 gap-3">
+                <label className="block">
+                  <span className={label}>Prezzo</span>
+                  <input
+                    type="number"
+                    min={0}
+                    step={0.01}
+                    defaultValue={item.unitPrice}
+                    onBlur={(e) => {
+                      const v = Number(e.target.value);
+                      if (v !== item.unitPrice) updateField(item, { unitPrice: v });
+                    }}
+                    className={input}
                   />
-                  <IconButton onClick={() => remove(item)} icon="delete" label="Elimina" tone="danger" />
-                </ActionsRow>
+                </label>
+                <label className="block">
+                  <span className={label}>IVA %</span>
+                  <input
+                    type="number"
+                    min={0}
+                    max={100}
+                    defaultValue={item.vatRate}
+                    onBlur={(e) => {
+                      const v = Number(e.target.value);
+                      if (v !== item.vatRate) updateField(item, { vatRate: v });
+                    }}
+                    className={input}
+                  />
+                </label>
+              </div>
+              <label className="mt-2 block">
+                <span className={label}>Natura (se esente)</span>
+                <select
+                  value={item.vatNature ?? ""}
+                  onChange={(e) => updateField(item, { vatNature: e.target.value || null })}
+                  className={`${input} w-full`}
+                >
+                  {VAT_NATURES.map((n) => (
+                    <option key={n.value} value={n.value}>
+                      {n.label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <div className="mt-3 flex justify-end border-t border-neutral-100 pt-3 dark:border-neutral-800">
+                <ActionsMenu actions={priceActions(item)} />
               </div>
             </div>
           ))}
@@ -266,16 +320,55 @@ export default function AdminPriceListPage() {
             <tbody>
               {items.map((item) => (
                 <tr key={item.id} className={trBorder}>
-                  <td
-                    className={`${td} font-medium text-neutral-900 dark:text-white`}
-                  >
-                    {item.name}
-                  </td>
-                  <td className={td}>{formatCurrency(item.unitPrice)}</td>
                   <td className={td}>
-                    {item.vatNature
-                      ? `Esente (${item.vatNature})`
-                      : `${item.vatRate}%`}
+                    <input
+                      defaultValue={item.name}
+                      onBlur={(e) => {
+                        const v = e.target.value.trim();
+                        if (v && v !== item.name) updateField(item, { name: v });
+                      }}
+                      className={`${input} w-40 font-medium`}
+                    />
+                  </td>
+                  <td className={td}>
+                    <input
+                      type="number"
+                      min={0}
+                      step={0.01}
+                      defaultValue={item.unitPrice}
+                      onBlur={(e) => {
+                        const v = Number(e.target.value);
+                        if (v !== item.unitPrice) updateField(item, { unitPrice: v });
+                      }}
+                      className={`${input} w-24`}
+                    />
+                  </td>
+                  <td className={td}>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="number"
+                        min={0}
+                        max={100}
+                        defaultValue={item.vatRate}
+                        onBlur={(e) => {
+                          const v = Number(e.target.value);
+                          if (v !== item.vatRate) updateField(item, { vatRate: v });
+                        }}
+                        className={`${input} w-16`}
+                        disabled={!!item.vatNature}
+                      />
+                      <select
+                        value={item.vatNature ?? ""}
+                        onChange={(e) => updateField(item, { vatNature: e.target.value || null })}
+                        className={`${input} w-28`}
+                      >
+                        {VAT_NATURES.map((n) => (
+                          <option key={n.value} value={n.value}>
+                            {n.value || "IVA %"}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
                   </td>
                   <td className={td}>
                     <span
@@ -289,14 +382,9 @@ export default function AdminPriceListPage() {
                     </span>
                   </td>
                   <td className={td}>
-                    <ActionsRow>
-                      <IconButton
-                        onClick={() => toggleActive(item)}
-                        icon={item.active ? "deactivate" : "activate"}
-                        label={item.active ? "Disattiva" : "Riattiva"}
-                      />
-                      <IconButton onClick={() => remove(item)} icon="delete" label="Elimina" tone="danger" />
-                    </ActionsRow>
+                    <div className="flex justify-end">
+                      <ActionsMenu actions={priceActions(item)} />
+                    </div>
                   </td>
                 </tr>
               ))}

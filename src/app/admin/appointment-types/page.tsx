@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import {
   btnPositive,
   card,
@@ -15,7 +16,7 @@ import {
   trBorder,
 } from "@/lib/ui";
 import { useToast } from "@/components/Toast";
-import { ActionsRow, IconButton, IconLink } from "@/components/IconAction";
+import { ActionsMenu } from "@/components/IconAction";
 import { useConfirm } from "@/components/ConfirmDialog";
 
 interface AppointmentType {
@@ -30,6 +31,7 @@ interface AppointmentType {
 export default function AdminAppointmentTypesPage() {
   const toast = useToast();
   const confirm = useConfirm();
+  const router = useRouter();
   const [types, setTypes] = useState<AppointmentType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -110,6 +112,20 @@ export default function AdminAppointmentTypesPage() {
     }
     toast.success("Calendario eliminato.");
     load();
+  }
+
+  function typeActions(t: AppointmentType) {
+    return [
+      { key: "schedule", icon: "schedule" as const, label: "Orario", onClick: () => router.push(`/admin/schedule?appointmentTypeId=${t.id}`) },
+      { key: "calendar", icon: "calendar" as const, label: "Calendario", onClick: () => router.push(`/admin/calendar?appointmentTypeId=${t.id}`) },
+      {
+        key: "toggle",
+        icon: t.active ? ("pause" as const) : ("resume" as const),
+        label: t.active ? "Disattiva" : "Riattiva",
+        onClick: () => updateField(t.id, { active: !t.active }),
+      },
+      { key: "delete", icon: "delete" as const, label: "Elimina", tone: "danger" as const, onClick: () => remove(t) },
+    ];
   }
 
   return (
@@ -261,16 +277,9 @@ export default function AdminAppointmentTypesPage() {
               </label>
 
               <div className="mt-3 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-                <ActionsRow>
-                  <IconLink href={`/admin/schedule?appointmentTypeId=${t.id}`} icon="schedule" label="Orario" />
-                  <IconLink href={`/admin/calendar?appointmentTypeId=${t.id}`} icon="calendar" label="Calendario" />
-                  <IconButton
-                    onClick={() => updateField(t.id, { active: !t.active })}
-                    icon={t.active ? "deactivate" : "activate"}
-                    label={t.active ? "Disattiva" : "Riattiva"}
-                  />
-                  <IconButton onClick={() => remove(t)} icon="delete" label="Elimina" tone="danger" />
-                </ActionsRow>
+                <div className="flex justify-end">
+                  <ActionsMenu actions={typeActions(t)} />
+                </div>
               </div>
             </div>
           ))}
@@ -353,16 +362,9 @@ export default function AdminAppointmentTypesPage() {
                     </span>
                   </td>
                   <td className={td}>
-                    <ActionsRow>
-                      <IconLink href={`/admin/schedule?appointmentTypeId=${t.id}`} icon="schedule" label="Orario" />
-                      <IconLink href={`/admin/calendar?appointmentTypeId=${t.id}`} icon="calendar" label="Calendario" />
-                      <IconButton
-                        onClick={() => updateField(t.id, { active: !t.active })}
-                        icon={t.active ? "deactivate" : "activate"}
-                        label={t.active ? "Disattiva" : "Riattiva"}
-                      />
-                      <IconButton onClick={() => remove(t)} icon="delete" label="Elimina" tone="danger" />
-                    </ActionsRow>
+                    <div className="flex justify-end">
+                      <ActionsMenu actions={typeActions(t)} />
+                    </div>
                   </td>
                 </tr>
               ))}
