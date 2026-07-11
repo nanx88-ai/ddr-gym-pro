@@ -1,12 +1,17 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useLayoutEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { NAV_GROUPS, NavIcon } from "@/components/AdminNav";
 import { toggleActive } from "@/lib/ui";
 
-const DRAG_OPEN_THRESHOLD = 50;
-const DRAG_CLOSE_THRESHOLD = 70;
+// Soglie di trascinamento: DRAG_STEP fa avanzare/tornare indietro di un
+// livello (chiuso<->ridotto<->esteso), DRAG_LONG da chiuso salta
+// direttamente a esteso in un unico gesto piu' lungo, DRAG_CLOSE (da
+// ridotto, trascinando verso il basso) chiude del tutto.
+const DRAG_STEP = 50;
+const DRAG_LONG = 140;
+const DRAG_CLOSE = 70;
 const BAR_HEIGHT = 52;
 // Zona morta sotto la barra collassata: senza handler, cosi' la gesture
 // "swipe up" di iOS per chiudere le app non entra in conflitto col
@@ -22,13 +27,23 @@ const CELL = "bg-neutral-100 dark:bg-neutral-900";
 const TEXT_LABEL = "text-neutral-700 dark:text-neutral-300";
 const TEXT_CELL = "text-neutral-800 dark:text-neutral-200";
 
+type ViewState = "closed" | "small" | "full";
+
 /**
- * Menu principale da mobile: non un burger+drawer laterale, ma una bottom
- * bar sempre visibile a tutta larghezza che si trascina (o si tocca) verso
- * l'alto per aprire una scheda a schermo intero con le sezioni a griglia,
- * stile "ERP block": griglia rigida a celle piene separate da linee 1px,
- * zero border-radius, zero ombre/gradienti, stato attivo = riempimento
- * giallo pieno. Segue il tema chiaro/scuro dell'admin (classe .dark).
+ * SPERIMENTALE (in prova, revertibile): menu principale da mobile a 3
+ * livelli. Chiuso -> tocco/drag leggero apre "ridotto" (solo le 3 voci
+ * principali, "Espandi" nella maniglia); da li' un drag leggero verso
+ * l'alto (o tap su "Espandi") apre "esteso" (tutte le 9 voci + barra
+ * impostazioni/esci); un drag piu' lungo da chiuso salta direttamente a
+ * esteso.
+ *
+ * Il contenuto (maniglia + griglia + barra impostazioni/esci) e' un unico
+ * blocco sempre della stessa altezza naturale: a cambiare e' solo quanto ne
+ * resta "sotto il bordo dello schermo" tramite un singolo translateY -
+ * qualunque punto della card si afferri (maniglia o "Espandi"), tutto il
+ * resto sotto si muove insieme, in blocco, sempre come se si stesse aprendo
+ * di piu' o richiudendo la stessa carta - mai un pezzo fermo e un altro che
+ * cresce per conto suo.
  */
 export default function MobileNavSheet({
   pathname,
@@ -37,92 +52,138 @@ export default function MobileNavSheet({
   pathname: string;
   onLogout: () => void;
 }) {
-  const [open, setOpen] = useState(false);
+  const [state, setState] = useState<ViewState>("closed");
   const [dragY, setDragY] = useState(0);
   const [dragging, setDragging] = useState(false);
   const dragState = useRef<{ startY: number } | null>(null);
+  const gridRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [fullGridHeight, setFullGridHeight] = useState(0);
+  const [naturalHeight, setNaturalHeight] = useState(0);
+
+  useLayoutEffect(() => {
+    function measure() {
+      if (gridRef.current) setFullGridHeight(gridRef.current.scrollHeight);
+      if (contentRef.current) setNaturalHeight(contentRef.current.scrollHeight);
+    }
+    measure();
+    window.addEventListener("resize", measure);
+    return () => window.removeEventListener("resize", measure);
+  }, [state]);
+
+  // 9 voci su 3 colonne = 3 righe di uguale altezza (celle aspect-square):
+  // "ridotto" mostra esattamente la maniglia + la prima riga.
+  const smallVisibleHeight = BAR_HEIGHT + fullGridHeight / 3;
 
   function onPointerDown(e: React.PointerEvent) {
     dragState.current = { startY: e.clientY };
     setDragging(true);
-    (e.target as Element).setPointerCapture?.(e.pointerId);
+    try {
+      (e.target as Element).setPointerCapture?.(e.pointerId);
+    } catch {
+      // pointer non piu' attivo (raro, safety net): il trascinamento continua comunque via stato React
+    }
   }
 
   function onPointerMove(e: React.PointerEvent) {
     if (!dragState.current) return;
     const delta = e.clientY - dragState.current.startY;
-    if (open) {
-      // trascina verso il basso per chiudere
-      setDragY(Math.max(0, delta));
-    } else {
-      // trascina verso l'alto per aprire (delta negativo)
-      setDragY(Math.min(0, delta));
-    }
+    if (state === "closed") setDragY(Math.min(0, delta));
+    else if (state === "full") setDragY(Math.max(0, delta));
+    else setDragY(delta);
   }
 
   function onPointerUp() {
     if (!dragState.current) return;
     dragState.current = null;
     setDragging(false);
-    if (open && dragY > DRAG_CLOSE_THRESHOLD) {
-      setOpen(false);
-    } else if (!open && dragY < -DRAG_OPEN_THRESHOLD) {
-      setOpen(true);
+    if (state === "closed") {
+      if (dragY <= -DRAG_LONG) setState("full");
+      else if (dragY <= -DRAG_STEP) setState("small");
+    } else if (state === "small") {
+      if (dragY <= -DRAG_STEP) setState("full");
+      else if (dragY >= DRAG_CLOSE) setState("closed");
+    } else {
+      if (dragY >= DRAG_STEP) setState("small");
     }
     setDragY(0);
+  }
+
+  /** Tocco semplice (non trascinamento) sulla barra maniglia: un livello alla volta. */
+  function handleTap() {
+    if (state === "closed") setState("small");
+    else if (state === "small") setState("closed");
+    else setState("small");
+  }
+
+  /** "Espandi"/"Socchiudi" nella maniglia: stessa posizione, azione opposta a seconda del livello. */
+  function expandCollapseTap(e: React.MouseEvent) {
+    e.stopPropagation();
+    setState(state === "small" ? "full" : "small");
   }
 
   // L'ultimo gruppo (Impostazioni) e' mostrato a parte nella bottom action
   // bar, insieme a Esci.
   const gridItems = NAV_GROUPS.slice(0, -1).flatMap((g) => g.items);
 
-  const grid = (
-    <div className="grid grid-cols-3">
-      {gridItems.map((item) => {
-        const isActive = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={() => setOpen(false)}
-            className={`flex aspect-square flex-col items-center justify-center gap-2 border p-2 text-center transition-colors ${
-              isActive
-                ? `bg-transparent ${toggleActive}`
-                : `${LINE} ${CELL} ${TEXT_CELL}`
-            }`}
-          >
-            <NavIcon icon={item.icon} />
-            <span className="text-[11px] font-semibold uppercase leading-tight tracking-wide">{item.label}</span>
-          </Link>
-        );
-      })}
-    </div>
-  );
+  const gridChildren = gridItems.map((item) => {
+    const isActive = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        onClick={() => setState("closed")}
+        className={`flex aspect-square flex-col items-center justify-center gap-2 border p-2 text-center transition-colors ${
+          isActive ? `bg-transparent ${toggleActive}` : `${LINE} ${CELL} ${TEXT_CELL}`
+        }`}
+      >
+        <NavIcon icon={item.icon} />
+        <span className="text-[11px] font-semibold uppercase leading-tight tracking-wide">{item.label}</span>
+      </Link>
+    );
+  });
+
+  // translateY della card aperta: 0 = tutto visibile (esteso), (naturalHeight
+  // - smallVisibleHeight) = solo maniglia+prima riga poking su (ridotto).
+  // Durante il trascinamento e' il valore live che segue il dito in ogni
+  // direzione - un solo numero sposta l'intera card in blocco, qualunque
+  // punto si stia trascinando.
+  const restingTranslateY = state === "full" ? 0 : naturalHeight - smallVisibleHeight;
+  const sheetTranslateY = dragging
+    ? Math.min(naturalHeight, Math.max(0, restingTranslateY + dragY))
+    : restingTranslateY;
+
+  const settingsFocusable = state === "full" ? undefined : -1;
 
   return (
     <div className="sm:hidden">
-      {/* Overlay a tutto schermo, piu' marcato di quello del pannello notifiche */}
-      {open && <div className="fixed inset-0 z-40 bg-black/80" onClick={() => setOpen(false)} />}
+      {/* Copia invisibile sempre presente, solo per misurare l'altezza reale
+          della griglia completa (dipende dalla larghezza schermo per via
+          delle celle aspect-square) prima ancora che l'utente apra il menu. */}
+      <div ref={gridRef} className="invisible fixed inset-x-0 top-0 -z-10 grid grid-cols-3" aria-hidden>
+        {gridChildren}
+      </div>
+
+      {/* Overlay a tutto schermo: chiude sempre del tutto, indipendentemente dal livello */}
+      {state !== "closed" && (
+        <div className="fixed inset-0 z-40 bg-black/80" onClick={() => setState("closed")} />
+      )}
 
       {/* Barra collassata: sollevata dal bordo, con zona morta non interattiva
           sotto per non entrare in conflitto con la gesture bar iOS */}
-      {!open && (
+      {state === "closed" && (
         <div
           className={`fixed inset-x-0 bottom-0 z-40 ${SURFACE}`}
           style={{ height: `calc(${BAR_HEIGHT}px + ${BOTTOM_DEAD_ZONE})` }}
         >
           <button
             type="button"
-            onClick={() => setOpen(true)}
+            onClick={handleTap}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             className={`relative flex w-full touch-none items-center border-t px-4 ${SURFACE} ${LINE}`}
-            style={{
-              height: BAR_HEIGHT,
-              transform: `translateY(${dragY}px)`,
-              transition: dragging ? "none" : "transform 0.2s ease-out",
-            }}
+            style={{ height: BAR_HEIGHT }}
             aria-label="Apri menu"
           >
             <span className={`text-xs font-semibold uppercase tracking-wide ${TEXT_LABEL}`}>Menu</span>
@@ -134,58 +195,81 @@ export default function MobileNavSheet({
         </div>
       )}
 
-      {/* Anteprima durante il trascinamento verso l'alto: mostra subito una
-          fetta del pannello invece di un'area vuota finche' non si supera la
-          soglia di apertura. */}
-      {!open && dragging && dragY < 0 && (
+      {/* Anteprima durante il trascinamento verso l'alto da chiuso: la
+          stessa griglia completa, via via piu' scoperta man mano che si
+          trascina - mai un contenuto diverso a scatto. */}
+      {state === "closed" && dragging && dragY < 0 && (
         <div
           className={`fixed inset-x-0 z-40 overflow-hidden border-t ${SURFACE} ${LINE}`}
-          style={{ bottom: `calc(${BAR_HEIGHT}px + ${BOTTOM_DEAD_ZONE})`, height: Math.min(-dragY, 480) }}
+          style={{ bottom: `calc(${BAR_HEIGHT}px + ${BOTTOM_DEAD_ZONE})`, height: Math.min(-dragY, fullGridHeight) }}
         >
-          {grid}
+          <div className="grid grid-cols-3">{gridChildren}</div>
         </div>
       )}
 
-      {/* Scheda a schermo intero */}
-      {open && (
+      {/* Scheda aperta: un unico blocco a altezza naturale (maniglia +
+          griglia completa + barra impostazioni/esci), "ridotta" o "estesa"
+          solo tramite translateY - mai contenuto diverso, mai un pezzo
+          fermo mentre un altro si muove. */}
+      {state !== "closed" && (
         <div
-          className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[92vh] flex-col border-t ${SURFACE} ${LINE}`}
+          ref={contentRef}
+          className={`fixed inset-x-0 bottom-0 z-50 flex flex-col border-t ${SURFACE} ${LINE}`}
           style={{
-            transform: `translateY(${dragY}px)`,
-            transition: dragging ? "none" : "transform 0.2s ease-out",
+            transform: `translateY(${sheetTranslateY}px)`,
+            transition: dragging ? "none" : "transform 0.22s ease-out",
           }}
         >
           <button
             type="button"
-            onClick={() => setOpen(false)}
+            onClick={handleTap}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
             className="relative flex w-full touch-none items-center px-4"
             style={{ height: BAR_HEIGHT }}
-            aria-label="Chiudi menu"
+            aria-label={state === "full" ? "Riduci menu" : "Chiudi o espandi menu"}
           >
             <span className={`text-xs font-semibold uppercase tracking-wide ${TEXT_LABEL}`}>Menu</span>
             <span className="absolute inset-x-0 flex justify-center">
               <span className={`h-1 w-10 border ${LINE}`} />
             </span>
+            <span
+              role="button"
+              tabIndex={0}
+              onClick={expandCollapseTap}
+              onPointerDown={(e) => e.stopPropagation()}
+              className={`absolute right-4 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide ${TEXT_LABEL}`}
+            >
+              {state === "small" ? "Espandi" : "Socchiudi"}
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d={state === "small" ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6"} />
+              </svg>
+            </span>
           </button>
 
-          <div className={`flex-1 overflow-y-auto border-t ${LINE}`}>{grid}</div>
+          <div className={`border-t ${LINE}`}>
+            <div className="grid grid-cols-3">{gridChildren}</div>
+          </div>
 
-          {/* Bottom action bar: neutro a sinistra, distruttivo a destra, divisi da una linea */}
-          <div className={`flex border-t ${LINE}`} style={{ height: 52 }}>
+          {/* Bottom action bar: neutro a sinistra, distruttivo a destra, divisi da una linea.
+              Sempre presente (non solo in "esteso"): resta semplicemente
+              sotto al bordo schermo quando "ridotto", parte dello stesso
+              blocco che si sposta in translateY. */}
+          <div className={`flex border-t ${LINE}`} style={{ height: BAR_HEIGHT }}>
             <Link
               href="/admin/settings"
-              onClick={() => setOpen(false)}
+              tabIndex={settingsFocusable}
+              onClick={() => setState("closed")}
               className={`flex flex-1 items-center justify-center gap-2 border-r text-sm font-medium ${LINE} ${TEXT_LABEL}`}
             >
               <NavIcon icon="settings" />
               Impostazioni
             </Link>
             <button
+              tabIndex={settingsFocusable}
               onClick={() => {
-                setOpen(false);
+                setState("closed");
                 onLogout();
               }}
               className="flex flex-1 items-center justify-center gap-2 text-sm font-medium text-red-600 dark:text-red-400"
