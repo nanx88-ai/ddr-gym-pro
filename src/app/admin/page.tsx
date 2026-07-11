@@ -505,9 +505,9 @@ export default function AdminBookingsPage() {
               <tr>
                 <th className={th}>Cliente</th>
                 <th className={th}>Servizio</th>
-                <th className={th}>Orario</th>
-                <th className={th}>Stato</th>
-                <th className={th}>Azioni</th>
+                <th className={`${th} whitespace-nowrap`}>Orario</th>
+                <th className={`${th} whitespace-nowrap`}>Stato</th>
+                <th className={`${th} whitespace-nowrap`}>Azioni</th>
               </tr>
             </thead>
             <tbody>

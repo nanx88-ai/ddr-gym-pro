@@ -64,9 +64,9 @@ function CalendarSyncSection() {
 
   return (
     <section className={`${card} mb-6 p-4`}>
-      <h2 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">
+      <h3 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">
         Sincronizza calendario
-      </h2>
+      </h3>
       <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
         Sottoscrivi questo link in Google Calendar (&quot;Aggiungi
         calendario&quot; &rarr; &quot;Da URL&quot;) o Apple Calendar
@@ -237,11 +237,14 @@ export default function AdminSettingsPage() {
 
       {error && <div className={errorBox}>{error}</div>}
 
-      <div className="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
+      <h2 className="mb-2 mt-2 text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+        Generali
+      </h2>
+      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section className={`${card} p-4`}>
-          <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
+          <h3 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
             Aspetto
-          </h2>
+          </h3>
           <div className="flex items-center gap-3">
             <span className="text-sm text-neutral-600 dark:text-neutral-300">
               Tema dell&apos;interfaccia admin
@@ -251,7 +254,7 @@ export default function AdminSettingsPage() {
         </section>
 
         <section className={`${card} p-4`}>
-          <h2 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">Notifiche push</h2>
+          <h3 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">Notifiche push</h3>
           <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
             Notifiche native su questo dispositivo (anche a PWA chiusa/in background). Vanno attivate separatamente
             su ogni telefono/computer da cui gestisci l&apos;admin.
@@ -260,12 +263,16 @@ export default function AdminSettingsPage() {
         </section>
       </div>
 
+      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+        Dati e integrazioni
+      </h2>
+
       <CalendarSyncSection />
 
       <section className={`${card} mb-6 p-4`}>
-        <h2 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">
+        <h3 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">
           API e integrazioni
-        </h2>
+        </h3>
         <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
           Chiavi salvate direttamente da qui invece che nei file di
           configurazione del server. Aruba, Fatture in Cloud, email (SMTP),
@@ -392,9 +399,9 @@ export default function AdminSettingsPage() {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section className={`${card} p-4`}>
-          <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
+          <h3 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
             Esporta dati (CSV)
-          </h2>
+          </h3>
           <div className="flex flex-wrap gap-2">
             <a href="/api/admin/export/clients" className={btnNeutral}>
               Clienti
@@ -409,9 +416,9 @@ export default function AdminSettingsPage() {
         </section>
 
         <section className={`${card} p-4`}>
-          <h2 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">
+          <h3 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">
             Backup
-          </h2>
+          </h3>
           <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
             Scarica una copia completa del database (file .db). Conservala in un
             posto sicuro.

@@ -237,7 +237,7 @@ export default function AdminAgendaPage() {
         Vista d&apos;insieme delle prenotazioni per giorno, settimana o mese.
       </p>
 
-      <div className="mb-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+      <div className="mb-3 flex flex-wrap items-center gap-3">
         <div className="flex border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900">
           {(
             [
@@ -283,7 +283,7 @@ export default function AdminAgendaPage() {
           ))}
         </div>
 
-        <div className="flex items-center justify-center gap-2 sm:justify-end">
+        <div className="flex items-center gap-2">
           <IconButton icon="chevronLeft" label="Periodo precedente" onClick={() => step(-1)} />
           <span className="min-w-[9rem] text-center text-sm font-semibold capitalize text-neutral-900 dark:text-white sm:min-w-[13rem]">
             {view === "month"
@@ -295,9 +295,7 @@ export default function AdminAgendaPage() {
           <IconButton icon="chevronRight" label="Periodo successivo" onClick={() => step(1)} />
           <IconButton icon="today" label="Vai a oggi" onClick={() => setSelectedDate(new Date())} />
         </div>
-      </div>
 
-      <div className="mb-3">
         <button
           type="button"
           onClick={() => setFiltersOpen((o) => !o)}

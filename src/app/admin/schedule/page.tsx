@@ -218,14 +218,14 @@ function SchedulePageContent() {
                         type="time"
                         value={b.startTime}
                         onChange={(e) => updateBand(b.key, { startTime: e.target.value })}
-                        className={`${input} min-w-0 flex-1`}
+                        className={`${input} w-24`}
                       />
                       <span className="shrink-0 text-neutral-500">&ndash;</span>
                       <input
                         type="time"
                         value={b.endTime}
                         onChange={(e) => updateBand(b.key, { endTime: e.target.value })}
-                        className={`${input} min-w-0 flex-1`}
+                        className={`${input} w-24`}
                       />
                       <IconButton icon="remove" label="Rimuovi fascia" tone="danger" onClick={() => removeBand(b.key)} />
                     </div>

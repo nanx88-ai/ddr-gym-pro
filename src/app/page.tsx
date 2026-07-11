@@ -661,19 +661,51 @@ export default function HomePage() {
                                 <span className={publicLabel}>
                                   Quante volte
                                 </span>
-                                <input
-                                  type="number"
-                                  min={2}
-                                  max={52}
-                                  value={p.count}
-                                  onChange={(e) =>
-                                    updatePickedSlot(p.key, {
-                                      count: Number(e.target.value) || 2,
-                                      confirmed: false,
-                                    })
-                                  }
-                                  className={publicInput}
-                                />
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      updatePickedSlot(p.key, {
+                                        count: Math.max(2, p.count - 1),
+                                        confirmed: false,
+                                      })
+                                    }
+                                    className="flex h-11 w-11 shrink-0 items-center justify-center border border-neutral-300 bg-neutral-100 text-lg font-semibold text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                                  >
+                                    &minus;
+                                  </button>
+                                  <input
+                                    type="number"
+                                    min={2}
+                                    max={52}
+                                    value={p.count}
+                                    onChange={(e) =>
+                                      updatePickedSlot(p.key, {
+                                        count: e.target.value === "" ? ("" as unknown as number) : Number(e.target.value),
+                                        confirmed: false,
+                                      })
+                                    }
+                                    onBlur={(e) => {
+                                      const v = Number(e.target.value);
+                                      updatePickedSlot(p.key, {
+                                        count: Number.isFinite(v) && v >= 2 ? Math.min(52, v) : 2,
+                                      });
+                                    }}
+                                    className={`${publicInput} w-20 text-center`}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      updatePickedSlot(p.key, {
+                                        count: Math.min(52, p.count + 1),
+                                        confirmed: false,
+                                      })
+                                    }
+                                    className="flex h-11 w-11 shrink-0 items-center justify-center border border-neutral-300 bg-neutral-100 text-lg font-semibold text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                                  >
+                                    +
+                                  </button>
+                                </div>
                               </label>
                             ) : (
                               <label className="block">

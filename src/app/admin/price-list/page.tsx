@@ -310,11 +310,11 @@ export default function AdminPriceListPage() {
           <table className="w-full text-sm">
             <thead className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900/60">
               <tr>
-                <th className={th}>Nome</th>
-                <th className={th}>Prezzo</th>
-                <th className={th}>IVA</th>
-                <th className={th}>Stato</th>
-                <th className={th}>Azioni</th>
+                <th className={`${th} w-full`}>Nome</th>
+                <th className={`${th} whitespace-nowrap`}>Prezzo</th>
+                <th className={`${th} whitespace-nowrap`}>IVA</th>
+                <th className={`${th} whitespace-nowrap`}>Stato</th>
+                <th className={`${th} whitespace-nowrap`}>Azioni</th>
               </tr>
             </thead>
             <tbody>
@@ -327,24 +327,27 @@ export default function AdminPriceListPage() {
                         const v = e.target.value.trim();
                         if (v && v !== item.name) updateField(item, { name: v });
                       }}
-                      className={`${input} w-40 font-medium`}
+                      className={`${input} w-full min-w-[12rem] font-medium`}
                     />
                   </td>
                   <td className={td}>
-                    <input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      defaultValue={item.unitPrice}
-                      onBlur={(e) => {
-                        const v = Number(e.target.value);
-                        if (v !== item.unitPrice) updateField(item, { unitPrice: v });
-                      }}
-                      className={`${input} w-24`}
-                    />
+                    <div className="flex items-center gap-1 whitespace-nowrap">
+                      <span className="shrink-0 text-neutral-500">&euro;</span>
+                      <input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        defaultValue={item.unitPrice}
+                        onBlur={(e) => {
+                          const v = Number(e.target.value);
+                          if (v !== item.unitPrice) updateField(item, { unitPrice: v });
+                        }}
+                        className={`${input} w-20`}
+                      />
+                    </div>
                   </td>
                   <td className={td}>
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1 whitespace-nowrap">
                       <input
                         type="number"
                         min={0}
@@ -354,23 +357,23 @@ export default function AdminPriceListPage() {
                           const v = Number(e.target.value);
                           if (v !== item.vatRate) updateField(item, { vatRate: v });
                         }}
-                        className={`${input} w-16`}
+                        className={`${input} w-14`}
                         disabled={!!item.vatNature}
                       />
                       <select
                         value={item.vatNature ?? ""}
                         onChange={(e) => updateField(item, { vatNature: e.target.value || null })}
-                        className={`${input} w-28`}
+                        className={`${input} w-20`}
                       >
                         {VAT_NATURES.map((n) => (
                           <option key={n.value} value={n.value}>
-                            {n.value || "IVA %"}
+                            {n.value || "%"}
                           </option>
                         ))}
                       </select>
                     </div>
                   </td>
-                  <td className={td}>
+                  <td className={`${td} whitespace-nowrap`}>
                     <span
                       className={`px-2 py-1 text-xs font-medium ${
                         item.active
@@ -381,7 +384,7 @@ export default function AdminPriceListPage() {
                       {item.active ? "Attiva" : "Disattivata"}
                     </span>
                   </td>
-                  <td className={td}>
+                  <td className={`${td} whitespace-nowrap`}>
                     <div className="flex justify-end">
                       <ActionsMenu actions={priceActions(item)} />
                     </div>

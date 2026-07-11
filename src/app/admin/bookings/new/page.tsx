@@ -95,7 +95,7 @@ export default function AdminNewBookingPage() {
   }
 
   return (
-    <div className="max-w-md">
+    <div className="mx-auto max-w-md">
       <h1 className={pageTitle}>Nuovo appuntamento</h1>
       <p className={pageSubtitle}>
         Nessun vincolo qui: puoi registrare un appuntamento gia&apos; avvenuto, in un orario gia&apos; occupato, o
@@ -173,14 +173,34 @@ export default function AdminNewBookingPage() {
             {endMethod === "count" ? (
               <label className="block">
                 <span className={label}>Quante volte</span>
-                <input
-                  type="number"
-                  min={2}
-                  max={52}
-                  value={count}
-                  onChange={(e) => setCount(Number(e.target.value) || 2)}
-                  className={input}
-                />
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCount((c) => Math.max(2, c - 1))}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center border border-neutral-300 bg-neutral-100 text-lg font-semibold text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                  >
+                    &minus;
+                  </button>
+                  <input
+                    type="number"
+                    min={2}
+                    max={52}
+                    value={count}
+                    onChange={(e) => setCount(e.target.value === "" ? ("" as unknown as number) : Number(e.target.value))}
+                    onBlur={(e) => {
+                      const v = Number(e.target.value);
+                      setCount(Number.isFinite(v) && v >= 2 ? Math.min(52, v) : 2);
+                    }}
+                    className={`${input} w-20 text-center`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setCount((c) => Math.min(52, c + 1))}
+                    className="flex h-11 w-11 shrink-0 items-center justify-center border border-neutral-300 bg-neutral-100 text-lg font-semibold text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+                  >
+                    +
+                  </button>
+                </div>
               </label>
             ) : (
               <label className="block">

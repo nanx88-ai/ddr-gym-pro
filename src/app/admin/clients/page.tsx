@@ -319,10 +319,10 @@ export default function AdminClientsPage() {
               <tr>
                 <th className={th}>Nome</th>
                 <th className={th}>Email</th>
-                <th className={th}>Telefono</th>
-                <th className={th}>Prenotazioni</th>
-                <th className={th}>Stato</th>
-                <th className={th}>Azioni</th>
+                <th className={`${th} whitespace-nowrap`}>Telefono</th>
+                <th className={`${th} whitespace-nowrap`}>Prenotazioni</th>
+                <th className={`${th} whitespace-nowrap`}>Stato</th>
+                <th className={`${th} whitespace-nowrap`}>Azioni</th>
               </tr>
             </thead>
             <tbody>
@@ -406,8 +406,8 @@ export default function AdminClientsPage() {
                     <tr>
                       <th className={th}>Nome</th>
                       <th className={th}>Email</th>
-                      <th className={th}>Prenotazioni</th>
-                      <th className={th}>Azioni</th>
+                      <th className={`${th} whitespace-nowrap`}>Prenotazioni</th>
+                      <th className={`${th} whitespace-nowrap`}>Azioni</th>
                     </tr>
                   </thead>
                   <tbody>

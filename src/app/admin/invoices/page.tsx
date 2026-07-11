@@ -96,11 +96,11 @@ export default function AdminInvoicesPage() {
           <table className="w-full text-sm">
             <thead className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900/60">
               <tr>
-                <th className={th}>Numero</th>
+                <th className={`${th} whitespace-nowrap`}>Numero</th>
                 <th className={th}>Cliente</th>
-                <th className={th}>Periodo</th>
-                <th className={th}>Totale</th>
-                <th className={th}>Stato</th>
+                <th className={`${th} whitespace-nowrap`}>Periodo</th>
+                <th className={`${th} whitespace-nowrap`}>Totale</th>
+                <th className={`${th} whitespace-nowrap`}>Stato</th>
               </tr>
             </thead>
             <tbody>

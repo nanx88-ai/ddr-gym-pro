@@ -292,12 +292,12 @@ export default function AdminAppointmentTypesPage() {
           <table className="w-full text-sm">
             <thead className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900/60">
               <tr>
-                <th className={th}>Nome</th>
-                <th className={th}>Durata slot</th>
-                <th className={th}>Capienza</th>
-                <th className={th}>Approvazione</th>
-                <th className={th}>Stato</th>
-                <th className={th}>Azioni</th>
+                <th className={`${th} w-full`}>Nome</th>
+                <th className={`${th} whitespace-nowrap`}>Durata</th>
+                <th className={`${th} whitespace-nowrap`}>Capienza</th>
+                <th className={`${th} whitespace-nowrap`}>Approvazione</th>
+                <th className={`${th} whitespace-nowrap`}>Stato</th>
+                <th className={`${th} whitespace-nowrap`}>Azioni</th>
               </tr>
             </thead>
             <tbody>
@@ -309,20 +309,21 @@ export default function AdminAppointmentTypesPage() {
                     {t.name}
                   </td>
                   <td className={td}>
-                    <input
-                      type="number"
-                      min={5}
-                      max={480}
-                      defaultValue={t.durationMinutes}
-                      onBlur={(e) => {
-                        const v = Number(e.target.value);
-                        if (v !== t.durationMinutes)
-                          updateField(t.id, { durationMinutes: v });
-                      }}
-                      className={`${input} w-24`}
-                    />
-                    {""}
-                    <span className="text-neutral-500">min</span>
+                    <div className="flex items-center gap-1.5 whitespace-nowrap">
+                      <input
+                        type="number"
+                        min={5}
+                        max={480}
+                        defaultValue={t.durationMinutes}
+                        onBlur={(e) => {
+                          const v = Number(e.target.value);
+                          if (v !== t.durationMinutes)
+                            updateField(t.id, { durationMinutes: v });
+                        }}
+                        className={`${input} w-16`}
+                      />
+                      <span className="shrink-0 text-neutral-500">min</span>
+                    </div>
                   </td>
                   <td className={td}>
                     <input
@@ -335,10 +336,10 @@ export default function AdminAppointmentTypesPage() {
                         if (v !== t.capacity)
                           updateField(t.id, { capacity: v });
                       }}
-                      className={`${input} w-24`}
+                      className={`${input} w-16`}
                     />
                   </td>
-                  <td className={td}>
+                  <td className={`${td} text-center`}>
                     <input
                       type="checkbox"
                       checked={t.requiresApproval}
@@ -350,7 +351,7 @@ export default function AdminAppointmentTypesPage() {
                       className={checkbox}
                     />
                   </td>
-                  <td className={td}>
+                  <td className={`${td} whitespace-nowrap`}>
                     <span
                       className={`px-2 py-1 text-xs font-medium ${
                         t.active
