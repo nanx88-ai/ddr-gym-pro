@@ -388,7 +388,7 @@ export default function AdminClientDetailPage({
         <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
           Dati anagrafici e fiscali
         </h2>
-        <form onSubmit={saveFiscal} className="grid grid-cols-2 gap-3">
+        <form onSubmit={saveFiscal} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
           <label className="block">
             <span className={label}>Tipo cliente</span>
             <select
@@ -413,7 +413,7 @@ export default function AdminClientDetailPage({
 
           {fiscal.clientKind === "AZIENDA" && (
             <>
-              <label className="col-span-2 block">
+              <label className="block sm:col-span-2">
                 <span className={label}>Ragione sociale</span>
                 <input
                   value={fiscal.businessName}
@@ -446,7 +446,7 @@ export default function AdminClientDetailPage({
               className={input}
             />
           </label>
-          <label className="col-span-2 block">
+          <label className="block sm:col-span-2">
             <span className={label}>Indirizzo</span>
             <input
               value={fiscal.address}
@@ -515,7 +515,7 @@ export default function AdminClientDetailPage({
             />
           </label>
 
-          <div className="col-span-2">
+          <div className="sm:col-span-2">
             <button
               type="submit"
               disabled={savingFiscal}
@@ -532,12 +532,12 @@ export default function AdminClientDetailPage({
           Profilo di fatturazione
         </h2>
         <form onSubmit={saveBilling} className="flex flex-wrap items-end gap-3">
-          <label className="block">
+          <label className="block w-full sm:w-56">
             <span className={label}>Voce di listino</span>
             <select
               value={priceListItemId}
               onChange={(e) => setPriceListItemId(e.target.value)}
-              className={`${input} w-56`}
+              className={`${input} w-full`}
             >
               {priceList.map((p) => (
                 <option key={p.id} value={p.id}>
@@ -546,18 +546,18 @@ export default function AdminClientDetailPage({
               ))}
             </select>
           </label>
-          <label className="block">
+          <label className="block w-full sm:w-56">
             <span className={label}>Regola di conteggio</span>
             <select
               value={billingType}
               onChange={(e) => setBillingType(e.target.value)}
-              className={`${input} w-56`}
+              className={`${input} w-full`}
             >
               <option value="PER_ACCESS">Per accessi effettivi</option>
               <option value="FLAT">Importo fisso per periodo</option>
             </select>
           </label>
-          <button type="submit" disabled={savingBilling} className={btnPrimary}>
+          <button type="submit" disabled={savingBilling} className={`w-full sm:w-auto ${btnPrimary}`}>
             {savingBilling ? "Salvataggio..." : "Salva profilo"}
           </button>
         </form>
@@ -641,7 +641,7 @@ export default function AdminClientDetailPage({
               className={input}
             />
           </label>
-          <label className="block">
+          <label className="col-span-2 block sm:col-span-1">
             <span className={label}>Avvisa (giorni prima)</span>
             <input
               type="number"
@@ -730,28 +730,28 @@ export default function AdminClientDetailPage({
           onSubmit={generateInvoice}
           className="mb-4 flex flex-wrap items-end gap-3"
         >
-          <label className="block">
+          <label className="block w-full sm:w-40">
             <span className={label}>Da</span>
             <input
               type="date"
               value={periodStart}
               onChange={(e) => setPeriodStart(e.target.value)}
-              className={`${input} w-40`}
+              className={`${input} w-full min-w-0`}
             />
           </label>
-          <label className="block">
+          <label className="block w-full sm:w-40">
             <span className={label}>A</span>
             <input
               type="date"
               value={periodEnd}
               onChange={(e) => setPeriodEnd(e.target.value)}
-              className={`${input} w-40`}
+              className={`${input} w-full min-w-0`}
             />
           </label>
           <button
             type="submit"
             disabled={generating || !client.billingProfile}
-            className={btnPositive}
+            className={`w-full sm:w-auto ${btnPositive}`}
           >
             {generating ? "Generazione..." : "Genera fattura"}
           </button>

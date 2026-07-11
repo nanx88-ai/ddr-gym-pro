@@ -6,9 +6,10 @@ import { card, input, pageSubtitle, pageTitle, tableHeadBg, tableWrap, td, th, t
 import { Checkbox } from "@/components/Checkbox";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { ActionsMenu } from "@/components/IconAction";
+import { ActionsMenu, IconButton } from "@/components/IconAction";
 import { StatusDot } from "@/components/StatusDot";
 import { SortableTh, type SortDir } from "@/components/SortableTh";
+import { SortDirToggle } from "@/components/SortDirToggle";
 
 interface Client {
   id: string;
@@ -42,6 +43,7 @@ export default function AdminClientsPage() {
   const [hasUpcomingReminder, setHasUpcomingReminder] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [sortActive, setSortActive] = useState(false);
   const [types, setTypes] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
@@ -115,6 +117,7 @@ export default function AdminClientsPage() {
   }
 
   function handleSort(key: SortBy) {
+    setSortActive(true);
     if (sortBy === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
@@ -183,6 +186,12 @@ export default function AdminClientsPage() {
 
   function clientActions(c: Client) {
     return [
+      {
+        key: "open",
+        icon: "chevronRight" as const,
+        label: "Apri",
+        onClick: () => router.push(`/admin/clients/${c.id}`),
+      },
       {
         key: "pause",
         icon: c.status === "ACTIVE" ? ("pause" as const) : ("resume" as const),
@@ -281,6 +290,29 @@ export default function AdminClientsPage() {
             Con scadenze in arrivo
           </label>
 
+          {/* Da mobile non ci sono intestazioni di colonna cliccabili: stesso
+              ordinamento delle colonne desktop via select + bottone direzione. */}
+          <div className="flex gap-2 sm:hidden">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortBy)}
+              className={`${input} w-full flex-1`}
+            >
+              <option value="name">Ordina per nome</option>
+              <option value="email">Ordina per email</option>
+              <option value="phone">Ordina per telefono</option>
+              <option value="bookings">Ordina per prenotazioni</option>
+            </select>
+            <SortDirToggle
+              active={sortActive}
+              dir={sortDir}
+              onChange={({ active, dir }) => {
+                setSortActive(active);
+                setSortDir(dir);
+              }}
+            />
+          </div>
+
           {activeFilterCount > 0 && (
             <button
               type="button"
@@ -299,32 +331,30 @@ export default function AdminClientsPage() {
         </p>
       )}
 
-      {/* Mobile: schede */}
+      {/* Mobile: schede - niente click sull'intera scheda (rischio di apertura
+          accidentale durante lo scroll), apertura solo via bottone dedicato. */}
       {visibleClients.length > 0 && (
-        <div className="space-y-3 sm:hidden">
+        <div className="space-y-2 sm:hidden">
           {visibleClients.map((c) => (
-            <div
-              key={c.id}
-              onClick={() => router.push(`/admin/clients/${c.id}`)}
-              className={`${card} cursor-pointer p-4`}
-            >
+            <div key={c.id} className={`${card} space-y-1 px-4 py-3.5`}>
               <div className="flex items-center gap-2">
                 <StatusDot status={c.status} />
-                <span className="font-medium text-neutral-900 dark:text-white">
+                <span className="flex-1 truncate text-[15px] font-bold text-neutral-900 dark:text-white">
                   {c.firstName} {c.lastName}
                 </span>
               </div>
-              <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{c.email}</div>
-              <div className="mt-2 flex items-center justify-between text-sm">
-                <span className="text-neutral-600 dark:text-neutral-300">{c.phone ?? "Nessun telefono"}</span>
-                <span className="text-neutral-500 dark:text-neutral-400">
-                  {c._count.bookings} prenotazion{c._count.bookings === 1 ? "e" : "i"}
-                </span>
+              <div className="text-[13px] text-neutral-600 dark:text-neutral-300">{c.email}</div>
+              <div className="text-xs text-neutral-500 dark:text-neutral-500">
+                {c.phone ?? "Nessun telefono"} · {c._count.bookings} prenotazion{c._count.bookings === 1 ? "e" : "i"}
               </div>
-              <div
-                className="mt-3 flex justify-end border-t border-neutral-100 pt-3 dark:border-neutral-800"
-                onClick={(e) => e.stopPropagation()}
-              >
+              <div className="flex items-center justify-between pt-1">
+                <button
+                  type="button"
+                  onClick={() => router.push(`/admin/clients/${c.id}`)}
+                  className="text-sm font-medium text-yellow-600 hover:underline dark:text-yellow-400"
+                >
+                  Apri
+                </button>
                 <ActionsMenu actions={clientActions(c)} />
               </div>
             </div>
@@ -362,7 +392,8 @@ export default function AdminClientsPage() {
                   <td className={td}>{c.phone ?? "-"}</td>
                   <td className={td}>{c._count.bookings}</td>
                   <td className={td} onClick={(e) => e.stopPropagation()}>
-                    <div className="flex justify-end">
+                    <div className="flex justify-end gap-1.5">
+                      <IconButton icon="chevronRight" label="Apri" onClick={() => router.push(`/admin/clients/${c.id}`)} />
                       <ActionsMenu actions={clientActions(c)} />
                     </div>
                   </td>
@@ -400,21 +431,21 @@ export default function AdminClientsPage() {
           {archivedOpen && (
             <>
               {/* Mobile: schede */}
-              <div className="mt-3 space-y-3 sm:hidden">
+              <div className="mt-3 space-y-2 sm:hidden">
                 {archivedClients.map((c) => (
-                  <div
-                    key={c.id}
-                    onClick={() => router.push(`/admin/clients/${c.id}`)}
-                    className={`${card} cursor-pointer p-4 opacity-75`}
-                  >
-                    <span className="font-medium text-neutral-900 dark:text-white">
+                  <div key={c.id} className={`${card} space-y-1 px-4 py-3.5 opacity-75`}>
+                    <span className="block truncate text-[15px] font-bold text-neutral-900 dark:text-white">
                       {c.firstName} {c.lastName}
                     </span>
-                    <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{c.email}</div>
-                    <div
-                      className="mt-3 flex justify-end border-t border-neutral-100 pt-3 dark:border-neutral-800"
-                      onClick={(e) => e.stopPropagation()}
-                    >
+                    <div className="text-[13px] text-neutral-600 dark:text-neutral-300">{c.email}</div>
+                    <div className="flex items-center justify-between pt-1">
+                      <button
+                        type="button"
+                        onClick={() => router.push(`/admin/clients/${c.id}`)}
+                        className="text-sm font-medium text-yellow-600 hover:underline dark:text-yellow-400"
+                      >
+                        Apri
+                      </button>
                       <ActionsMenu actions={clientActions(c)} />
                     </div>
                   </div>
@@ -445,7 +476,8 @@ export default function AdminClientsPage() {
                         <td className={td}>{c.email}</td>
                         <td className={td}>{c._count.bookings}</td>
                         <td className={td} onClick={(e) => e.stopPropagation()}>
-                          <div className="flex justify-end">
+                          <div className="flex justify-end gap-1.5">
+                            <IconButton icon="chevronRight" label="Apri" onClick={() => router.push(`/admin/clients/${c.id}`)} />
                             <ActionsMenu actions={clientActions(c)} />
                           </div>
                         </td>

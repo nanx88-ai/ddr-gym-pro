@@ -23,6 +23,7 @@ import EditBookingModal from "@/components/EditBookingModal";
 import { Checkbox } from "@/components/Checkbox";
 import { StatusDot } from "@/components/StatusDot";
 import { SortableTh } from "@/components/SortableTh";
+import { SortDirToggle } from "@/components/SortDirToggle";
 
 interface RescheduleRequest {
   id: string;
@@ -80,6 +81,7 @@ export default function AdminBookingsPage() {
   const [search, setSearch] = useState("");
   const [sortBy, setSortBy] = useState<SortBy>("date");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [sortActive, setSortActive] = useState(false);
   const [pendingFirst, setPendingFirst] = useState(true);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [dateFrom, setDateFrom] = useState("");
@@ -197,6 +199,7 @@ export default function AdminBookingsPage() {
   }
 
   function handleSort(key: SortBy) {
+    setSortActive(true);
     if (sortBy === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
@@ -443,6 +446,28 @@ export default function AdminBookingsPage() {
             Solo con spostamento richiesto
           </label>
 
+          {/* Da mobile non ci sono intestazioni di colonna cliccabili: stesso
+              ordinamento delle colonne desktop via select + bottone direzione. */}
+          <div className="flex gap-2 sm:hidden">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as SortBy)}
+              className={`${filterField} flex-1`}
+            >
+              <option value="date">Ordina per orario</option>
+              <option value="client">Ordina per cliente</option>
+              <option value="service">Ordina per servizio</option>
+            </select>
+            <SortDirToggle
+              active={sortActive}
+              dir={sortDir}
+              onChange={({ active, dir }) => {
+                setSortActive(active);
+                setSortDir(dir);
+              }}
+            />
+          </div>
+
           {activeFilterCount > 0 && (
             <button
               type="button"
@@ -465,42 +490,31 @@ export default function AdminBookingsPage() {
         </p>
       )}
 
-      {/* Mobile: schede, una per prenotazione (una tabella qui e'illeggibile su schermi stretti) */}
+      {/* Mobile: schede compatte a 3 righe (identita' / servizio / orario+azioni) */}
       {!loading && visibleBookings.length > 0 && (
-        <div className="space-y-3 sm:hidden">
+        <div className="space-y-2 sm:hidden">
           {visibleBookings.map((b) => (
-            <div key={b.id} className={`${card} p-4`}>
-              <div className="flex items-start gap-2">
-                <StatusDot status={b.status} className="mt-1.5" />
-                <div>
-                  <div className="font-medium text-neutral-900 dark:text-white">
-                    {b.client.firstName} {b.client.lastName}
-                  </div>
-                  <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                    {b.client.email}
-                  </div>
-                  {b.client.status === "PAUSED" && (
-                    <span className="text-xs text-yellow-500 dark:text-yellow-400">
-                      Cliente in pausa
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              <div className="mt-3 flex items-center justify-between text-sm">
-                <span className="text-neutral-700 dark:text-neutral-200">
-                  {b.appointmentType.name}
+            <div key={b.id} className={`${card} space-y-1 px-4 py-3.5`}>
+              <div className="flex items-center gap-2">
+                <StatusDot status={b.status} />
+                <span className="flex-1 truncate text-[15px] font-bold text-neutral-900 dark:text-white">
+                  {b.client.firstName} {b.client.lastName}
                 </span>
-                <span className="capitalize text-neutral-500 dark:text-neutral-400">
+                {b.client.status === "PAUSED" && (
+                  <span className="shrink-0 text-xs font-medium text-yellow-600 dark:text-yellow-400">In pausa</span>
+                )}
+              </div>
+              <div className="text-[13px] text-neutral-600 dark:text-neutral-300">
+                {b.appointmentType.name}
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-xs capitalize text-neutral-500 dark:text-neutral-500">
                   {formatDateTime(b.startTime)}
                 </span>
+                <Actions b={b} />
               </div>
 
               <RescheduleBanner b={b} />
-
-              <div className="mt-3 border-t border-neutral-100 pt-3 dark:border-neutral-800">
-                <Actions b={b} />
-              </div>
             </div>
           ))}
         </div>
