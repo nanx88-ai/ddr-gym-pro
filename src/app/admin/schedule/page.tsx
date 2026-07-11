@@ -2,8 +2,9 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { btnNeutral, btnPositive, btnPrimary, card, checkbox, input, label, pageSubtitle, pageTitle } from "@/lib/ui";
+import { btnNeutral, btnPositive, btnPrimary, card, input, label, pageSubtitle, pageTitle } from "@/lib/ui";
 import { IconButton } from "@/components/IconAction";
+import { Checkbox } from "@/components/Checkbox";
 
 interface AppointmentType {
   id: string;
@@ -262,7 +263,7 @@ function SchedulePageContent() {
                   {dayBands.map((b) => (
                     <div
                       key={b.key}
-                      className="flex items-center justify-between border border-neutral-200 bg-neutral-50 py-2 pl-3 pr-2 dark:border-neutral-800 dark:bg-neutral-900/60"
+                      className="flex items-center justify-between border border-neutral-200 bg-neutral-50 py-3 pl-3 pr-2 dark:border-neutral-800 dark:bg-neutral-900/60"
                     >
                       <span className="text-xs font-medium text-neutral-800 dark:text-neutral-100">
                         {b.startTime}&ndash;{b.endTime}
@@ -284,10 +285,10 @@ function SchedulePageContent() {
                 key={dayOfWeek}
                 type="button"
                 onClick={() => setSelectedDay(dayOfWeek)}
-                className={`h-11 w-14 shrink-0 text-xs font-semibold uppercase ${
+                className={`h-11 w-14 shrink-0 border-2 text-xs font-semibold uppercase transition-colors hover:bg-yellow-400/10 ${
                   selectedDay === dayOfWeek
-                    ? "bg-yellow-400 text-neutral-900"
-                    : "bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
+                    ? "border-yellow-500 text-yellow-600 dark:border-yellow-400 dark:text-yellow-400"
+                    : "border-transparent bg-neutral-100 text-neutral-700 dark:bg-neutral-800 dark:text-neutral-200"
                 }`}
               >
                 {DAY_SHORT[dayOfWeek]}
@@ -332,7 +333,7 @@ function SchedulePageContent() {
             <input type="date" value={excDate} onChange={(e) => setExcDate(e.target.value)} className={`${input} w-40`} />
           </label>
           <label className="flex items-center gap-2 pb-2 text-sm text-neutral-700 dark:text-neutral-300">
-            <input type="checkbox" checked={excClosed} onChange={(e) => setExcClosed(e.target.checked)} className={checkbox} />
+            <Checkbox checked={excClosed} onChange={(e) => setExcClosed(e.target.checked)} />
             Giorno chiuso
           </label>
           {!excClosed && (

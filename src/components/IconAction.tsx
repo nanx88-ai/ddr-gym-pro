@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 export type ActionIconKey =
   | "expand"
@@ -237,53 +238,97 @@ export interface MenuAction {
  * annulla/modifica/elimina...): invece di affiancare N bottoni icona che
  * rompono il layout su mobile, un solo trigger apre un dropdown squadrato
  * con la lista, sempre allineato a destra.
+ *
+ * Il dropdown va in un portal su document.body, posizionato via coordinate
+ * fisse: se restasse figlio del trigger (position: absolute) verrebbe
+ * tagliato da qualunque antenato con overflow-hidden (es. tableWrap) o dal
+ * bordo della tabella - specialmente sull'ultima riga.
  */
 export function ActionsMenu({ actions, label = "Azioni" }: { actions: MenuAction[]; label?: string }) {
   const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
+  const [coords, setCoords] = useState<{ top: number; left: number; openUp: boolean } | null>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
   const visible = actions.filter((a) => !a.hidden);
 
   useEffect(() => {
+    if (!open) return;
     function onClickOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (triggerRef.current?.contains(target)) return;
+      if (menuRef.current?.contains(target)) return;
+      setOpen(false);
+    }
+    function onReposition() {
+      setOpen(false);
     }
     document.addEventListener("mousedown", onClickOutside);
-    return () => document.removeEventListener("mousedown", onClickOutside);
-  }, []);
+    window.addEventListener("scroll", onReposition, true);
+    window.addEventListener("resize", onReposition);
+    return () => {
+      document.removeEventListener("mousedown", onClickOutside);
+      window.removeEventListener("scroll", onReposition, true);
+      window.removeEventListener("resize", onReposition);
+    };
+  }, [open]);
+
+  function toggleOpen() {
+    if (!open && triggerRef.current) {
+      const rect = triggerRef.current.getBoundingClientRect();
+      const menuWidth = 192;
+      const estimatedHeight = visible.length * 44 + 8;
+      const openUp = window.innerHeight - rect.bottom < estimatedHeight && rect.top > estimatedHeight;
+      setCoords({
+        top: openUp ? rect.top - estimatedHeight : rect.bottom + 4,
+        left: Math.max(8, Math.min(rect.right - menuWidth, window.innerWidth - menuWidth - 8)),
+        openUp,
+      });
+    }
+    setOpen((o) => !o);
+  }
 
   if (visible.length === 0) return null;
 
   return (
-    <div className="relative shrink-0" ref={ref}>
+    <>
       <button
+        ref={triggerRef}
         type="button"
-        onClick={() => setOpen((o) => !o)}
+        onClick={toggleOpen}
         aria-label={label}
         title={label}
-        className="flex h-11 w-11 items-center justify-center border border-neutral-300 bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+        className="flex h-11 w-11 shrink-0 items-center justify-center border border-neutral-300 bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
       >
         <ActionSvg icon="moreVertical" />
       </button>
-      {open && (
-        <div className="absolute right-0 top-full z-30 mt-1 w-48 border border-neutral-200 bg-white shadow-lg dark:border-neutral-800 dark:bg-neutral-900">
-          {visible.map((a) => (
-            <button
-              key={a.key}
-              type="button"
-              onClick={() => {
-                setOpen(false);
-                a.onClick();
-              }}
-              className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
-                a.tone === "danger" ? "text-red-600 dark:text-red-400" : "text-neutral-800 dark:text-neutral-100"
-              }`}
-            >
-              <ActionSvg icon={a.icon} />
-              {a.label}
-            </button>
-          ))}
-        </div>
-      )}
-    </div>
+      {open &&
+        coords &&
+        typeof document !== "undefined" &&
+        createPortal(
+          <div
+            ref={menuRef}
+            style={{ position: "fixed", top: coords.top, left: coords.left }}
+            className="z-[200] w-48 border border-neutral-200 bg-white shadow-lg dark:border-neutral-800 dark:bg-neutral-900"
+          >
+            {visible.map((a) => (
+              <button
+                key={a.key}
+                type="button"
+                onClick={() => {
+                  setOpen(false);
+                  a.onClick();
+                }}
+                className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
+                  a.tone === "danger" ? "text-red-600 dark:text-red-400" : "text-neutral-800 dark:text-neutral-100"
+                }`}
+              >
+                <ActionSvg icon={a.icon} />
+                {a.label}
+              </button>
+            ))}
+          </div>,
+          document.body,
+        )}
+    </>
   );
 }

@@ -145,10 +145,10 @@ function CalendarPageContent() {
               onClick={() => setView(v)}
               title={viewLabel}
               aria-label={viewLabel}
-              className={`flex h-11 w-11 items-center justify-center transition-colors ${
+              className={`flex h-11 w-11 items-center justify-center border-2 transition-colors ${
                 view === v
-                  ? "bg-yellow-400 text-neutral-900"
-                  : "text-neutral-600 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                  ? "border-yellow-500 text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900"
+                  : "border-transparent text-neutral-600 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-800"
               }`}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
@@ -331,7 +331,7 @@ function DayView({
                 max={500}
                 defaultValue={slot.capacity}
                 onBlur={(e) => updateCapacity(slot, Number(e.target.value))}
-                className={`${input} w-16 py-1`}
+                className={`${input} w-16 shrink-0 py-1`}
               />
               {slot.overrideId && slot.capacity !== slot.defaultCapacity && (
                 <span className="text-yellow-400">

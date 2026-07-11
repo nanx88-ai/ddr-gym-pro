@@ -3,13 +3,13 @@
 // accento giallo, verde per azioni positive, rosso per azioni distruttive.
 
 export const btnPrimary =
-  "min-h-11 bg-yellow-400 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-yellow-300 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+  "min-h-11 border-2 border-yellow-500 bg-transparent px-4 py-2 text-sm font-medium text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900";
 
 export const btnPositive =
-  "min-h-11 bg-green-600 px-3 py-2 text-sm font-medium text-white hover:bg-green-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+  "min-h-11 border-2 border-green-600 bg-transparent px-3 py-2 text-sm font-medium text-green-700 hover:bg-green-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:border-green-500 dark:text-green-400 dark:hover:bg-green-600 dark:hover:text-white";
 
 export const btnDanger =
-  "min-h-11 bg-red-600 px-3 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors";
+  "min-h-11 border-2 border-red-600 bg-transparent px-3 py-2 text-sm font-medium text-red-700 hover:bg-red-600 hover:text-white disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:border-red-500 dark:text-red-400 dark:hover:bg-red-600 dark:hover:text-white";
 
 export const btnNeutral =
   "min-h-11 border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-800 hover:bg-neutral-200 disabled:opacity-50 disabled:cursor-not-allowed transition-colors dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:hover:bg-neutral-700";
@@ -34,10 +34,6 @@ export const input =
 
 export const label =
   "mb-1 block text-sm font-medium text-neutral-600 dark:text-neutral-300";
-
-// h-6 w-6 (24px) = minimo WCAG 2.5.5 per target di tap; il div wrapper con
-// padding nei punti d'uso porta l'area di tocco reale vicino ai 44px.
-export const checkbox = "h-6 w-6 shrink-0 cursor-pointer accent-yellow-400";
 
 export const pageTitle =
   "mb-1 text-xl font-bold text-neutral-900 dark:text-white";

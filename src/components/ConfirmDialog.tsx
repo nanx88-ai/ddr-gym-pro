@@ -1,6 +1,7 @@
 "use client";
 
 import { createContext, useCallback, useContext, useRef, useState } from "react";
+import { btnDanger, btnPrimary } from "@/lib/ui";
 
 interface ConfirmOptions {
   message: string;
@@ -54,11 +55,7 @@ export function ConfirmDialogProvider({ children }: { children: React.ReactNode 
               <button
                 type="button"
                 onClick={() => close(true)}
-                className={`min-h-11 px-3 py-2 text-sm font-medium ${
-                  options.danger
-                    ? "bg-red-600 text-white hover:bg-red-500"
-                    : "bg-yellow-400 text-neutral-900 hover:bg-yellow-300"
-                }`}
+                className={options.danger ? btnDanger : btnPrimary}
               >
                 {options.confirmLabel ?? "Conferma"}
               </button>

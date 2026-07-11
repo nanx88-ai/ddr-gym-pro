@@ -111,7 +111,7 @@ export default function MonthCalendar({
                       : isFull
                         ? "cursor-not-allowed text-neutral-300 opacity-50 grayscale dark:text-neutral-600"
                         : isSelected
-                          ? "bg-yellow-400 text-neutral-900"
+                          ? "border border-yellow-500 bg-transparent text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900"
                           : isToday
                             ? "border border-yellow-400 text-neutral-900 hover:bg-yellow-50 dark:text-white dark:hover:bg-yellow-400/10"
                             : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800"

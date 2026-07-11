@@ -1,17 +1,18 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { formatCurrency, STATUS_COLORS, STATUS_LABELS } from "@/lib/format";
+import { formatCurrency } from "@/lib/format";
 import {
   card,
   pageSubtitle,
   pageTitle,
   tableWrap,
   td,
-  th,
   trBorder,
 } from "@/lib/ui";
+import { StatusDot } from "@/components/StatusDot";
+import { SortableTh, type SortDir } from "@/components/SortableTh";
 
 interface Invoice {
   id: string;
@@ -27,6 +28,28 @@ interface Invoice {
 export default function AdminInvoicesPage() {
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState<"number" | "client" | "period" | "total">("period");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
+
+  function handleSort(key: "number" | "client" | "period" | "total") {
+    if (sortBy === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(key);
+      setSortDir("asc");
+    }
+  }
+
+  const sortedInvoices = useMemo(() => {
+    const dir = sortDir === "asc" ? 1 : -1;
+    return [...invoices].sort((a, b) => {
+      if (sortBy === "number") return dir * a.number.localeCompare(b.number);
+      if (sortBy === "client")
+        return dir * `${a.client.firstName} ${a.client.lastName}`.localeCompare(`${b.client.firstName} ${b.client.lastName}`);
+      if (sortBy === "total") return dir * (a.total - b.total);
+      return dir * (new Date(a.periodStart).getTime() - new Date(b.periodStart).getTime());
+    });
+  }, [invoices, sortBy, sortDir]);
 
   useEffect(() => {
     fetch("/api/admin/invoices")
@@ -56,20 +79,16 @@ export default function AdminInvoicesPage() {
       {/* Mobile: schede */}
       {invoices.length > 0 && (
         <div className="space-y-3 sm:hidden">
-          {invoices.map((inv) => (
+          {sortedInvoices.map((inv) => (
             <Link
               key={inv.id}
               href={`/admin/invoices/${inv.id}`}
               className={`${card} block p-4`}
             >
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <StatusDot status={inv.status} />
                 <span className="font-medium text-neutral-900 dark:text-white">
                   {inv.number}
-                </span>
-                <span
-                  className={`shrink-0 px-2 py-1 text-xs font-medium ${STATUS_COLORS[inv.status]}`}
-                >
-                  {STATUS_LABELS[inv.status] ?? inv.status}
                 </span>
               </div>
               <div className="mt-1 text-sm text-neutral-600 dark:text-neutral-300">
@@ -96,23 +115,25 @@ export default function AdminInvoicesPage() {
           <table className="w-full text-sm">
             <thead className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900/60">
               <tr>
-                <th className={`${th} whitespace-nowrap`}>Numero</th>
-                <th className={th}>Cliente</th>
-                <th className={`${th} whitespace-nowrap`}>Periodo</th>
-                <th className={`${th} whitespace-nowrap`}>Totale</th>
-                <th className={`${th} whitespace-nowrap`}>Stato</th>
+                <SortableTh label="Numero" sortKey="number" active={sortBy === "number"} dir={sortDir} onSort={handleSort} />
+                <SortableTh label="Cliente" sortKey="client" active={sortBy === "client"} dir={sortDir} onSort={handleSort} />
+                <SortableTh label="Periodo" sortKey="period" active={sortBy === "period"} dir={sortDir} onSort={handleSort} />
+                <SortableTh label="Totale" sortKey="total" active={sortBy === "total"} dir={sortDir} onSort={handleSort} />
               </tr>
             </thead>
             <tbody>
-              {invoices.map((inv) => (
+              {sortedInvoices.map((inv) => (
                 <tr key={inv.id} className={trBorder}>
                   <td className={td}>
-                    <Link
-                      href={`/admin/invoices/${inv.id}`}
-                      className="font-medium text-neutral-900 dark:text-white hover:text-yellow-400 hover:underline"
-                    >
-                      {inv.number}
-                    </Link>
+                    <div className="flex items-center gap-2">
+                      <StatusDot status={inv.status} />
+                      <Link
+                        href={`/admin/invoices/${inv.id}`}
+                        className="font-medium text-neutral-900 dark:text-white hover:text-yellow-400 hover:underline"
+                      >
+                        {inv.number}
+                      </Link>
+                    </div>
                   </td>
                   <td className={td}>
                     {inv.client.firstName} {inv.client.lastName}
@@ -123,13 +144,6 @@ export default function AdminInvoicesPage() {
                     {new Date(inv.periodEnd).toLocaleDateString("it-IT")}
                   </td>
                   <td className={td}>{formatCurrency(inv.total)}</td>
-                  <td className={td}>
-                    <span
-                      className={`px-2 py-1 text-xs font-medium ${STATUS_COLORS[inv.status]}`}
-                    >
-                      {STATUS_LABELS[inv.status] ?? inv.status}
-                    </span>
-                  </td>
                 </tr>
               ))}
             </tbody>

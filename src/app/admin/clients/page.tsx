@@ -1,12 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import Link from "next/link";
-import { STATUS_COLORS, STATUS_LABELS } from "@/lib/format";
-import { card, checkbox, input, pageSubtitle, pageTitle, tableHeadBg, tableWrap, td, th, trBorder } from "@/lib/ui";
+import { useRouter } from "next/navigation";
+import { card, input, pageSubtitle, pageTitle, tableHeadBg, tableWrap, td, th, trBorder } from "@/lib/ui";
+import { Checkbox } from "@/components/Checkbox";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { ActionsMenu } from "@/components/IconAction";
+import { StatusDot } from "@/components/StatusDot";
+import { SortableTh, type SortDir } from "@/components/SortableTh";
 
 interface Client {
   id: string;
@@ -23,9 +25,10 @@ interface Client {
   reminders: { dueDate: string; title: string }[];
 }
 
-type SortBy = "name" | "bookingsDesc" | "bookingsAsc";
+type SortBy = "name" | "email" | "phone" | "bookings";
 
 export default function AdminClientsPage() {
+  const router = useRouter();
   const toast = useToast();
   const confirm = useConfirm();
   const [clients, setClients] = useState<Client[]>([]);
@@ -38,6 +41,7 @@ export default function AdminClientsPage() {
   const [incompleteFiscal, setIncompleteFiscal] = useState(false);
   const [hasUpcomingReminder, setHasUpcomingReminder] = useState(false);
   const [sortBy, setSortBy] = useState<SortBy>("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [types, setTypes] = useState<{ id: string; name: string }[]>([]);
 
   useEffect(() => {
@@ -80,12 +84,14 @@ export default function AdminClientsPage() {
       return true;
     });
 
+    const dir = sortDir === "asc" ? 1 : -1;
     return [...filtered].sort((a, b) => {
-      if (sortBy === "bookingsDesc") return b._count.bookings - a._count.bookings;
-      if (sortBy === "bookingsAsc") return a._count.bookings - b._count.bookings;
-      return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
+      if (sortBy === "bookings") return dir * (a._count.bookings - b._count.bookings);
+      if (sortBy === "email") return dir * a.email.localeCompare(b.email);
+      if (sortBy === "phone") return dir * (a.phone ?? "").localeCompare(b.phone ?? "");
+      return dir * `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`);
     });
-  }, [clients, search, appointmentTypeId, inactiveDays, incompleteFiscal, hasUpcomingReminder, sortBy]);
+  }, [clients, search, appointmentTypeId, inactiveDays, incompleteFiscal, hasUpcomingReminder, sortBy, sortDir]);
 
   const archivedClients = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -99,8 +105,23 @@ export default function AdminClientsPage() {
     (appointmentTypeId ? 1 : 0) +
     (inactiveDays ? 1 : 0) +
     (incompleteFiscal ? 1 : 0) +
-    (hasUpcomingReminder ? 1 : 0) +
-    (sortBy !== "name" ? 1 : 0);
+    (hasUpcomingReminder ? 1 : 0);
+
+  function resetFilters() {
+    setAppointmentTypeId("");
+    setInactiveDays("");
+    setIncompleteFiscal(false);
+    setHasUpcomingReminder(false);
+  }
+
+  function handleSort(key: SortBy) {
+    if (sortBy === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(key);
+      setSortDir("asc");
+    }
+  }
 
   async function setStatus(client: Client, status: string, confirmMsg?: string) {
     if (confirmMsg && !(await confirm(confirmMsg))) return;
@@ -247,33 +268,28 @@ export default function AdminClientsPage() {
             <option value="60">Inattivi da 60+ giorni</option>
             <option value="90">Inattivi da 90+ giorni</option>
           </select>
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)} className={`${input} w-full`}>
-            <option value="name">Ordina per nome</option>
-            <option value="bookingsDesc">Piu' prenotazioni prima</option>
-            <option value="bookingsAsc">Meno prenotazioni prima</option>
-          </select>
           <label
             className={`${input} w-full flex items-center gap-2 border border-neutral-300 bg-neutral-100 font-medium text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200`}
           >
-            <input
-              type="checkbox"
-              checked={incompleteFiscal}
-              onChange={(e) => setIncompleteFiscal(e.target.checked)}
-              className={checkbox}
-            />
+            <Checkbox checked={incompleteFiscal} onChange={(e) => setIncompleteFiscal(e.target.checked)} />
             Dati fiscali incompleti
           </label>
           <label
             className={`${input} w-full flex items-center gap-2 border border-neutral-300 bg-neutral-100 font-medium text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200`}
           >
-            <input
-              type="checkbox"
-              checked={hasUpcomingReminder}
-              onChange={(e) => setHasUpcomingReminder(e.target.checked)}
-              className={checkbox}
-            />
+            <Checkbox checked={hasUpcomingReminder} onChange={(e) => setHasUpcomingReminder(e.target.checked)} />
             Con scadenze in arrivo
           </label>
+
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="min-h-11 border border-dashed border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-500 hover:border-red-400 hover:text-red-500 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-red-500 dark:hover:text-red-400"
+            >
+              Reset filtri
+            </button>
+          )}
         </div>
       )}
 
@@ -287,13 +303,15 @@ export default function AdminClientsPage() {
       {visibleClients.length > 0 && (
         <div className="space-y-3 sm:hidden">
           {visibleClients.map((c) => (
-            <div key={c.id} className={`${card} p-4`}>
-              <div className="flex items-start justify-between gap-2">
-                <Link href={`/admin/clients/${c.id}`} className="font-medium text-neutral-900 hover:underline dark:text-white">
+            <div
+              key={c.id}
+              onClick={() => router.push(`/admin/clients/${c.id}`)}
+              className={`${card} cursor-pointer p-4`}
+            >
+              <div className="flex items-center gap-2">
+                <StatusDot status={c.status} />
+                <span className="font-medium text-neutral-900 dark:text-white">
                   {c.firstName} {c.lastName}
-                </Link>
-                <span className={`shrink-0 px-2 py-1 text-xs font-medium ${STATUS_COLORS[c.status]}`}>
-                  {STATUS_LABELS[c.status] ?? c.status}
                 </span>
               </div>
               <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{c.email}</div>
@@ -303,7 +321,10 @@ export default function AdminClientsPage() {
                   {c._count.bookings} prenotazion{c._count.bookings === 1 ? "e" : "i"}
                 </span>
               </div>
-              <div className="mt-3 flex justify-end border-t border-neutral-100 pt-3 dark:border-neutral-800">
+              <div
+                className="mt-3 flex justify-end border-t border-neutral-100 pt-3 dark:border-neutral-800"
+                onClick={(e) => e.stopPropagation()}
+              >
                 <ActionsMenu actions={clientActions(c)} />
               </div>
             </div>
@@ -317,31 +338,30 @@ export default function AdminClientsPage() {
           <table className="w-full text-sm">
             <thead className={tableHeadBg}>
               <tr>
-                <th className={th}>Nome</th>
-                <th className={th}>Email</th>
-                <th className={`${th} whitespace-nowrap`}>Telefono</th>
-                <th className={`${th} whitespace-nowrap`}>Prenotazioni</th>
-                <th className={`${th} whitespace-nowrap`}>Stato</th>
+                <SortableTh label="Nome" sortKey="name" active={sortBy === "name"} dir={sortDir} onSort={handleSort} />
+                <SortableTh label="Email" sortKey="email" active={sortBy === "email"} dir={sortDir} onSort={handleSort} />
+                <SortableTh label="Telefono" sortKey="phone" active={sortBy === "phone"} dir={sortDir} onSort={handleSort} />
+                <SortableTh label="Prenotazioni" sortKey="bookings" active={sortBy === "bookings"} dir={sortDir} onSort={handleSort} />
                 <th className={`${th} whitespace-nowrap`}>Azioni</th>
               </tr>
             </thead>
             <tbody>
               {visibleClients.map((c) => (
-                <tr key={c.id} className={trBorder}>
+                <tr
+                  key={c.id}
+                  onClick={() => router.push(`/admin/clients/${c.id}`)}
+                  className={`${trBorder} cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-900/40`}
+                >
                   <td className={`${td} font-medium text-neutral-900 dark:text-white`}>
-                    <Link href={`/admin/clients/${c.id}`} className="hover:text-yellow-400 hover:underline">
+                    <div className="flex items-center gap-2">
+                      <StatusDot status={c.status} />
                       {c.firstName} {c.lastName}
-                    </Link>
+                    </div>
                   </td>
                   <td className={td}>{c.email}</td>
                   <td className={td}>{c.phone ?? "-"}</td>
                   <td className={td}>{c._count.bookings}</td>
-                  <td className={td}>
-                    <span className={`px-2 py-1 text-xs font-medium ${STATUS_COLORS[c.status]}`}>
-                      {STATUS_LABELS[c.status] ?? c.status}
-                    </span>
-                  </td>
-                  <td className={td}>
+                  <td className={td} onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end">
                       <ActionsMenu actions={clientActions(c)} />
                     </div>
@@ -382,17 +402,19 @@ export default function AdminClientsPage() {
               {/* Mobile: schede */}
               <div className="mt-3 space-y-3 sm:hidden">
                 {archivedClients.map((c) => (
-                  <div key={c.id} className={`${card} p-4 opacity-75`}>
-                    <div className="flex items-start justify-between gap-2">
-                      <Link href={`/admin/clients/${c.id}`} className="font-medium text-neutral-900 hover:underline dark:text-white">
-                        {c.firstName} {c.lastName}
-                      </Link>
-                      <span className={`shrink-0 px-2 py-1 text-xs font-medium ${STATUS_COLORS[c.status]}`}>
-                        {STATUS_LABELS[c.status] ?? c.status}
-                      </span>
-                    </div>
+                  <div
+                    key={c.id}
+                    onClick={() => router.push(`/admin/clients/${c.id}`)}
+                    className={`${card} cursor-pointer p-4 opacity-75`}
+                  >
+                    <span className="font-medium text-neutral-900 dark:text-white">
+                      {c.firstName} {c.lastName}
+                    </span>
                     <div className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">{c.email}</div>
-                    <div className="mt-3 flex justify-end border-t border-neutral-100 pt-3 dark:border-neutral-800">
+                    <div
+                      className="mt-3 flex justify-end border-t border-neutral-100 pt-3 dark:border-neutral-800"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <ActionsMenu actions={clientActions(c)} />
                     </div>
                   </div>
@@ -412,15 +434,17 @@ export default function AdminClientsPage() {
                   </thead>
                   <tbody>
                     {archivedClients.map((c) => (
-                      <tr key={c.id} className={`${trBorder} opacity-75`}>
+                      <tr
+                        key={c.id}
+                        onClick={() => router.push(`/admin/clients/${c.id}`)}
+                        className={`${trBorder} cursor-pointer opacity-75 hover:bg-neutral-50 dark:hover:bg-neutral-900/40`}
+                      >
                         <td className={`${td} font-medium text-neutral-900 dark:text-white`}>
-                          <Link href={`/admin/clients/${c.id}`} className="hover:text-yellow-400 hover:underline">
-                            {c.firstName} {c.lastName}
-                          </Link>
+                          {c.firstName} {c.lastName}
                         </td>
                         <td className={td}>{c.email}</td>
                         <td className={td}>{c._count.bookings}</td>
-                        <td className={td}>
+                        <td className={td} onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-end">
                             <ActionsMenu actions={clientActions(c)} />
                           </div>

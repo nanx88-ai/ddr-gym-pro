@@ -188,23 +188,6 @@ export default function AdminStatsPage() {
       </p>
 
       <div className="mb-6 flex flex-wrap items-end gap-3">
-        <div className="flex flex-wrap gap-1.5">
-          {PILLS.map((p) => (
-            <button
-              key={p.key}
-              type="button"
-              onClick={() => applyPreset(p.key)}
-              className={`min-h-9 border px-3 py-1.5 text-xs font-medium ${
-                activePreset === p.key
-                  ? "border-yellow-400 bg-yellow-400 text-neutral-900"
-                  : "border-neutral-300 bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
-
         <label className="block">
           <span className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">Da</span>
           <input
@@ -214,7 +197,7 @@ export default function AdminStatsPage() {
               setDateFrom(e.target.value);
               setActivePreset("custom");
             }}
-            className={`${input} w-40`}
+            className={`${input} w-40 min-w-0`}
           />
         </label>
         <label className="block">
@@ -226,9 +209,26 @@ export default function AdminStatsPage() {
               setDateTo(e.target.value);
               setActivePreset("custom");
             }}
-            className={`${input} w-40`}
+            className={`${input} w-40 min-w-0`}
           />
         </label>
+
+        <div className="flex flex-wrap gap-1.5">
+          {PILLS.map((p) => (
+            <button
+              key={p.key}
+              type="button"
+              onClick={() => applyPreset(p.key)}
+              className={`min-h-11 border-2 px-3 py-1.5 text-xs font-medium transition-colors ${
+                activePreset === p.key
+                  ? "border-yellow-500 text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900"
+                  : "border-neutral-300 bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">

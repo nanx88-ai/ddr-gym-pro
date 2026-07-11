@@ -18,13 +18,14 @@ import {
   startOfWeek,
 } from "date-fns";
 import { it } from "date-fns/locale";
-import { formatTime, STATUS_COLORS, STATUS_LABELS } from "@/lib/format";
+import { formatTime } from "@/lib/format";
 import { card, input, pageSubtitle, pageTitle } from "@/lib/ui";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import AttendanceToggle from "@/components/AttendanceToggle";
 import { ActionsMenu, IconButton } from "@/components/IconAction";
 import EditBookingModal from "@/components/EditBookingModal";
+import { StatusDot } from "@/components/StatusDot";
 
 interface AppointmentType {
   id: string;
@@ -251,10 +252,10 @@ export default function AdminAgendaPage() {
               onClick={() => setView(v)}
               title={viewLabel}
               aria-label={viewLabel}
-              className={`flex h-11 w-11 items-center justify-center transition-colors ${
+              className={`flex h-11 w-11 items-center justify-center border-2 transition-colors ${
                 view === v
-                  ? "bg-yellow-400 text-neutral-900"
-                  : "text-neutral-600 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                  ? "border-yellow-500 text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900"
+                  : "border-transparent text-neutral-600 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-800"
               }`}
             >
               <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
@@ -373,6 +374,23 @@ export default function AdminAgendaPage() {
             <option value="afternoon">Pomeriggio (12-18)</option>
             <option value="evening">Sera (18-24)</option>
           </select>
+
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                setSearch("");
+                setStatus("");
+                setAppointmentTypeId("");
+                setFullness("");
+                setAttendance("");
+                setTimeOfDay("");
+              }}
+              className="min-h-11 border border-dashed border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-500 hover:border-red-400 hover:text-red-500 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-red-500 dark:hover:text-red-400"
+            >
+              Reset filtri
+            </button>
+          )}
         </div>
       )}
 
@@ -414,16 +432,6 @@ export default function AdminAgendaPage() {
   );
 }
 
-function StatusBadge({ status }: { status: string }) {
-  return (
-    <span
-      className={`shrink-0 px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[status]}`}
-    >
-      {STATUS_LABELS[status] ?? status}
-    </span>
-  );
-}
-
 function DayList({
   bookings,
   onUpdateStatus,
@@ -460,7 +468,8 @@ function DayList({
                 {formatTime(b.startTime)}
               </span>
               <div>
-                <div className="text-sm font-medium text-neutral-900 dark:text-white">
+                <div className="flex items-center gap-1.5 text-sm font-medium text-neutral-900 dark:text-white">
+                  <StatusDot status={b.status} />
                   {b.client.firstName} {b.client.lastName}
                 </div>
                 <div className="text-xs text-neutral-500 dark:text-neutral-400">
@@ -469,7 +478,6 @@ function DayList({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <StatusBadge status={b.status} />
               {["APPROVED", "RESCHEDULED"].includes(b.status) && new Date(b.startTime).getTime() <= Date.now() && (
                 <AttendanceToggle attended={b.attended} onChange={(attended) => onMarkAttendance(b.id, attended)} />
               )}
@@ -564,7 +572,7 @@ function WeekGrid({
                     <span className="font-medium text-neutral-900 dark:text-white">
                       {formatTime(b.startTime)}
                     </span>
-                    <StatusBadge status={b.status} />
+                    <StatusDot status={b.status} />
                   </div>
                   <div className="truncate text-neutral-600 dark:text-neutral-300">
                     {b.client.firstName} {b.client.lastName}

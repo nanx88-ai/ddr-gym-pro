@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { formatCurrency } from "@/lib/format";
 import {
   btnPositive,
@@ -17,6 +17,8 @@ import {
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { ActionsMenu } from "@/components/IconAction";
+import { StatusDot } from "@/components/StatusDot";
+import { SortableTh, type SortDir } from "@/components/SortableTh";
 
 interface PriceListItem {
   id: string;
@@ -51,6 +53,26 @@ export default function AdminPriceListPage() {
   const [vatRate, setVatRate] = useState(22);
   const [vatNature, setVatNature] = useState("");
   const [creating, setCreating] = useState(false);
+  const [sortBy, setSortBy] = useState<"name" | "price" | "vat">("name");
+  const [sortDir, setSortDir] = useState<SortDir>("asc");
+
+  function handleSort(key: "name" | "price" | "vat") {
+    if (sortBy === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(key);
+      setSortDir("asc");
+    }
+  }
+
+  const sortedItems = useMemo(() => {
+    const dir = sortDir === "asc" ? 1 : -1;
+    return [...items].sort((a, b) => {
+      if (sortBy === "price") return dir * (a.unitPrice - b.unitPrice);
+      if (sortBy === "vat") return dir * (a.vatRate - b.vatRate);
+      return dir * a.name.localeCompare(b.name);
+    });
+  }, [items, sortBy, sortDir]);
 
   async function load() {
     setLoading(true);
@@ -231,9 +253,10 @@ export default function AdminPriceListPage() {
       {/* Mobile: schede */}
       {items.length > 0 && (
         <div className="space-y-3 sm:hidden">
-          {items.map((item) => (
+          {sortedItems.map((item) => (
             <div key={item.id} className={`${card} p-4`}>
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <StatusDot status={item.active ? "ACTIVE" : "INACTIVE"} label={item.active ? "Attiva" : "Disattivata"} />
                 <input
                   defaultValue={item.name}
                   onBlur={(e) => {
@@ -242,15 +265,6 @@ export default function AdminPriceListPage() {
                   }}
                   className={`${input} flex-1 font-medium`}
                 />
-                <span
-                  className={`shrink-0 px-2 py-1 text-xs font-medium ${
-                    item.active
-                      ? "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-400"
-                      : "bg-neutral-200 text-neutral-600 dark:bg-neutral-700/50 dark:text-neutral-400"
-                  }`}
-                >
-                  {item.active ? "Attiva" : "Disattivata"}
-                </span>
               </div>
               <div className="mt-2 grid grid-cols-2 gap-3">
                 <label className="block">
@@ -310,25 +324,27 @@ export default function AdminPriceListPage() {
           <table className="w-full text-sm">
             <thead className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900/60">
               <tr>
-                <th className={`${th} w-full`}>Nome</th>
-                <th className={`${th} whitespace-nowrap`}>Prezzo</th>
-                <th className={`${th} whitespace-nowrap`}>IVA</th>
-                <th className={`${th} whitespace-nowrap`}>Stato</th>
+                <SortableTh label="Nome" sortKey="name" active={sortBy === "name"} dir={sortDir} onSort={handleSort} />
+                <SortableTh label="Prezzo" sortKey="price" active={sortBy === "price"} dir={sortDir} onSort={handleSort} />
+                <SortableTh label="IVA" sortKey="vat" active={sortBy === "vat"} dir={sortDir} onSort={handleSort} />
                 <th className={`${th} whitespace-nowrap`}>Azioni</th>
               </tr>
             </thead>
             <tbody>
-              {items.map((item) => (
+              {sortedItems.map((item) => (
                 <tr key={item.id} className={trBorder}>
                   <td className={td}>
-                    <input
-                      defaultValue={item.name}
-                      onBlur={(e) => {
-                        const v = e.target.value.trim();
-                        if (v && v !== item.name) updateField(item, { name: v });
-                      }}
-                      className={`${input} w-full min-w-[12rem] font-medium`}
-                    />
+                    <div className="flex items-center gap-2">
+                      <StatusDot status={item.active ? "ACTIVE" : "INACTIVE"} label={item.active ? "Attiva" : "Disattivata"} />
+                      <input
+                        defaultValue={item.name}
+                        onBlur={(e) => {
+                          const v = e.target.value.trim();
+                          if (v && v !== item.name) updateField(item, { name: v });
+                        }}
+                        className={`${input} w-56 font-medium`}
+                      />
+                    </div>
                   </td>
                   <td className={td}>
                     <div className="flex items-center gap-1 whitespace-nowrap">
@@ -342,7 +358,7 @@ export default function AdminPriceListPage() {
                           const v = Number(e.target.value);
                           if (v !== item.unitPrice) updateField(item, { unitPrice: v });
                         }}
-                        className={`${input} w-20`}
+                        className={`${input} w-20 shrink-0`}
                       />
                     </div>
                   </td>
@@ -357,13 +373,13 @@ export default function AdminPriceListPage() {
                           const v = Number(e.target.value);
                           if (v !== item.vatRate) updateField(item, { vatRate: v });
                         }}
-                        className={`${input} w-14`}
+                        className={`${input} w-14 shrink-0`}
                         disabled={!!item.vatNature}
                       />
                       <select
                         value={item.vatNature ?? ""}
                         onChange={(e) => updateField(item, { vatNature: e.target.value || null })}
-                        className={`${input} w-20`}
+                        className={`${input} w-20 shrink-0`}
                       >
                         {VAT_NATURES.map((n) => (
                           <option key={n.value} value={n.value}>
@@ -372,17 +388,6 @@ export default function AdminPriceListPage() {
                         ))}
                       </select>
                     </div>
-                  </td>
-                  <td className={`${td} whitespace-nowrap`}>
-                    <span
-                      className={`px-2 py-1 text-xs font-medium ${
-                        item.active
-                          ? "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-400"
-                          : "bg-neutral-200 text-neutral-600 dark:bg-neutral-700/50 dark:text-neutral-400"
-                      }`}
-                    >
-                      {item.active ? "Attiva" : "Disattivata"}
-                    </span>
                   </td>
                   <td className={`${td} whitespace-nowrap`}>
                     <div className="flex justify-end">

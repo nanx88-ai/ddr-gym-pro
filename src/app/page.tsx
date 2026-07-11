@@ -503,11 +503,11 @@ export default function HomePage() {
                           type="button"
                           disabled={slot.full}
                           onClick={() => togglePickedSlot(slot)}
-                          className={`border px-2 py-3 text-center transition-colors ${
+                          className={`border-2 px-2 py-3 text-center transition-colors ${
                             slot.full
                               ? "cursor-not-allowed border-neutral-100 bg-neutral-50 text-neutral-300 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-600"
                               : isPicked
-                                ? "border-yellow-400 bg-yellow-400 text-neutral-900"
+                                ? "border-yellow-500 bg-transparent text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900"
                                 : "border-neutral-200 bg-white text-neutral-900 hover:border-yellow-400 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:hover:border-yellow-400"
                           }`}
                         >
@@ -519,7 +519,7 @@ export default function HomePage() {
                               slot.full
                                 ? "text-neutral-300 dark:text-neutral-600"
                                 : isPicked
-                                  ? "text-neutral-700"
+                                  ? "text-current"
                                   : slot.pending > 0
                                     ? "text-amber-600"
                                     : "text-emerald-600"
@@ -597,10 +597,10 @@ export default function HomePage() {
                                 confirmed: false,
                               })
                             }
-                            className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+                            className={`flex-1 border-2 py-1.5 text-xs font-medium transition-colors ${
                               !p.recurring
-                                ? "bg-yellow-400 text-neutral-900"
-                                : "text-neutral-500 dark:text-neutral-400"
+                                ? "border-yellow-500 text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900"
+                                : "border-transparent text-neutral-500 dark:text-neutral-400"
                             }`}
                           >
                             Singola
@@ -613,10 +613,10 @@ export default function HomePage() {
                                 confirmed: false,
                               })
                             }
-                            className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+                            className={`flex-1 border-2 py-1.5 text-xs font-medium transition-colors ${
                               p.recurring
-                                ? "bg-yellow-400 text-neutral-900"
-                                : "text-neutral-500 dark:text-neutral-400"
+                                ? "border-yellow-500 text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900"
+                                : "border-transparent text-neutral-500 dark:text-neutral-400"
                             }`}
                           >
                             Ricorrente

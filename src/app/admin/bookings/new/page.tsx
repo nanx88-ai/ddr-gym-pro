@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { btnPositive, checkbox, errorBox, input, label, pageSubtitle, pageTitle } from "@/lib/ui";
+import { btnPositive, errorBox, input, label, pageSubtitle, pageTitle } from "@/lib/ui";
+import { Checkbox } from "@/components/Checkbox";
 import { expandWeeklyOccurrences, occurrenceCountEndDate, WEEKDAY_LABELS_FULL } from "@/lib/recurrence";
 
 interface AppointmentType {
@@ -144,31 +145,35 @@ export default function AdminNewBookingPage() {
         </div>
 
         <label className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
-          <input type="checkbox" checked={recurring} onChange={(e) => setRecurring(e.target.checked)} className={checkbox} />
+          <Checkbox checked={recurring} onChange={(e) => setRecurring(e.target.checked)} />
           Ricorrente (stesso giorno della settimana e ora)
         </label>
 
         {recurring && (
-          <div className="space-y-3 border border-neutral-200 p-3 dark:border-neutral-800">
-            <div className="flex gap-4 text-xs text-neutral-700 dark:text-neutral-200">
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  checked={endMethod === "count"}
-                  onChange={() => setEndMethod("count")}
-                  className="h-6 w-6 accent-yellow-400"
-                />
+          <div className="space-y-3 border-l-2 border-yellow-400/40 pl-3">
+            <div className="flex border border-neutral-200 p-1 dark:border-neutral-800">
+              <button
+                type="button"
+                onClick={() => setEndMethod("count")}
+                className={`flex-1 border-2 py-1.5 text-xs font-medium transition-colors ${
+                  endMethod === "count"
+                    ? "border-yellow-500 text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900"
+                    : "border-transparent text-neutral-500 dark:text-neutral-400"
+                }`}
+              >
                 Numero di volte
-              </label>
-              <label className="flex items-center gap-2">
-                <input
-                  type="radio"
-                  checked={endMethod === "date"}
-                  onChange={() => setEndMethod("date")}
-                  className="h-6 w-6 accent-yellow-400"
-                />
+              </button>
+              <button
+                type="button"
+                onClick={() => setEndMethod("date")}
+                className={`flex-1 border-2 py-1.5 text-xs font-medium transition-colors ${
+                  endMethod === "date"
+                    ? "border-yellow-500 text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900"
+                    : "border-transparent text-neutral-500 dark:text-neutral-400"
+                }`}
+              >
                 Data di fine
-              </label>
+              </button>
             </div>
             {endMethod === "count" ? (
               <label className="block">
@@ -191,7 +196,7 @@ export default function AdminNewBookingPage() {
                       const v = Number(e.target.value);
                       setCount(Number.isFinite(v) && v >= 2 ? Math.min(52, v) : 2);
                     }}
-                    className={`${input} w-20 text-center`}
+                    className={`${input} w-20 shrink-0 text-center`}
                   />
                   <button
                     type="button"

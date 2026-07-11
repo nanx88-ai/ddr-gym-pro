@@ -25,10 +25,10 @@ export default function AttendanceToggle({
         type="button"
         onClick={() => onChange(true)}
         title="Segna presente"
-        className={`${pad} font-medium transition-colors ${
+        className={`${pad} border-2 font-medium transition-colors ${
           !isAbsent
-            ? "bg-green-600 text-white"
-            : "bg-white text-neutral-500 hover:bg-neutral-100 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800"
+            ? "border-green-600 bg-transparent text-green-700 hover:bg-green-600 hover:text-white dark:border-green-500 dark:text-green-400"
+            : "border-transparent bg-white text-neutral-500 hover:bg-neutral-100 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800"
         }`}
       >
         Presente
@@ -37,10 +37,10 @@ export default function AttendanceToggle({
         type="button"
         onClick={() => onChange(false)}
         title="Segna assente"
-        className={`${pad} font-medium transition-colors ${
+        className={`${pad} border-2 font-medium transition-colors ${
           isAbsent
-            ? "bg-red-600 text-white"
-            : "bg-white text-neutral-500 hover:bg-neutral-100 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800"
+            ? "border-red-600 bg-transparent text-red-700 hover:bg-red-600 hover:text-white dark:border-red-500 dark:text-red-400"
+            : "border-transparent bg-white text-neutral-500 hover:bg-neutral-100 dark:bg-neutral-900 dark:text-neutral-400 dark:hover:bg-neutral-800"
         }`}
       >
         Assente

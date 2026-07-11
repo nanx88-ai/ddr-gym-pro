@@ -54,6 +54,32 @@ export const STATUS_COLORS: Record<string, string> = {
   SUCCESS: "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-400",
 };
 
+// Colore del pallino di stato (StatusDot): stesso significato (verde=attivo/ok,
+// ambra=in corso/attesa, rosso=errore/rifiutato, blu=informativo, viola=evento
+// secondario, grigio=inattivo/chiuso) riusato coerentemente tra le entita',
+// anche se non sono mai visibili nella stessa vista. "INACTIVE" e' il generico
+// per i campi booleani active=false (Servizi, Listino) - non ha un colore
+// proprio in STATUS_COLORS perche' quei due non usano badge testuali.
+export const STATUS_DOT_COLORS: Record<string, string> = {
+  PENDING_APPROVAL: "bg-amber-500",
+  APPROVED: "bg-green-500",
+  REJECTED: "bg-red-500",
+  CANCELLED: "bg-neutral-400",
+  RESCHEDULE_REQUESTED: "bg-blue-500",
+  RESCHEDULED: "bg-purple-500",
+  ACTIVE: "bg-green-500",
+  PAUSED: "bg-amber-500",
+  ARCHIVED: "bg-neutral-400",
+  INACTIVE: "bg-neutral-400",
+  PENDING: "bg-amber-500",
+  DRAFT: "bg-neutral-400",
+  ISSUED: "bg-blue-500",
+  SENT: "bg-amber-500",
+  PAID: "bg-green-500",
+  ERROR: "bg-red-500",
+  SUCCESS: "bg-green-500",
+};
+
 export function formatCurrency(amount: number) {
   return amount.toLocaleString("it-IT", { style: "currency", currency: "EUR" });
 }

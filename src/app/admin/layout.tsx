@@ -44,8 +44,8 @@ function NavContent({
                     collapsed ? "justify-center" : ""
                   } ${
                     isActive
-                      ? "bg-yellow-400 font-medium text-neutral-900"
-                      : "text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
+                      ? "border-2 border-yellow-500 bg-transparent font-medium text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900"
+                      : "border-2 border-transparent text-neutral-600 hover:bg-neutral-100 hover:text-neutral-900 dark:text-neutral-300 dark:hover:bg-neutral-800 dark:hover:text-white"
                   }`}
                 >
                   <NavIcon icon={item.icon} />

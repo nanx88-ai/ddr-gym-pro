@@ -39,15 +39,17 @@ export default function MobileNavSheet({
 }) {
   const [open, setOpen] = useState(false);
   const [dragY, setDragY] = useState(0);
-  const dragState = useRef<{ startY: number; dragging: boolean } | null>(null);
+  const [dragging, setDragging] = useState(false);
+  const dragState = useRef<{ startY: number } | null>(null);
 
   function onPointerDown(e: React.PointerEvent) {
-    dragState.current = { startY: e.clientY, dragging: true };
+    dragState.current = { startY: e.clientY };
+    setDragging(true);
     (e.target as Element).setPointerCapture?.(e.pointerId);
   }
 
   function onPointerMove(e: React.PointerEvent) {
-    if (!dragState.current?.dragging) return;
+    if (!dragState.current) return;
     const delta = e.clientY - dragState.current.startY;
     if (open) {
       // trascina verso il basso per chiudere
@@ -60,7 +62,8 @@ export default function MobileNavSheet({
 
   function onPointerUp() {
     if (!dragState.current) return;
-    dragState.current.dragging = false;
+    dragState.current = null;
+    setDragging(false);
     if (open && dragY > DRAG_CLOSE_THRESHOLD) {
       setOpen(false);
     } else if (!open && dragY < -DRAG_OPEN_THRESHOLD) {
@@ -72,6 +75,29 @@ export default function MobileNavSheet({
   // L'ultimo gruppo (Impostazioni) e' mostrato a parte nella bottom action
   // bar, insieme a Esci.
   const gridItems = NAV_GROUPS.slice(0, -1).flatMap((g) => g.items);
+
+  const grid = (
+    <div className="grid grid-cols-3">
+      {gridItems.map((item) => {
+        const isActive = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
+        return (
+          <Link
+            key={item.href}
+            href={item.href}
+            onClick={() => setOpen(false)}
+            className={`flex aspect-square flex-col items-center justify-center gap-2 border p-2 text-center transition-colors ${
+              isActive
+                ? "border-yellow-500 bg-transparent text-yellow-600 hover:bg-yellow-400 hover:text-neutral-900 dark:border-yellow-400 dark:text-yellow-400 dark:hover:bg-yellow-400 dark:hover:text-neutral-900"
+                : `${LINE} ${CELL} ${TEXT_CELL}`
+            }`}
+          >
+            <NavIcon icon={item.icon} />
+            <span className="text-[11px] font-semibold uppercase leading-tight tracking-wide">{item.label}</span>
+          </Link>
+        );
+      })}
+    </div>
+  );
 
   return (
     <div className="sm:hidden">
@@ -95,7 +121,7 @@ export default function MobileNavSheet({
             style={{
               height: BAR_HEIGHT,
               transform: `translateY(${dragY}px)`,
-              transition: dragState.current?.dragging ? "none" : "transform 0.2s ease-out",
+              transition: dragging ? "none" : "transform 0.2s ease-out",
             }}
             aria-label="Apri menu"
           >
@@ -108,13 +134,25 @@ export default function MobileNavSheet({
         </div>
       )}
 
+      {/* Anteprima durante il trascinamento verso l'alto: mostra subito una
+          fetta del pannello invece di un'area vuota finche' non si supera la
+          soglia di apertura. */}
+      {!open && dragging && dragY < 0 && (
+        <div
+          className={`fixed inset-x-0 z-40 overflow-hidden border-t ${SURFACE} ${LINE}`}
+          style={{ bottom: `calc(${BAR_HEIGHT}px + ${BOTTOM_DEAD_ZONE})`, height: Math.min(-dragY, 480) }}
+        >
+          {grid}
+        </div>
+      )}
+
       {/* Scheda a schermo intero */}
       {open && (
         <div
           className={`fixed inset-x-0 bottom-0 z-50 flex max-h-[92vh] flex-col border-t ${SURFACE} ${LINE}`}
           style={{
             transform: `translateY(${dragY}px)`,
-            transition: dragState.current?.dragging ? "none" : "transform 0.2s ease-out",
+            transition: dragging ? "none" : "transform 0.2s ease-out",
           }}
         >
           <button
@@ -133,26 +171,7 @@ export default function MobileNavSheet({
             </span>
           </button>
 
-          <div className={`flex-1 overflow-y-auto border-t ${LINE}`}>
-            <div className="grid grid-cols-3">
-              {gridItems.map((item) => {
-                const isActive = item.href === "/admin" ? pathname === "/admin" : pathname.startsWith(item.href);
-                return (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    onClick={() => setOpen(false)}
-                    className={`flex aspect-square flex-col items-center justify-center gap-2 border p-2 text-center ${LINE} ${
-                      isActive ? "bg-yellow-400 text-neutral-900" : `${CELL} ${TEXT_CELL}`
-                    }`}
-                  >
-                    <NavIcon icon={item.icon} />
-                    <span className="text-[11px] font-semibold uppercase leading-tight tracking-wide">{item.label}</span>
-                  </Link>
-                );
-              })}
-            </div>
-          </div>
+          <div className={`flex-1 overflow-y-auto border-t ${LINE}`}>{grid}</div>
 
           {/* Bottom action bar: neutro a sinistra, distruttivo a destra, divisi da una linea */}
           <div className={`flex border-t ${LINE}`} style={{ height: 52 }}>

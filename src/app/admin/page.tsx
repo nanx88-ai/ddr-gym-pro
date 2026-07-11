@@ -1,12 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { formatDateTime, STATUS_COLORS, STATUS_LABELS } from "@/lib/format";
+import { formatDateTime } from "@/lib/format";
 import {
   btnDanger,
   btnPositive,
   card,
-  checkbox,
   input,
   pageSubtitle,
   pageTitle,
@@ -21,6 +20,9 @@ import { useConfirm } from "@/components/ConfirmDialog";
 import AttendanceToggle from "@/components/AttendanceToggle";
 import { ActionsMenu } from "@/components/IconAction";
 import EditBookingModal from "@/components/EditBookingModal";
+import { Checkbox } from "@/components/Checkbox";
+import { StatusDot } from "@/components/StatusDot";
+import { SortableTh } from "@/components/SortableTh";
 
 interface RescheduleRequest {
   id: string;
@@ -64,10 +66,10 @@ const STATUS_OPTIONS = [
   { value: "RESCHEDULED", label: "Riprogrammate" },
 ];
 
-type SortBy = "date" | "status";
+type SortBy = "client" | "service" | "date";
 type SortDir = "asc" | "desc";
 
-const filterField = `${input} w-full`;
+const filterField = `${input} w-full min-w-0`;
 
 export default function AdminBookingsPage() {
   const toast = useToast();
@@ -148,13 +150,16 @@ export default function AdminBookingsPage() {
         if (ap !== bp) return ap - bp;
       }
       const dir = sortDir === "asc" ? 1 : -1;
-      if (sortBy === "date") {
-        return (
-          dir *
-          (new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
-        );
+      if (sortBy === "client") {
+        return dir * `${a.client.firstName} ${a.client.lastName}`.localeCompare(`${b.client.firstName} ${b.client.lastName}`);
       }
-      return dir * a.status.localeCompare(b.status);
+      if (sortBy === "service") {
+        return dir * a.appointmentType.name.localeCompare(b.appointmentType.name);
+      }
+      return (
+        dir *
+        (new Date(a.startTime).getTime() - new Date(b.startTime).getTime())
+      );
     });
   }, [
     bookings,
@@ -172,8 +177,6 @@ export default function AdminBookingsPage() {
 
   const activeFilterCount =
     (filter ? 1 : 0) +
-    (sortBy !== "date" ? 1 : 0) +
-    (sortDir !== "asc" ? 1 : 0) +
     (!pendingFirst ? 1 : 0) +
     (dateFrom ? 1 : 0) +
     (dateTo ? 1 : 0) +
@@ -181,6 +184,26 @@ export default function AdminBookingsPage() {
     (recurring ? 1 : 0) +
     (onlyRescheduleRequested ? 1 : 0) +
     (clientId ? 1 : 0);
+
+  function resetFilters() {
+    setFilter("");
+    setAppointmentTypeId("");
+    setClientId("");
+    setDateFrom("");
+    setDateTo("");
+    setRecurring("");
+    setOnlyRescheduleRequested(false);
+    setPendingFirst(true);
+  }
+
+  function handleSort(key: SortBy) {
+    if (sortBy === key) {
+      setSortDir((d) => (d === "asc" ? "desc" : "asc"));
+    } else {
+      setSortBy(key);
+      setSortDir("asc");
+    }
+  }
 
   const DISRUPTIVE_CONFIRM: Record<string, string> = {
     REJECTED: "Rifiutare questa richiesta di prenotazione?",
@@ -406,39 +429,29 @@ export default function AdminBookingsPage() {
             <option value="no">Solo singole</option>
           </select>
 
-          <select value={sortBy} onChange={(e) => setSortBy(e.target.value as SortBy)} className={filterField}>
-            <option value="date">Ordina per data</option>
-            <option value="status">Ordina per stato</option>
-          </select>
-
-          <button
-            type="button"
-            onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
-            className={`${filterField} flex items-center justify-center gap-1.5 border border-neutral-300 bg-neutral-100 font-medium text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700`}
-          >
-            {sortDir === "asc" ? "↑ Crescente" : "↓ Decrescente"}
-          </button>
-
-          <span className="hidden sm:block" />
-
           <label
             className={`${input} w-full flex items-center gap-2 border border-neutral-300 bg-neutral-100 font-medium text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200`}
           >
-            <input type="checkbox" checked={pendingFirst} onChange={(e) => setPendingFirst(e.target.checked)} className={checkbox} />
+            <Checkbox checked={pendingFirst} onChange={(e) => setPendingFirst(e.target.checked)} />
             In attesa in cima
           </label>
 
           <label
             className={`${input} w-full flex items-center gap-2 border border-neutral-300 bg-neutral-100 font-medium text-neutral-700 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200`}
           >
-            <input
-              type="checkbox"
-              checked={onlyRescheduleRequested}
-              onChange={(e) => setOnlyRescheduleRequested(e.target.checked)}
-              className={checkbox}
-            />
+            <Checkbox checked={onlyRescheduleRequested} onChange={(e) => setOnlyRescheduleRequested(e.target.checked)} />
             Solo con spostamento richiesto
           </label>
+
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="min-h-11 border border-dashed border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-500 hover:border-red-400 hover:text-red-500 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-red-500 dark:hover:text-red-400"
+            >
+              Reset filtri
+            </button>
+          )}
         </div>
       )}
 
@@ -457,7 +470,8 @@ export default function AdminBookingsPage() {
         <div className="space-y-3 sm:hidden">
           {visibleBookings.map((b) => (
             <div key={b.id} className={`${card} p-4`}>
-              <div className="flex items-start justify-between gap-2">
+              <div className="flex items-start gap-2">
+                <StatusDot status={b.status} className="mt-1.5" />
                 <div>
                   <div className="font-medium text-neutral-900 dark:text-white">
                     {b.client.firstName} {b.client.lastName}
@@ -471,11 +485,6 @@ export default function AdminBookingsPage() {
                     </span>
                   )}
                 </div>
-                <span
-                  className={`shrink-0 px-2 py-1 text-xs font-medium ${STATUS_COLORS[b.status]}`}
-                >
-                  {STATUS_LABELS[b.status] ?? b.status}
-                </span>
               </div>
 
               <div className="mt-3 flex items-center justify-between text-sm">
@@ -503,10 +512,9 @@ export default function AdminBookingsPage() {
           <table className="w-full text-sm">
             <thead className={tableHeadBg}>
               <tr>
-                <th className={th}>Cliente</th>
-                <th className={th}>Servizio</th>
-                <th className={`${th} whitespace-nowrap`}>Orario</th>
-                <th className={`${th} whitespace-nowrap`}>Stato</th>
+                <SortableTh label="Cliente" sortKey="client" active={sortBy === "client"} dir={sortDir} onSort={handleSort} />
+                <SortableTh label="Servizio" sortKey="service" active={sortBy === "service"} dir={sortDir} onSort={handleSort} />
+                <SortableTh label="Orario" sortKey="date" active={sortBy === "date"} dir={sortDir} onSort={handleSort} />
                 <th className={`${th} whitespace-nowrap`}>Azioni</th>
               </tr>
             </thead>
@@ -514,28 +522,26 @@ export default function AdminBookingsPage() {
               {visibleBookings.map((b) => (
                 <tr key={b.id} className={trBorder}>
                   <td className={td}>
-                    <div className="font-medium text-neutral-900 dark:text-white">
-                      {b.client.firstName} {b.client.lastName}
+                    <div className="flex items-start gap-2">
+                      <StatusDot status={b.status} className="mt-1.5" />
+                      <div>
+                        <div className="font-medium text-neutral-900 dark:text-white">
+                          {b.client.firstName} {b.client.lastName}
+                        </div>
+                        <div className="text-xs text-neutral-500 dark:text-neutral-400">
+                          {b.client.email}
+                        </div>
+                        {b.client.status === "PAUSED" && (
+                          <span className="text-xs text-yellow-400">
+                            Cliente in pausa
+                          </span>
+                        )}
+                      </div>
                     </div>
-                    <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                      {b.client.email}
-                    </div>
-                    {b.client.status === "PAUSED" && (
-                      <span className="text-xs text-yellow-400">
-                        Cliente in pausa
-                      </span>
-                    )}
                   </td>
                   <td className={td}>{b.appointmentType.name}</td>
                   <td className={`${td} capitalize`}>
                     {formatDateTime(b.startTime)}
-                  </td>
-                  <td className={td}>
-                    <span
-                      className={`px-2 py-1 text-xs font-medium ${STATUS_COLORS[b.status]}`}
-                    >
-                      {STATUS_LABELS[b.status] ?? b.status}
-                    </span>
                   </td>
                   <td className={td}>
                     <Actions b={b} />

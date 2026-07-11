@@ -3,12 +3,7 @@
 import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import {
-  formatCurrency,
-  formatDateTime,
-  STATUS_COLORS,
-  STATUS_LABELS,
-} from "@/lib/format";
+import { formatCurrency, formatDateTime } from "@/lib/format";
 import {
   btnDanger,
   btnNeutral,
@@ -23,6 +18,7 @@ import {
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import AttendanceToggle from "@/components/AttendanceToggle";
+import { StatusDot } from "@/components/StatusDot";
 
 /**
  * Affidabilita'del cliente: quota di prenotazioni concluse (confermate,
@@ -365,7 +361,8 @@ export default function AdminClientDetailPage({
       </Link>
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div>
-          <h1 className={pageTitle}>
+          <h1 className={`${pageTitle} flex items-center gap-2`}>
+            <StatusDot status={client.status} />
             {client.firstName} {client.lastName}
           </h1>
           <p className={pageSubtitle}>
@@ -588,19 +585,14 @@ export default function AdminClientDetailPage({
               key={b.id}
               className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 dark:border-neutral-800 py-2 last:border-0"
             >
-              <div>
+              <div className="flex items-center gap-1.5">
+                <StatusDot status={b.status} />
                 <span className="text-sm capitalize text-neutral-900 dark:text-white">
                   {formatDateTime(b.startTime)}
                 </span>
                 {""}
                 <span className="text-xs text-neutral-500">
                   {b.appointmentType.name}
-                </span>
-                {""}
-                <span
-                  className={`ml-1 px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[b.status]}`}
-                >
-                  {STATUS_LABELS[b.status] ?? b.status}
                 </span>
               </div>
               <AttendanceToggle
@@ -777,25 +769,23 @@ export default function AdminClientDetailPage({
               href={`/admin/invoices/${inv.id}`}
               className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 py-2 text-sm last:border-0 hover:bg-neutral-100 dark:hover:bg-neutral-800/50"
             >
-              <div>
-                <span className="font-medium text-neutral-900 dark:text-white">
-                  {inv.number}
-                </span>
-                {""}
-                <span className="text-xs text-neutral-500">
-                  {new Date(inv.periodStart).toLocaleDateString("it-IT")}{" "}
-                  &ndash;{""}
-                  {new Date(inv.periodEnd).toLocaleDateString("it-IT")}
-                </span>
+              <div className="flex items-center gap-1.5">
+                <StatusDot status={inv.status} />
+                <div>
+                  <span className="font-medium text-neutral-900 dark:text-white">
+                    {inv.number}
+                  </span>
+                  {""}
+                  <span className="text-xs text-neutral-500">
+                    {new Date(inv.periodStart).toLocaleDateString("it-IT")}{" "}
+                    &ndash;{""}
+                    {new Date(inv.periodEnd).toLocaleDateString("it-IT")}
+                  </span>
+                </div>
               </div>
               <div className="flex items-center gap-3">
                 <span className="text-neutral-700 dark:text-neutral-300">
                   {formatCurrency(inv.total)}
-                </span>
-                <span
-                  className={`px-2 py-0.5 text-xs font-medium ${STATUS_COLORS[inv.status]}`}
-                >
-                  {STATUS_LABELS[inv.status] ?? inv.status}
                 </span>
               </div>
             </Link>
