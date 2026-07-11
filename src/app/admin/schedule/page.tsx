@@ -165,7 +165,7 @@ function SchedulePageContent() {
   }
 
   return (
-    <div className="max-w-5xl">
+    <div>
       <h1 className={pageTitle}>Fasce orarie</h1>
       <p className={pageSubtitle}>
         Quante fasce vuoi per ogni giorno (es. 06:00&ndash;08:00, 09:00&ndash;11:00, 13:00&ndash;16:00): i buchi tra
@@ -201,7 +201,7 @@ function SchedulePageContent() {
 
       <section className={`${card} mb-8 p-4`}>
         <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">Fasce orarie settimanali</h2>
-        <div className="grid grid-cols-1 gap-x-8 lg:grid-cols-2">
+        <div className="grid grid-cols-1 gap-x-8 sm:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4">
           {DAY_ORDER.map((dayOfWeek) => {
             const dayBands = bands.filter((b) => b.dayOfWeek === dayOfWeek).sort((a, b) => a.startTime.localeCompare(b.startTime));
             return (

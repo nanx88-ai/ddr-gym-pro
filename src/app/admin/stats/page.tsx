@@ -181,30 +181,30 @@ export default function AdminStatsPage() {
   const newVsReturningTotal = stats.newVsReturning.new + stats.newVsReturning.returning;
 
   return (
-    <div className="max-w-5xl">
+    <div>
       <h1 className={pageTitle}>Statistiche</h1>
       <p className={pageSubtitle}>
         Basate su {stats.totalBookings} prenotazion{stats.totalBookings === 1 ? "e" : "i"} confermate, in attesa o riprogrammate.
       </p>
 
-      <div className="mb-3 flex flex-wrap gap-1.5">
-        {PILLS.map((p) => (
-          <button
-            key={p.key}
-            type="button"
-            onClick={() => applyPreset(p.key)}
-            className={`min-h-9 border px-3 py-1.5 text-xs font-medium ${
-              activePreset === p.key
-                ? "border-yellow-400 bg-yellow-400 text-neutral-900"
-                : "border-neutral-300 bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
-            }`}
-          >
-            {p.label}
-          </button>
-        ))}
-      </div>
+      <div className="mb-6 flex flex-wrap items-end gap-3">
+        <div className="flex flex-wrap gap-1.5">
+          {PILLS.map((p) => (
+            <button
+              key={p.key}
+              type="button"
+              onClick={() => applyPreset(p.key)}
+              className={`min-h-9 border px-3 py-1.5 text-xs font-medium ${
+                activePreset === p.key
+                  ? "border-yellow-400 bg-yellow-400 text-neutral-900"
+                  : "border-neutral-300 bg-neutral-100 text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+              }`}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
 
-      <div className="mb-6 flex flex-wrap items-end gap-2">
         <label className="block">
           <span className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">Da</span>
           <input
@@ -231,7 +231,7 @@ export default function AdminStatsPage() {
         </label>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
         <StatCard title="Giorni piu' attivi">
           <div className="space-y-2">
             {stats.activeDays.map((d) => (
