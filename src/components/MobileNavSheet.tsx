@@ -184,14 +184,17 @@ export default function MobileNavSheet({
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
-            className={`relative flex w-full touch-none items-center border-t px-4 ${SURFACE} ${LINE}`}
+            className={`flex w-full touch-none items-center justify-between border-t px-4 ${SURFACE} ${LINE}`}
             style={{ height: BAR_HEIGHT }}
             aria-label="Apri menu"
           >
-            <span className={`text-xs font-semibold uppercase tracking-wide ${TEXT_LABEL}`}>Menu</span>
-            <span className="absolute inset-x-0 flex justify-center">
-              <span className={`h-1 w-10 border ${LINE}`} />
-            </span>
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-neutral-600 dark:text-neutral-400">
+              <path strokeLinecap="round" d="M6 15l6-6 6 6" />
+            </svg>
+            <img src="/logo-ddr-white.png" alt="DDR" className="h-6 w-auto" loading="lazy" />
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-neutral-600 dark:text-neutral-400">
+              <path strokeLinecap="round" d="M6 15l6-6 6 6" />
+            </svg>
           </button>
           {/* zona morta: nessun handler, lascia passare le gesture di sistema */}
         </div>
@@ -228,26 +231,27 @@ export default function MobileNavSheet({
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
-            className="relative flex w-full touch-none items-center px-4"
+            className="flex w-full touch-none items-center justify-between px-4"
             style={{ height: BAR_HEIGHT }}
-            aria-label={state === "full" ? "Riduci menu" : "Chiudi o espandi menu"}
+            aria-label={state === "full" ? "Riduci menu" : "Espandi menu"}
           >
-            <span className={`text-xs font-semibold uppercase tracking-wide ${TEXT_LABEL}`}>Menu</span>
-            <span className="absolute inset-x-0 flex justify-center">
-              <span className={`h-1 w-10 border ${LINE}`} />
-            </span>
-            <span
-              role="button"
-              tabIndex={0}
-              onClick={expandCollapseTap}
-              onPointerDown={(e) => e.stopPropagation()}
-              className={`absolute right-4 flex items-center gap-1 text-xs font-semibold uppercase tracking-wide ${TEXT_LABEL}`}
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-neutral-600 dark:text-neutral-400">
+              <path strokeLinecap="round" d={state === "full" ? "M6 9l6 6 6-6" : "M6 15l6-6 6 6"} />
+            </svg>
+            <img src="/logo-ddr-white.png" alt="DDR" className="h-6 w-auto" loading="lazy" />
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className="h-4 w-4 text-neutral-600 dark:text-neutral-400 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+                expandCollapseTap(e as any);
+              }}
             >
-              {state === "small" ? "Espandi" : "Socchiudi"}
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-3.5 w-3.5">
-                <path strokeLinecap="round" strokeLinejoin="round" d={state === "small" ? "M6 15l6-6 6 6" : "M6 9l6 6 6-6"} />
-              </svg>
-            </span>
+              <path strokeLinecap="round" d={state === "full" ? "M6 9l6 6 6-6" : "M6 15l6-6 6 6"} />
+            </svg>
           </button>
 
           <div className={`border-t ${LINE}`}>

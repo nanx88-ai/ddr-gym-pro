@@ -28,27 +28,35 @@ export interface NavGroup {
 
 export const NAV_GROUPS: NavGroup[] = [
   {
+    // Primo gruppo (più frequenti): prenotazioni, planning, creazione
     items: [
       { href: "/admin", label: "Prenotazioni", icon: "bookings" },
       { href: "/admin/agenda", label: "Agenda", icon: "agenda" },
-      { href: "/admin/bookings/new", label: "Appuntamento", icon: "new" },
+      { href: "/admin/schedule", label: "Planning", icon: "schedule" },
     ],
   },
   {
+    // Secondo gruppo: operazioni frequenti
     items: [
-      { href: "/admin/appointment-types", label: "Servizi", icon: "types" },
-      { href: "/admin/schedule", label: "Planning", icon: "schedule" },
+      { href: "/admin/bookings/new", label: "Appuntamento", icon: "new" },
+      { href: "/admin/communications", label: "Comunicazioni", icon: "communications" },
+      { href: "/admin/clients", label: "Clienti", icon: "clients" },
+    ],
+  },
+  {
+    // Terzo gruppo: gestione e storico
+    items: [
+      { href: "/admin/subscriptions", label: "Abbonamenti", icon: "subscriptions" },
+      { href: "/admin/invoices", label: "Fatture", icon: "invoices" },
       { href: "/admin/tariffs", label: "Tariffe", icon: "tariffs" },
     ],
   },
   {
+    // Quarto gruppo: configurazione (meno frequente)
     items: [
-      { href: "/admin/clients", label: "Clienti", icon: "clients" },
-      { href: "/admin/subscriptions", label: "Abbonamenti", icon: "subscriptions" },
       { href: "/admin/price-list", label: "Listino", icon: "priceList" },
-      { href: "/admin/invoices", label: "Fatture", icon: "invoices" },
       { href: "/admin/stats", label: "Statistiche", icon: "stats" },
-      { href: "/admin/communications", label: "Comunicazioni", icon: "communications" },
+      { href: "/admin/appointment-types", label: "Servizi", icon: "types" },
     ],
   },
   {
