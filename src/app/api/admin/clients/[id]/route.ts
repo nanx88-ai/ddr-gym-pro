@@ -17,6 +17,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       },
       invoices: { orderBy: { issueDate: "desc" } },
       reminders: { orderBy: { dueDate: "asc" } },
+      subscriptions: {
+        orderBy: { endDate: "desc" },
+        include: { tariff: true },
+      },
     },
   });
 
@@ -29,8 +33,10 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 
 const bodySchema = z.object({
   status: z.enum([CLIENT_STATUS.ACTIVE, CLIENT_STATUS.PAUSED, CLIENT_STATUS.ARCHIVED]).optional(),
-  notes: z.string().optional(),
-  phone: z.string().optional(),
+  notes: z.string().nullable().optional(),
+  phone: z.string().nullable().optional(),
+  sex: z.enum(["M", "F", "OTHER"]).nullable().optional(),
+  dateOfBirth: z.string().datetime().nullable().optional(),
   clientKind: z.enum(["PRIVATO", "AZIENDA"]).nullable().optional(),
   businessName: z.string().nullable().optional(),
   fiscalCode: z.string().nullable().optional(),

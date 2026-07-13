@@ -26,6 +26,8 @@ model Client {
   lastName  String
   email     String   @unique
   phone     String?
+  sex       String?  // "M" | "F" | "OTHER" — stato civile, facoltativo
+  dateOfBirth DateTime? // data di nascita, facoltativa
   status    String   @default("ACTIVE")
   notes     String?
   createdAt DateTime @default(now())

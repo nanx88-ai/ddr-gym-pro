@@ -1,112 +1,12 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { formatCurrency, formatDateTime } from "@/lib/format";
-import {
-  btnDanger,
-  btnNeutral,
-  btnPositive,
-  btnPrimary,
-  card,
-  input,
-  label,
-  pageSubtitle,
-  pageTitle,
-} from "@/lib/ui";
-import { useToast } from "@/components/Toast";
-import { useConfirm } from "@/components/ConfirmDialog";
-import AttendanceToggle from "@/components/AttendanceToggle";
-import { StatusDot } from "@/components/StatusDot";
+import { useParams } from "next/navigation";
+import { formatCurrency, formatDate, formatTime } from "@/lib/format";
+import { btnPrimary, card, td, th } from "@/lib/ui";
 
-/**
- * Affidabilita'del cliente: quota di prenotazioni concluse (confermate,
- * spostate, annullate, non presentato) che si sono chiuse bene (confermata e
- * presenza non segnata come assente), rispetto al totale. Le richieste
- * ancora in attesa non contano ne'a favore ne'contro.
- */
-function ReliabilityBadge({ bookings }: { bookings: Booking[] }) {
-  const finalized = bookings.filter((b) =>
-    ["APPROVED", "RESCHEDULED", "REJECTED", "CANCELLED"].includes(b.status),
-  );
-  if (finalized.length === 0) return null;
-
-  const rescheduled = finalized.filter(
-    (b) => b.status === "RESCHEDULED",
-  ).length;
-  const cancelled = finalized.filter((b) => b.status === "CANCELLED").length;
-  const noShow = finalized.filter((b) => b.attended === false).length;
-  const negative = rescheduled + cancelled + noShow;
-  const rate = Math.round(100 * (1 - negative / finalized.length));
-
-  const color =
-    rate >= 80
-      ? "bg-green-100 text-green-800 dark:bg-green-500/15 dark:text-green-400"
-      : rate >= 50
-        ? "bg-yellow-100 text-yellow-800 dark:bg-yellow-400/15 dark:text-yellow-300"
-        : "bg-red-100 text-red-800 dark:bg-red-500/15 dark:text-red-400";
-
-  return (
-    <div className="mb-4 flex flex-wrap items-center gap-2 text-sm">
-      <span className={`px-2.5 py-1 text-xs font-semibold ${color}`}>
-        Affidabilita': {rate}%
-      </span>
-      <span className="text-xs text-neutral-500 dark:text-neutral-400">
-        su {finalized.length} prenotazion{finalized.length === 1 ? "e" : "i"}{" "}
-        concluse
-        {rescheduled > 0 &&
-          `· ${rescheduled} spostat${rescheduled === 1 ? "a" : "e"}`}
-        {cancelled > 0 &&
-          `· ${cancelled} annullat${cancelled === 1 ? "a" : "e"}`}
-        {noShow > 0 && `· ${noShow} assenz${noShow === 1 ? "a" : "e"}`}
-      </span>
-    </div>
-  );
-}
-
-interface PriceListItem {
-  id: string;
-  name: string;
-  unitPrice: number;
-  vatRate: number;
-  vatNature: string | null;
-}
-
-interface BillingProfile {
-  id: string;
-  priceListItemId: string;
-  billingType: string;
-  active: boolean;
-  priceListItem: PriceListItem;
-}
-
-interface Booking {
-  id: string;
-  startTime: string;
-  status: string;
-  attended: boolean | null;
-  appointmentType: { name: string };
-}
-
-interface Invoice {
-  id: string;
-  number: string;
-  periodStart: string;
-  periodEnd: string;
-  issueDate: string;
-  status: string;
-  total: number;
-}
-
-interface Reminder {
-  id: string;
-  title: string;
-  description: string | null;
-  dueDate: string;
-  notifyDaysBefore: number;
-  notifiedAt: string | null;
-}
+type Tab = "anagrafica" | "abbonamenti" | "prenotazioni" | "fatture" | "scadenze" | "residenza";
 
 interface ClientDetail {
   id: string;
@@ -114,689 +14,370 @@ interface ClientDetail {
   lastName: string;
   email: string;
   phone: string | null;
+  sex: string | null;
+  dateOfBirth: string | null;
   status: string;
   notes: string | null;
-  clientKind: string | null;
-  businessName: string | null;
-  fiscalCode: string | null;
-  vatNumber: string | null;
   address: string | null;
   zipCode: string | null;
   city: string | null;
   province: string | null;
   country: string;
+  clientKind: string | null;
+  businessName: string | null;
+  fiscalCode: string | null;
+  vatNumber: string | null;
   pec: string | null;
   sdiCode: string | null;
-  billingProfile: BillingProfile | null;
-  bookings: Booking[];
-  invoices: Invoice[];
-  reminders: Reminder[];
+  subscriptions: Array<{
+    id: string;
+    tariff: { id: string; title: string; price: number };
+    startDate: string;
+    endDate: string;
+    autoRenew: boolean;
+    renewMonths: number;
+  }>;
+  bookings: Array<{
+    id: string;
+    appointmentType: { id: string; name: string };
+    startTime: string;
+    endTime: string;
+    status: string;
+    attended: boolean | null;
+  }>;
+  invoices: Array<{
+    id: string;
+    number: string;
+    status: string;
+    total: number;
+    issueDate: string;
+  }>;
+  reminders: Array<{
+    id: string;
+    title: string;
+    dueDate: string;
+    notifiedAt: string | null;
+  }>;
 }
 
-export default function AdminClientDetailPage({
-  params,
-}: {
-  params: Promise<{ id: string }>;
-}) {
-  const { id } = use(params);
-  const router = useRouter();
-  const toast = useToast();
-  const confirm = useConfirm();
+export default function ClientDetailPage() {
+  const params = useParams();
+  const id = params.id as string;
+
   const [client, setClient] = useState<ClientDetail | null>(null);
-  const [priceList, setPriceList] = useState<PriceListItem[]>([]);
+  const [tab, setTab] = useState<Tab>("anagrafica");
   const [loading, setLoading] = useState(true);
-  const [savingFiscal, setSavingFiscal] = useState(false);
-  const [savingBilling, setSavingBilling] = useState(false);
-  const [generating, setGenerating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const [reminderTitle, setReminderTitle] = useState("");
-  const [reminderDescription, setReminderDescription] = useState("");
-  const [reminderDueDate, setReminderDueDate] = useState("");
-  const [reminderNotifyDays, setReminderNotifyDays] = useState(7);
-  const [addingReminder, setAddingReminder] = useState(false);
-
-  const [fiscal, setFiscal] = useState({
-    clientKind: "PRIVATO",
-    businessName: "",
-    fiscalCode: "",
-    vatNumber: "",
-    address: "",
-    zipCode: "",
-    city: "",
-    province: "",
-    country: "IT",
-    pec: "",
-    sdiCode: "",
-    phone: "",
-  });
-
-  const [priceListItemId, setPriceListItemId] = useState("");
-  const [billingType, setBillingType] = useState("PER_ACCESS");
-
-  const now = new Date();
-  const [periodStart, setPeriodStart] = useState(
-    `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`,
-  );
-  const [periodEnd, setPeriodEnd] = useState(
-    `${now.getFullYear()}-${String(now.getMonth() + 2).padStart(2, "0")}-01`,
-  );
-
-  async function load() {
-    setLoading(true);
-    const res = await fetch(`/api/admin/clients/${id}`);
-    const json = await res.json();
-    setClient(json.client);
-    if (json.client) {
-      setFiscal({
-        clientKind: json.client.clientKind ?? "PRIVATO",
-        businessName: json.client.businessName ?? "",
-        fiscalCode: json.client.fiscalCode ?? "",
-        vatNumber: json.client.vatNumber ?? "",
-        address: json.client.address ?? "",
-        zipCode: json.client.zipCode ?? "",
-        city: json.client.city ?? "",
-        province: json.client.province ?? "",
-        country: json.client.country ?? "IT",
-        pec: json.client.pec ?? "",
-        sdiCode: json.client.sdiCode ?? "",
-        phone: json.client.phone ?? "",
-      });
-      if (json.client.billingProfile) {
-        setPriceListItemId(json.client.billingProfile.priceListItemId);
-        setBillingType(json.client.billingProfile.billingType);
-      }
-    }
-    setLoading(false);
-  }
 
   useEffect(() => {
-    load();
-    fetch("/api/admin/price-list")
-      .then((res) => res.json())
-      .then((json) => {
-        setPriceList(json.items ?? []);
-        setPriceListItemId((prev) => prev || json.items?.[0]?.id || "");
-      });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    fetch(`/api/admin/clients/${id}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (data.client) setClient(data.client);
+      })
+      .catch(() => console.error("Errore caricamento cliente"))
+      .finally(() => setLoading(false));
   }, [id]);
 
-  async function saveFiscal(e: React.FormEvent) {
-    e.preventDefault();
-    setSavingFiscal(true);
-    setError(null);
-    const res = await fetch(`/api/admin/clients/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(fiscal),
-    });
-    setSavingFiscal(false);
-    if (!res.ok) {
-      setError("Errore durante il salvataggio dei dati fiscali.");
-      return;
-    }
-    toast.success("Dati fiscali salvati.");
-    load();
-  }
-
-  async function saveBilling(e: React.FormEvent) {
-    e.preventDefault();
-    setSavingBilling(true);
-    setError(null);
-    const res = await fetch("/api/admin/billing-profiles", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        clientId: id,
-        priceListItemId,
-        billingType,
-        active: true,
-      }),
-    });
-    setSavingBilling(false);
-    if (!res.ok) {
-      setError("Errore durante il salvataggio del profilo di fatturazione.");
-      return;
-    }
-    toast.success("Profilo di fatturazione salvato.");
-    load();
-  }
-
-  async function setAttendance(bookingId: string, attended: boolean | null) {
-    await fetch(`/api/admin/bookings/${bookingId}/attendance`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ attended }),
-    });
-    toast.success(
-      attended === true
-        ? "Presenza segnata."
-        : attended === false
-          ? "Assenza segnata."
-          : "Presenza azzerata.",
+  if (loading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <p className="text-sm text-neutral-500">Caricamento...</p>
+      </div>
     );
-    load();
   }
 
-  async function addReminder(e: React.FormEvent) {
-    e.preventDefault();
-    if (!reminderDueDate) return;
-    setAddingReminder(true);
-    await fetch(`/api/admin/clients/${id}/reminders`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        title: reminderTitle,
-        description: reminderDescription || undefined,
-        dueDate: reminderDueDate,
-        notifyDaysBefore: reminderNotifyDays,
-      }),
-    });
-    setReminderTitle("");
-    setReminderDescription("");
-    setReminderDueDate("");
-    setReminderNotifyDays(7);
-    setAddingReminder(false);
-    toast.success("Scadenza aggiunta.");
-    load();
+  if (!client) {
+    return (
+      <div className="space-y-4 p-4 sm:p-6">
+        <Link href="/admin/clients" className={btnPrimary}>
+          ← Torna ai clienti
+        </Link>
+        <p className="text-neutral-500">Cliente non trovato</p>
+      </div>
+    );
   }
 
-  async function deleteReminder(reminderId: string) {
-    if (!(await confirm("Eliminare questa scadenza?"))) return;
-    await fetch(`/api/admin/reminders/${reminderId}`, { method: "DELETE" });
-    toast.success("Scadenza eliminata.");
-    load();
-  }
+  const tabs: { id: Tab; label: string; count?: number }[] = [
+    { id: "anagrafica", label: "Anagrafica" },
+    { id: "abbonamenti", label: "Abbonamenti", count: client.subscriptions.length },
+    { id: "prenotazioni", label: "Prenotazioni", count: client.bookings.length },
+    { id: "fatture", label: "Fatture", count: client.invoices.length },
+    { id: "scadenze", label: "Scadenze", count: client.reminders.length },
+    { id: "residenza", label: "Residenza" },
+  ];
 
-  async function generateInvoice(e: React.FormEvent) {
-    e.preventDefault();
-    setGenerating(true);
-    setError(null);
-    const res = await fetch("/api/admin/invoices", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ clientId: id, periodStart, periodEnd }),
-    });
-    const json = await res.json();
-    setGenerating(false);
-    if (!res.ok) {
-      setError(json.error ?? "Errore durante la generazione della fattura.");
-      return;
-    }
-    toast.success(`Fattura ${json.invoice.number} generata.`);
-    load();
-  }
+  const getSubscriptionStatus = (sub: ClientDetail["subscriptions"][0]) => {
+    const today = new Date();
+    const endDate = new Date(sub.endDate);
+    const daysLeft = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-  async function archiveClient() {
-    if (!client) return;
-    if (
-      !(await confirm({
-        message: `Archiviare ${client.firstName} ${client.lastName}? Non potra' prenotare finche' non lo riattivi. Storico e dati restano intatti.`,
-        confirmLabel: "Archivia",
-      }))
-    ) {
-      return;
-    }
-    await fetch(`/api/admin/clients/${id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ status: "ARCHIVED" }),
-    });
-    toast.success("Cliente archiviato.");
-    router.push("/admin/clients");
-  }
+    if (daysLeft < 0) return { label: "SCADUTO", color: "text-red-600 dark:text-red-400" };
+    if (daysLeft <= 7) return { label: "IN SCADENZA", color: "text-amber-600 dark:text-amber-400" };
+    return { label: "ATTIVO", color: "text-green-600 dark:text-green-400" };
+  };
 
-  if (loading)
-    return <p className="text-sm text-neutral-500">Caricamento...</p>;
-  if (!client)
-    return <p className="text-sm text-neutral-500">Cliente non trovato.</p>;
+  const getBookingStatusColor = (status: string) => {
+    const colors: Record<string, string> = {
+      PENDING_APPROVAL: "text-amber-600 dark:text-amber-400",
+      APPROVED: "text-green-600 dark:text-green-400",
+      REJECTED: "text-red-600 dark:text-red-400",
+      CANCELLED: "text-neutral-500 dark:text-neutral-400",
+      RESCHEDULED: "text-blue-600 dark:text-blue-400",
+    };
+    return colors[status] || "text-neutral-500";
+  };
 
   return (
-    <div className="max-w-4xl">
-      <Link
-        href="/admin/clients"
-        className="mb-3 inline-block text-sm text-neutral-500 dark:text-neutral-400 hover:underline"
-      >
-        &larr; Torna ai clienti
-      </Link>
-      <div className="flex flex-wrap items-start justify-between gap-2">
+    <div className="space-y-6 p-4 sm:p-6">
+      <div className="flex items-center justify-between">
         <div>
-          <h1 className={`${pageTitle} flex items-center gap-2`}>
-            <StatusDot status={client.status} />
+          <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
             {client.firstName} {client.lastName}
           </h1>
-          <p className={pageSubtitle}>
-            {client.email} {client.phone ? `· ${client.phone}` : ""}
-          </p>
+          <p className="mt-1 text-sm text-neutral-500">{client.email}</p>
         </div>
-        {client.status !== "ARCHIVED" && (
-          <button onClick={archiveClient} className={btnDanger}>
-            Archivia cliente
-          </button>
-        )}
+        <Link href="/admin/clients" className={btnPrimary}>
+          ← Indietro
+        </Link>
       </div>
 
-      <ReliabilityBadge bookings={client.bookings} />
-
-      {error && (
-        <div className="mb-4 border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300">
-          {error}
-        </div>
-      )}
-
-      <section className={`${card} mb-6 p-4`}>
-        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
-          Dati anagrafici e fiscali
-        </h2>
-        <form onSubmit={saveFiscal} className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-          <label className="block">
-            <span className={label}>Tipo cliente</span>
-            <select
-              value={fiscal.clientKind}
-              onChange={(e) =>
-                setFiscal({ ...fiscal, clientKind: e.target.value })
-              }
-              className={input}
-            >
-              <option value="PRIVATO">Privato</option>
-              <option value="AZIENDA">Azienda</option>
-            </select>
-          </label>
-          <label className="block">
-            <span className={label}>Telefono</span>
-            <input
-              value={fiscal.phone}
-              onChange={(e) => setFiscal({ ...fiscal, phone: e.target.value })}
-              className={input}
-            />
-          </label>
-
-          {fiscal.clientKind === "AZIENDA" && (
-            <>
-              <label className="block sm:col-span-2">
-                <span className={label}>Ragione sociale</span>
-                <input
-                  value={fiscal.businessName}
-                  onChange={(e) =>
-                    setFiscal({ ...fiscal, businessName: e.target.value })
-                  }
-                  className={input}
-                />
-              </label>
-              <label className="block">
-                <span className={label}>Partita IVA</span>
-                <input
-                  value={fiscal.vatNumber}
-                  onChange={(e) =>
-                    setFiscal({ ...fiscal, vatNumber: e.target.value })
-                  }
-                  className={input}
-                />
-              </label>
-            </>
-          )}
-
-          <label className="block">
-            <span className={label}>Codice fiscale</span>
-            <input
-              value={fiscal.fiscalCode}
-              onChange={(e) =>
-                setFiscal({ ...fiscal, fiscalCode: e.target.value })
-              }
-              className={input}
-            />
-          </label>
-          <label className="block sm:col-span-2">
-            <span className={label}>Indirizzo</span>
-            <input
-              value={fiscal.address}
-              onChange={(e) =>
-                setFiscal({ ...fiscal, address: e.target.value })
-              }
-              className={input}
-            />
-          </label>
-          <label className="block">
-            <span className={label}>CAP</span>
-            <input
-              value={fiscal.zipCode}
-              onChange={(e) =>
-                setFiscal({ ...fiscal, zipCode: e.target.value })
-              }
-              className={input}
-            />
-          </label>
-          <label className="block">
-            <span className={label}>Citta&apos;</span>
-            <input
-              value={fiscal.city}
-              onChange={(e) => setFiscal({ ...fiscal, city: e.target.value })}
-              className={input}
-            />
-          </label>
-          <label className="block">
-            <span className={label}>Provincia</span>
-            <input
-              value={fiscal.province}
-              onChange={(e) =>
-                setFiscal({ ...fiscal, province: e.target.value })
-              }
-              className={input}
-              maxLength={2}
-            />
-          </label>
-          <label className="block">
-            <span className={label}>Paese</span>
-            <input
-              value={fiscal.country}
-              onChange={(e) =>
-                setFiscal({ ...fiscal, country: e.target.value })
-              }
-              className={input}
-            />
-          </label>
-          <label className="block">
-            <span className={label}>PEC</span>
-            <input
-              value={fiscal.pec}
-              onChange={(e) => setFiscal({ ...fiscal, pec: e.target.value })}
-              className={input}
-            />
-          </label>
-          <label className="block">
-            <span className={label}>Codice destinatario SDI</span>
-            <input
-              value={fiscal.sdiCode}
-              onChange={(e) =>
-                setFiscal({ ...fiscal, sdiCode: e.target.value })
-              }
-              className={input}
-              maxLength={7}
-            />
-          </label>
-
-          <div className="sm:col-span-2">
+      <div className="border-b border-neutral-200 dark:border-neutral-800">
+        <div className="flex gap-1 overflow-x-auto sm:gap-4">
+          {tabs.map((t) => (
             <button
-              type="submit"
-              disabled={savingFiscal}
-              className={btnPrimary}
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`whitespace-nowrap border-b-2 px-3 py-2 text-sm font-medium transition-colors sm:px-4 ${
+                tab === t.id
+                  ? "border-yellow-500 text-yellow-600 dark:text-yellow-400"
+                  : "border-transparent text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-white"
+              }`}
             >
-              {savingFiscal ? "Salvataggio..." : "Salva dati fiscali"}
+              {t.label}
+              {t.count !== undefined && (
+                <span className="ml-2 inline-block rounded-full bg-neutral-200 px-2 py-0.5 text-xs dark:bg-neutral-800">
+                  {t.count}
+                </span>
+              )}
             </button>
-          </div>
-        </form>
-      </section>
+          ))}
+        </div>
+      </div>
 
-      <section className={`${card} mb-6 p-4`}>
-        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
-          Profilo di fatturazione
-        </h2>
-        <form onSubmit={saveBilling} className="flex flex-wrap items-end gap-3">
-          <label className="block w-full sm:w-56">
-            <span className={label}>Voce di listino</span>
-            <select
-              value={priceListItemId}
-              onChange={(e) => setPriceListItemId(e.target.value)}
-              className={`${input} w-full`}
-            >
-              {priceList.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({formatCurrency(p.unitPrice)})
-                </option>
-              ))}
-            </select>
-          </label>
-          <label className="block w-full sm:w-56">
-            <span className={label}>Regola di conteggio</span>
-            <select
-              value={billingType}
-              onChange={(e) => setBillingType(e.target.value)}
-              className={`${input} w-full`}
-            >
-              <option value="PER_ACCESS">Per accessi effettivi</option>
-              <option value="FLAT">Importo fisso per periodo</option>
-            </select>
-          </label>
-          <button type="submit" disabled={savingBilling} className={`w-full sm:w-auto ${btnPrimary}`}>
-            {savingBilling ? "Salvataggio..." : "Salva profilo"}
-          </button>
-        </form>
-        {priceList.length === 0 && (
-          <p className="mt-2 text-xs text-neutral-500">
-            Nessuna voce di listino disponibile: creane una in{""}
-            <Link
-              href="/admin/price-list"
-              className="text-yellow-400 hover:underline"
-            >
-              Listino
-            </Link>
-            .
-          </p>
+      <div className={card}>
+        {tab === "anagrafica" && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="text-xs font-semibold uppercase text-neutral-500">Nome</label>
+              <p className="mt-1 text-neutral-900 dark:text-white">{client.firstName}</p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold uppercase text-neutral-500">Cognome</label>
+              <p className="mt-1 text-neutral-900 dark:text-white">{client.lastName}</p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold uppercase text-neutral-500">Email</label>
+              <p className="mt-1 text-neutral-900 dark:text-white">{client.email}</p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold uppercase text-neutral-500">Telefono</label>
+              <p className="mt-1 text-neutral-900 dark:text-white">{client.phone || "—"}</p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold uppercase text-neutral-500">Sesso</label>
+              <p className="mt-1 text-neutral-900 dark:text-white">
+                {client.sex === "M" ? "Maschio" : client.sex === "F" ? "Femmina" : client.sex || "—"}
+              </p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold uppercase text-neutral-500">Data di nascita</label>
+              <p className="mt-1 text-neutral-900 dark:text-white">
+                {client.dateOfBirth ? formatDate(client.dateOfBirth) : "—"}
+              </p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold uppercase text-neutral-500">Status</label>
+              <p className="mt-1 text-neutral-900 dark:text-white">
+                {client.status === "ACTIVE" ? "Attivo" : "Sospeso"}
+              </p>
+            </div>
+            <div className="sm:col-span-2">
+              <label className="text-xs font-semibold uppercase text-neutral-500">Note</label>
+              <p className="mt-1 whitespace-pre-line text-neutral-900 dark:text-white">{client.notes || "—"}</p>
+            </div>
+          </div>
         )}
-      </section>
 
-      <section className={`${card} mb-6 p-4`}>
-        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
-          Storico prenotazioni e presenze
-        </h2>
-        <div className="space-y-1">
-          {client.bookings.map((b) => (
-            <div
-              key={b.id}
-              className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 dark:border-neutral-800 py-2 last:border-0"
-            >
-              <div className="flex items-center gap-1.5">
-                <StatusDot status={b.status} />
-                <span className="text-sm capitalize text-neutral-900 dark:text-white">
-                  {formatDateTime(b.startTime)}
-                </span>
-                {""}
-                <span className="text-xs text-neutral-500">
-                  {b.appointmentType.name}
-                </span>
-              </div>
-              <AttendanceToggle
-                attended={b.attended}
-                onChange={(attended) => setAttendance(b.id, attended)}
-              />
-            </div>
-          ))}
-          {client.bookings.length === 0 && (
-            <p className="text-sm text-neutral-500">Nessuna prenotazione.</p>
-          )}
-        </div>
-      </section>
-
-      <section className={`${card} mb-6 p-4`}>
-        <h2 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">
-          Scadenze
-        </h2>
-        <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
-          Es. fine abbonamento, certificato medico: titolo e descrizione a
-          scelta. Un cron giornaliero avvisa te e il cliente via email quando
-          manca il numero di giorni indicato.
-        </p>
-
-        <form
-          onSubmit={addReminder}
-          className="mb-4 grid grid-cols-2 gap-3 border border-neutral-200 p-3 dark:border-neutral-800 sm:grid-cols-4"
-        >
-          <label className="col-span-2 block sm:col-span-1">
-            <span className={label}>Titolo</span>
-            <input
-              required
-              placeholder="es. Certificato medico"
-              value={reminderTitle}
-              onChange={(e) => setReminderTitle(e.target.value)}
-              className={input}
-            />
-          </label>
-          <label className="col-span-2 block sm:col-span-1">
-            <span className={label}>Scadenza</span>
-            <input
-              required
-              type="date"
-              value={reminderDueDate}
-              onChange={(e) => setReminderDueDate(e.target.value)}
-              className={input}
-            />
-          </label>
-          <label className="col-span-2 block sm:col-span-1">
-            <span className={label}>Avvisa (giorni prima)</span>
-            <input
-              type="number"
-              min={0}
-              max={90}
-              value={reminderNotifyDays}
-              onChange={(e) =>
-                setReminderNotifyDays(Number(e.target.value) || 0)
-              }
-              className={input}
-            />
-          </label>
-          <label className="col-span-2 block sm:col-span-1">
-            <span className={label}>Descrizione (facoltativa)</span>
-            <input
-              value={reminderDescription}
-              onChange={(e) => setReminderDescription(e.target.value)}
-              className={input}
-            />
-          </label>
-          <div className="col-span-2 sm:col-span-4">
-            <button
-              type="submit"
-              disabled={addingReminder}
-              className={btnPositive}
-            >
-              {addingReminder ? "Aggiunta..." : "Aggiungi scadenza"}
-            </button>
-          </div>
-        </form>
-
-        <div className="space-y-1">
-          {client.reminders.map((r) => (
-            <div
-              key={r.id}
-              className="flex flex-wrap items-center justify-between gap-2 border-b border-neutral-200 py-2 last:border-0 dark:border-neutral-800"
-            >
-              <div>
-                <span className="text-sm font-medium text-neutral-900 dark:text-white">
-                  {r.title}
-                </span>
-                {""}
-                <span className="text-xs text-neutral-500 dark:text-neutral-400">
-                  scade il {new Date(r.dueDate).toLocaleDateString("it-IT")} ·
-                  avviso {r.notifyDaysBefore}g prima
-                </span>
-                {r.description && (
-                  <div className="text-xs text-neutral-500 dark:text-neutral-400">
-                    {r.description}
+        {tab === "abbonamenti" && (
+          <div className="space-y-4">
+            {client.subscriptions.length === 0 ? (
+              <p className="text-sm text-neutral-500">Nessun abbonamento</p>
+            ) : (
+              client.subscriptions.map((sub) => {
+                const status = getSubscriptionStatus(sub);
+                return (
+                  <div key={sub.id} className="flex flex-col justify-between border-b border-neutral-200 pb-4 last:border-0 dark:border-neutral-800 sm:flex-row sm:items-start">
+                    <div className="min-w-0 flex-1">
+                      <p className="font-medium text-neutral-900 dark:text-white">{sub.tariff.title}</p>
+                      <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+                        Dal {formatDate(sub.startDate)} al {formatDate(sub.endDate)}
+                      </p>
+                      <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
+                        {sub.autoRenew ? `Rinnovo: +${sub.renewMonths} mese(i)` : "Nessun rinnovo"}
+                      </p>
+                    </div>
+                    <div className="mt-3 text-right sm:mt-0 sm:ml-4">
+                      <p className={`text-sm font-semibold ${status.color}`}>{status.label}</p>
+                      <p className="mt-1 text-lg font-bold text-neutral-900 dark:text-white">{formatCurrency(sub.tariff.price)}</p>
+                    </div>
                   </div>
-                )}
+                );
+              })
+            )}
+          </div>
+        )}
+
+        {tab === "prenotazioni" && (
+          <div>
+            {client.bookings.length === 0 ? (
+              <p className="text-sm text-neutral-500">Nessuna prenotazione</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-neutral-200 dark:border-neutral-800">
+                      <th className={th}>Servizio</th>
+                      <th className={th}>Data/Ora</th>
+                      <th className={th}>Status</th>
+                      <th className={th}>Presenza</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {client.bookings.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()).map((booking) => (
+                      <tr key={booking.id} className="border-b border-neutral-100 dark:border-neutral-800">
+                        <td className={td}>{booking.appointmentType.name}</td>
+                        <td className={td}>
+                          <div className="whitespace-nowrap">
+                            {formatDate(booking.startTime)} {formatTime(booking.startTime)}
+                          </div>
+                        </td>
+                        <td className={`${td} ${getBookingStatusColor(booking.status)}`}>{booking.status}</td>
+                        <td className={td}>{booking.attended === true ? "✓" : booking.attended === false ? "✗" : "—"}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-              <div className="flex items-center gap-2">
-                {r.notifiedAt ? (
-                  <span className="bg-neutral-200 px-2 py-0.5 text-xs font-medium text-neutral-600 dark:bg-neutral-700 dark:text-neutral-300">
-                    Notificata
-                  </span>
-                ) : (
-                  <span className="bg-yellow-100 px-2 py-0.5 text-xs font-medium text-yellow-800 dark:bg-yellow-400/15 dark:text-yellow-300">
-                    In attesa
-                  </span>
-                )}
-                <button
-                  onClick={() => deleteReminder(r.id)}
-                  className={btnDanger}
-                >
-                  Elimina
-                </button>
+            )}
+          </div>
+        )}
+
+        {tab === "fatture" && (
+          <div>
+            {client.invoices.length === 0 ? (
+              <p className="text-sm text-neutral-500">Nessuna fattura</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b border-neutral-200 dark:border-neutral-800">
+                      <th className={th}>Numero</th>
+                      <th className={th}>Data</th>
+                      <th className={th}>Importo</th>
+                      <th className={th}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {client.invoices.sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime()).map((invoice) => (
+                      <tr key={invoice.id} className="border-b border-neutral-100 dark:border-neutral-800">
+                        <td className={td}>{invoice.number}</td>
+                        <td className={td}>{formatDate(invoice.issueDate)}</td>
+                        <td className={td}>{formatCurrency(invoice.total)}</td>
+                        <td className={td}>{invoice.status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
-            </div>
-          ))}
-          {client.reminders.length === 0 && (
-            <p className="text-sm text-neutral-500">
-              Nessuna scadenza impostata.
-            </p>
-          )}
-        </div>
-      </section>
+            )}
+          </div>
+        )}
 
-      <section className={`${card} p-4`}>
-        <h2 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
-          Fatture
-        </h2>
-
-        <form
-          onSubmit={generateInvoice}
-          className="mb-4 flex flex-wrap items-end gap-3"
-        >
-          <label className="block w-full sm:w-40">
-            <span className={label}>Da</span>
-            <input
-              type="date"
-              value={periodStart}
-              onChange={(e) => setPeriodStart(e.target.value)}
-              className={`${input} w-full min-w-0`}
-            />
-          </label>
-          <label className="block w-full sm:w-40">
-            <span className={label}>A</span>
-            <input
-              type="date"
-              value={periodEnd}
-              onChange={(e) => setPeriodEnd(e.target.value)}
-              className={`${input} w-full min-w-0`}
-            />
-          </label>
-          <button
-            type="submit"
-            disabled={generating || !client.billingProfile}
-            className={`w-full sm:w-auto ${btnPositive}`}
-          >
-            {generating ? "Generazione..." : "Genera fattura"}
-          </button>
-          {!client.billingProfile && (
-            <span className="text-xs text-neutral-500">
-              Imposta prima un profilo di fatturazione.
-            </span>
-          )}
-        </form>
-
-        <div className="space-y-1">
-          {client.invoices.map((inv) => (
-            <Link
-              key={inv.id}
-              href={`/admin/invoices/${inv.id}`}
-              className="flex items-center justify-between border-b border-neutral-200 dark:border-neutral-800 py-2 text-sm last:border-0 hover:bg-neutral-100 dark:hover:bg-neutral-800/50"
-            >
-              <div className="flex items-center gap-1.5">
-                <StatusDot status={inv.status} />
-                <div>
-                  <span className="font-medium text-neutral-900 dark:text-white">
-                    {inv.number}
-                  </span>
-                  {""}
-                  <span className="text-xs text-neutral-500">
-                    {new Date(inv.periodStart).toLocaleDateString("it-IT")}{" "}
-                    &ndash;{""}
-                    {new Date(inv.periodEnd).toLocaleDateString("it-IT")}
-                  </span>
+        {tab === "scadenze" && (
+          <div className="space-y-4">
+            {client.reminders.length === 0 ? (
+              <p className="text-sm text-neutral-500">Nessuna scadenza</p>
+            ) : (
+              client.reminders.map((reminder) => (
+                <div key={reminder.id} className="flex flex-col justify-between border-b border-neutral-200 pb-4 last:border-0 dark:border-neutral-800 sm:flex-row sm:items-start">
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-neutral-900 dark:text-white">{reminder.title}</p>
+                    <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">Scade: {formatDate(reminder.dueDate)}</p>
+                  </div>
+                  <div className="mt-3 text-right sm:mt-0 sm:ml-4">
+                    <p className="text-xs font-semibold text-neutral-500">
+                      {reminder.notifiedAt ? "✓ Notificato" : "Pendente"}
+                    </p>
+                  </div>
                 </div>
+              ))
+            )}
+          </div>
+        )}
+
+        {tab === "residenza" && (
+          <div className="grid gap-4 sm:grid-cols-2">
+            <div>
+              <label className="text-xs font-semibold uppercase text-neutral-500">Tipo cliente</label>
+              <p className="mt-1 text-neutral-900 dark:text-white">{client.clientKind === "AZIENDA" ? "Azienda" : "Privato"}</p>
+            </div>
+            {client.clientKind === "AZIENDA" && (
+              <div>
+                <label className="text-xs font-semibold uppercase text-neutral-500">Ragione sociale</label>
+                <p className="mt-1 text-neutral-900 dark:text-white">{client.businessName || "—"}</p>
               </div>
-              <div className="flex items-center gap-3">
-                <span className="text-neutral-700 dark:text-neutral-300">
-                  {formatCurrency(inv.total)}
-                </span>
+            )}
+            <div>
+              <label className="text-xs font-semibold uppercase text-neutral-500">Codice fiscale</label>
+              <p className="mt-1 text-neutral-900 dark:text-white">{client.fiscalCode || "—"}</p>
+            </div>
+            {client.clientKind === "AZIENDA" && (
+              <div>
+                <label className="text-xs font-semibold uppercase text-neutral-500">Partita IVA</label>
+                <p className="mt-1 text-neutral-900 dark:text-white">{client.vatNumber || "—"}</p>
               </div>
-            </Link>
-          ))}
-          {client.invoices.length === 0 && (
-            <p className="text-sm text-neutral-500">
-              Nessuna fattura generata.
-            </p>
-          )}
-        </div>
-      </section>
+            )}
+            <div>
+              <label className="text-xs font-semibold uppercase text-neutral-500">Indirizzo</label>
+              <p className="mt-1 text-neutral-900 dark:text-white">{client.address || "—"}</p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold uppercase text-neutral-500">CAP</label>
+              <p className="mt-1 text-neutral-900 dark:text-white">{client.zipCode || "—"}</p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold uppercase text-neutral-500">Città</label>
+              <p className="mt-1 text-neutral-900 dark:text-white">{client.city || "—"}</p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold uppercase text-neutral-500">Provincia</label>
+              <p className="mt-1 text-neutral-900 dark:text-white">{client.province || "—"}</p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold uppercase text-neutral-500">Paese</label>
+              <p className="mt-1 text-neutral-900 dark:text-white">{client.country}</p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold uppercase text-neutral-500">PEC</label>
+              <p className="mt-1 text-neutral-900 dark:text-white">{client.pec || "—"}</p>
+            </div>
+            <div>
+              <label className="text-xs font-semibold uppercase text-neutral-500">Codice SDI</label>
+              <p className="mt-1 text-neutral-900 dark:text-white">{client.sdiCode || "—"}</p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
