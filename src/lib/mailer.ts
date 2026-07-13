@@ -22,6 +22,16 @@ async function getSmtpConfig(): Promise<SmtpConfig | null> {
   }
 }
 
+async function createTransporter(smtp: SmtpConfig) {
+  const nodemailer = await import("nodemailer");
+  return nodemailer.createTransport({
+    host: smtp.host,
+    port: Number(smtp.port) || 587,
+    secure: Number(smtp.port) === 465,
+    auth: { user: smtp.user, pass: smtp.password },
+  });
+}
+
 /**
  * Invio email generico (usato per i reminder di scadenza, e riusabile per
  * altre notifiche future). Ritorna sent:false senza lanciare se l'SMTP non
@@ -34,16 +44,37 @@ export async function sendPlainEmail(to: string, subject: string, text: string) 
     return { sent: false, reason: "smtp_not_configured" as const };
   }
 
-  const nodemailer = await import("nodemailer");
-  const transporter = nodemailer.createTransport({
-    host: smtp.host,
-    port: Number(smtp.port) || 587,
-    secure: Number(smtp.port) === 465,
-    auth: { user: smtp.user, pass: smtp.password },
-  });
-
+  const transporter = await createTransporter(smtp);
   await transporter.sendMail({ from: smtp.from || smtp.user, to, subject, text });
   return { sent: true as const };
+}
+
+/**
+ * Invio email HTML a piu' destinatari, uno alla volta (niente cc/bcc: ogni
+ * cliente riceve la propria copia senza vedere gli indirizzi degli altri).
+ * Usato dalla bacheca Comunicazioni. Se l'SMTP non e' configurato non tenta
+ * nulla e segnala il motivo al chiamante.
+ */
+export async function sendHtmlBroadcast(recipients: string[], subject: string, html: string) {
+  const smtp = await getSmtpConfig();
+  if (!smtp) {
+    console.warn("[mailer] Nessuna integrazione SMTP attiva: broadcast non inviato.", { subject });
+    return { sent: 0, failed: recipients.length, reason: "smtp_not_configured" as const };
+  }
+
+  const transporter = await createTransporter(smtp);
+  let sent = 0;
+  let failed = 0;
+  for (const to of recipients) {
+    try {
+      await transporter.sendMail({ from: smtp.from || smtp.user, to, subject, html });
+      sent++;
+    } catch (err) {
+      console.error("[mailer] Invio fallito", { to, err });
+      failed++;
+    }
+  }
+  return { sent, failed };
 }
 
 interface BookingForEmail {

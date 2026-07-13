@@ -71,9 +71,11 @@ export default function MobileNavSheet({
     return () => window.removeEventListener("resize", measure);
   }, [state]);
 
-  // 9 voci su 3 colonne = 3 righe di uguale altezza (celle aspect-square):
-  // "ridotto" mostra esattamente la maniglia + la prima riga.
-  const smallVisibleHeight = BAR_HEIGHT + fullGridHeight / 3;
+  // Le voci (tranne l'ultimo gruppo, vedi gridItems) stanno su 3 colonne in
+  // righe di uguale altezza (celle aspect-square): "ridotto" mostra
+  // esattamente la maniglia + la prima riga, qualunque sia il numero di righe.
+  const gridRows = Math.max(1, Math.ceil(NAV_GROUPS.slice(0, -1).flatMap((g) => g.items).length / 3));
+  const smallVisibleHeight = BAR_HEIGHT + fullGridHeight / gridRows;
 
   function onPointerDown(e: React.PointerEvent) {
     dragState.current = { startY: e.clientY };

@@ -57,6 +57,7 @@ model Client {
   billingProfile  BillingProfile?
   invoices        Invoice[]
   reminders       Reminder[]
+  subscriptions   Subscription[]
 }
 
 // Scadenza libera definita dall'admin per un cliente (es. fine abbonamento,
@@ -322,4 +323,75 @@ model PushSubscription {
   p256dh    String
   auth      String
   createdAt DateTime @default(now())
+}
+
+// Annuncio in bacheca: testo in evidenza mostrato come alert sulla pagina
+// pubblica di prenotazione. L'admin puo' averne in archivio quanti vuole ma
+// al massimo UNO e' attivo alla volta (l'API di attivazione disattiva gli
+// altri): il pubblico vede solo quello attivo.
+model Announcement {
+  id        String   @id @default(cuid())
+  title     String?
+  body      String
+  active    Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Storico delle email di massa inviate dalla sezione Comunicazioni: chi
+// (audience risolta al momento dell'invio), cosa (oggetto + corpo HTML
+// dell'editor rich text) e con che esito. Solo log, non ritentabile.
+model EmailBroadcast {
+  id          String   @id @default(cuid())
+  subject     String
+  bodyHtml    String
+  audience    String // "ALL" | "ACTIVE" | "SELECTED"
+  recipients  String // JSON: array di email risolte al momento dell'invio
+  sentCount   Int      @default(0)
+  failedCount Int      @default(0)
+  createdAt   DateTime @default(now())
+}
+
+// Voce del tariffario pubblico ("Guarda le tariffe" sul sito di
+// prenotazione): vetrina prezzi, separata dal Listino (PriceListItem) che
+// invece e' il layer di fatturazione con IVA. quantity e' testo libero
+// (es. "10 ingressi", "3 mesi") e puo' restare vuoto.
+model Tariff {
+  id        String   @id @default(cuid())
+  title     String
+  subtitle  String?
+  quantity  String?
+  price     Float
+  active    Boolean  @default(true)
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  subscriptions Subscription[]
+}
+
+// Abbonamento sottoscritto da un cliente per una voce del tariffario:
+// l'admin imposta inizio/scadenza e se si rinnova in automatico. Il cron
+// giornaliero manda il promemoria a notifyDaysBefore giorni dalla scadenza
+// (email admin + cliente, push admin) e, se autoRenew, alla scadenza sposta
+// endDate avanti di renewMonths mesi. notifiedForEnd memorizza per quale
+// scadenza il promemoria e' gia' partito: dopo un rinnovo endDate cambia e
+// il ciclo successivo riparte da solo.
+model Subscription {
+  id               String    @id @default(cuid())
+  clientId         String
+  client           Client    @relation(fields: [clientId], references: [id])
+  tariffId         String
+  tariff           Tariff    @relation(fields: [tariffId], references: [id])
+  startDate        DateTime
+  endDate          DateTime
+  autoRenew        Boolean   @default(false)
+  renewMonths      Int       @default(1) // durata del rinnovo automatico, in mesi
+  notifyDaysBefore Int       @default(7)
+  notifiedForEnd   DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  @@index([clientId])
+  @@index([endDate])
 }

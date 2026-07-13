@@ -3,6 +3,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { AnnouncementBanner } from "@/components/AnnouncementBanner";
+import { TariffsSheet } from "@/components/TariffsSheet";
 import { formatTime } from "@/lib/format";
 import { toggleActive } from "@/lib/ui";
 import {
@@ -395,6 +397,8 @@ export default function HomePage() {
 
         <div className="flex flex-1 flex-col overflow-y-auto px-4 pb-6 pt-5 sm:px-5">
           <div className="mx-auto w-full max-w-2xl">
+            <AnnouncementBanner />
+
             <h1 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white sm:text-2xl">
               Prenota un Servizio
             </h1>
@@ -430,6 +434,8 @@ export default function HomePage() {
                   Nessun servizio disponibile al momento.
                 </p>
               )}
+
+              <TariffsSheet />
             </div>
           </div>
         </div>

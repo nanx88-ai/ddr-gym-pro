@@ -8,6 +8,9 @@ export type IconKey =
   | "new"
   | "clients"
   | "priceList"
+  | "tariffs"
+  | "subscriptions"
+  | "communications"
   | "invoices"
   | "stats"
   | "settings"
@@ -35,14 +38,17 @@ export const NAV_GROUPS: NavGroup[] = [
     items: [
       { href: "/admin/appointment-types", label: "Servizi", icon: "types" },
       { href: "/admin/schedule", label: "Planning", icon: "schedule" },
+      { href: "/admin/tariffs", label: "Tariffe", icon: "tariffs" },
     ],
   },
   {
     items: [
-      { href: "/admin/price-list", label: "Listino", icon: "priceList" },
       { href: "/admin/clients", label: "Clienti", icon: "clients" },
+      { href: "/admin/subscriptions", label: "Abbonamenti", icon: "subscriptions" },
+      { href: "/admin/price-list", label: "Listino", icon: "priceList" },
       { href: "/admin/invoices", label: "Fatture", icon: "invoices" },
       { href: "/admin/stats", label: "Statistiche", icon: "stats" },
+      { href: "/admin/communications", label: "Comunicazioni", icon: "communications" },
     ],
   },
   {
@@ -103,6 +109,28 @@ export const ICON_PATHS: Record<IconKey, React.ReactNode> = {
   ),
   priceList: (
     <path strokeLinecap="round" strokeLinejoin="round" d="M12 3.5 20.5 12 12 20.5 3.5 12 12 3.5Z M9 9h.01" />
+  ),
+  tariffs: (
+    // Cartellino prezzo
+    <>
+      <path strokeLinecap="round" strokeLinejoin="round" d="M3.5 12.5v-8a1 1 0 0 1 1-1h8L20.5 11a1 1 0 0 1 0 1.4l-7.6 7.6a1 1 0 0 1-1.4 0l-8-7.5Z" />
+      <path strokeLinecap="round" d="M8 8h.01" />
+    </>
+  ),
+  subscriptions: (
+    // Tessera con frecce di rinnovo
+    <>
+      <rect x="3" y="6" width="18" height="13" rx="1.5" />
+      <path strokeLinecap="round" strokeLinejoin="round" d="M9.5 12.5a2.8 2.8 0 0 1 5.3-1.1M15 9.5v2h-2M14.5 13a2.8 2.8 0 0 1-5.3 1.1M9 16v-2h2" />
+    </>
+  ),
+  communications: (
+    // Megafono
+    <path
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      d="M19 4.5v13l-7-3.5H6a2 2 0 0 1-2-2V10a2 2 0 0 1 2-2h6l7-3.5ZM19 8.5a3.5 3.5 0 0 1 0 5M8.5 14v4.5a1.5 1.5 0 0 0 3 0V14"
+    />
   ),
   invoices: (
     <>
