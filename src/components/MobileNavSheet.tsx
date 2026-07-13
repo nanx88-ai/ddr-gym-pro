@@ -191,7 +191,7 @@ export default function MobileNavSheet({
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-neutral-600 dark:text-neutral-400">
               <path strokeLinecap="round" d="M6 15l6-6 6 6" />
             </svg>
-            <img src="/logo-ddr-white.png" alt="DDR" className="h-6 w-auto" loading="lazy" />
+            <img src="/logo-ddr.png" alt="DDR" className="h-6 w-auto" loading="lazy" />
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-neutral-600 dark:text-neutral-400">
               <path strokeLinecap="round" d="M6 15l6-6 6 6" />
             </svg>
@@ -238,7 +238,7 @@ export default function MobileNavSheet({
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="h-4 w-4 text-neutral-600 dark:text-neutral-400">
               <path strokeLinecap="round" d={state === "full" ? "M6 9l6 6 6-6" : "M6 15l6-6 6 6"} />
             </svg>
-            <img src="/logo-ddr-white.png" alt="DDR" className="h-6 w-auto" loading="lazy" />
+            <img src="/logo-ddr.png" alt="DDR" className="h-6 w-auto" loading="lazy" />
             <svg
               viewBox="0 0 24 24"
               fill="none"
