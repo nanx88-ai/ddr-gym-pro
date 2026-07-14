@@ -40,7 +40,7 @@ interface Booking {
   status: string;
   attended: boolean | null;
   appointmentTypeId: string;
-  client: { firstName: string; lastName: string; email: string };
+  client: { id: string; firstName: string; lastName: string; email: string };
   appointmentType: { name: string };
 }
 
@@ -470,7 +470,12 @@ function DayList({
               <div>
                 <div className="flex items-center gap-1.5 text-sm font-medium text-neutral-900 dark:text-white">
                   <StatusDot status={b.status} />
-                  {b.client.firstName} {b.client.lastName}
+                  <Link
+                    href={`/admin/clients/${b.client.id}`}
+                    className="hover:text-yellow-600 dark:hover:text-yellow-400"
+                  >
+                    {b.client.firstName} {b.client.lastName}
+                  </Link>
                 </div>
                 <div className="text-xs text-neutral-500 dark:text-neutral-400">
                   {b.appointmentType.name} · {b.client.email}
@@ -574,9 +579,12 @@ function WeekGrid({
                     </span>
                     <StatusDot status={b.status} />
                   </div>
-                  <div className="truncate text-neutral-600 dark:text-neutral-300">
+                  <Link
+                    href={`/admin/clients/${b.client.id}`}
+                    className="block truncate text-neutral-600 hover:text-yellow-600 dark:text-neutral-300 dark:hover:text-yellow-400"
+                  >
                     {b.client.firstName} {b.client.lastName}
-                  </div>
+                  </Link>
                 </div>
               ))}
               {items.length === 0 && (

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { formatDateTime } from "@/lib/format";
 import {
   btnDanger,
@@ -497,9 +498,13 @@ export default function AdminBookingsPage() {
             <div key={b.id} className={`${card} space-y-1 px-4 py-3.5`}>
               <div className="flex items-center gap-2">
                 <StatusDot status={b.status} />
-                <span className="flex-1 truncate text-[15px] font-bold text-neutral-900 dark:text-white">
+                <Link
+                  href={`/admin/clients/${b.client.id}`}
+                  onClick={(e) => e.stopPropagation()}
+                  className="flex-1 truncate text-[15px] font-bold text-neutral-900 hover:text-yellow-600 dark:text-white dark:hover:text-yellow-400"
+                >
                   {b.client.firstName} {b.client.lastName}
-                </span>
+                </Link>
                 {b.client.status === "PAUSED" && (
                   <span className="shrink-0 text-xs font-medium text-yellow-600 dark:text-yellow-400">In pausa</span>
                 )}
@@ -539,9 +544,12 @@ export default function AdminBookingsPage() {
                     <div className="flex items-start gap-2">
                       <StatusDot status={b.status} className="mt-1.5" />
                       <div>
-                        <div className="font-medium text-neutral-900 dark:text-white">
+                        <Link
+                          href={`/admin/clients/${b.client.id}`}
+                          className="font-medium text-neutral-900 hover:text-yellow-600 dark:text-white dark:hover:text-yellow-400"
+                        >
                           {b.client.firstName} {b.client.lastName}
-                        </div>
+                        </Link>
                         <div className="text-xs text-neutral-500 dark:text-neutral-400">
                           {b.client.email}
                         </div>

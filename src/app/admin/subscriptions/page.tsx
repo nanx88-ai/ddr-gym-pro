@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Link from "next/link";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
   btnPositive,
@@ -327,9 +328,12 @@ export default function AdminSubscriptionsPage() {
               <div key={sub.id} className={`${card} p-4`}>
                 <div className="flex items-center gap-2">
                   <StatusDot status={STATUS_DOT[st.key]} label={st.label} />
-                  <span className="flex-1 truncate font-medium text-neutral-900 dark:text-white">
+                  <Link
+                    href={`/admin/clients/${sub.client.id}`}
+                    className="flex-1 truncate font-medium text-neutral-900 hover:text-yellow-600 dark:text-white dark:hover:text-yellow-400"
+                  >
                     {sub.client.firstName} {sub.client.lastName}
-                  </span>
+                  </Link>
                 </div>
                 <p className="mt-0.5 text-sm text-neutral-500 dark:text-neutral-400">
                   {sub.tariff.title} &middot; {formatCurrency(sub.tariff.price)} &middot; dal {formatDate(sub.startDate)}
@@ -366,9 +370,12 @@ export default function AdminSubscriptionsPage() {
                     <td className={td}>
                       <div className="flex items-center gap-2 whitespace-nowrap">
                         <StatusDot status={STATUS_DOT[st.key]} label={st.label} />
-                        <span className="font-medium">
+                        <Link
+                          href={`/admin/clients/${sub.client.id}`}
+                          className="font-medium hover:text-yellow-600 dark:hover:text-yellow-400"
+                        >
                           {sub.client.lastName} {sub.client.firstName}
-                        </span>
+                        </Link>
                       </div>
                     </td>
                     <td className={td}>

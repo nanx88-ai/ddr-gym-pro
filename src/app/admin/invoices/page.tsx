@@ -22,7 +22,7 @@ interface Invoice {
   issueDate: string;
   status: string;
   total: number;
-  client: { firstName: string; lastName: string; email: string };
+  client: { id: string; firstName: string; lastName: string; email: string };
 }
 
 export default function AdminInvoicesPage() {
@@ -136,7 +136,12 @@ export default function AdminInvoicesPage() {
                     </div>
                   </td>
                   <td className={td}>
-                    {inv.client.firstName} {inv.client.lastName}
+                    <Link
+                      href={`/admin/clients/${inv.client.id}`}
+                      className="hover:text-yellow-600 hover:underline dark:hover:text-yellow-400"
+                    >
+                      {inv.client.firstName} {inv.client.lastName}
+                    </Link>
                   </td>
                   <td className={td}>
                     {new Date(inv.periodStart).toLocaleDateString("it-IT")}{" "}
