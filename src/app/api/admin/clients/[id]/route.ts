@@ -32,6 +32,9 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
 }
 
 const bodySchema = z.object({
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
+  email: z.string().email().optional(),
   status: z.enum([CLIENT_STATUS.ACTIVE, CLIENT_STATUS.PAUSED, CLIENT_STATUS.ARCHIVED]).optional(),
   notes: z.string().nullable().optional(),
   phone: z.string().nullable().optional(),
@@ -58,12 +61,18 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     return NextResponse.json({ error: "Dati non validi", details: parsed.error.flatten() }, { status: 400 });
   }
 
-  const client = await prisma.client.update({
-    where: { id },
-    data: parsed.data,
-  });
-
-  return NextResponse.json({ client });
+  try {
+    const client = await prisma.client.update({
+      where: { id },
+      data: parsed.data,
+    });
+    return NextResponse.json({ client });
+  } catch (err: unknown) {
+    if (err && typeof err === "object" && "code" in err && err.code === "P2002") {
+      return NextResponse.json({ error: "Email già in uso da un altro cliente" }, { status: 409 });
+    }
+    throw err;
+  }
 }
 
 /**

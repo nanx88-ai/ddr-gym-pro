@@ -167,14 +167,18 @@ export default function MobileNavSheet({
           impostazioni/esci): mai smontata/rimontata al cambio di livello,
           solo translateY - cosi' un trascinamento che parte da chiuso muove
           da subito tutto il blocco insieme al dito, esattamente come il
-          passaggio ridotto<->esteso, mai un contenuto diverso a scatto. Il
-          bottom e' scostato del safe-area inset cosi' la maniglia, quando
-          chiusa, non tocca il bordo estremo dello schermo (zona gesture iOS). */}
+          passaggio ridotto<->esteso, mai un contenuto diverso a scatto.
+          bottom:0 (flush al vero bordo schermo): usare un offset (es.
+          env(safe-area-inset-bottom)) qui creava un "buco" tra il bordo
+          della card e il vero bordo schermo in cui la prima riga della
+          griglia sbucava visibilmente da chiuso (il contenuto oltre la
+          fetta visibile finisce nel gap invece che fuori viewport). Il
+          safe-area va quindi come padding INTERNO in fondo alla card
+          (dopo la bottom bar), non come offset esterno. */}
       <div
         ref={contentRef}
-        className={`fixed inset-x-0 z-50 flex flex-col border-t ${SURFACE} ${LINE}`}
+        className={`fixed inset-x-0 bottom-0 z-50 flex flex-col border-t ${SURFACE} ${LINE}`}
         style={{
-          bottom: "env(safe-area-inset-bottom)",
           transform: `translateY(${sheetTranslateY}px)`,
           transition: dragging ? "none" : "transform 0.22s ease-out",
         }}
@@ -228,6 +232,11 @@ export default function MobileNavSheet({
             Esci
           </button>
         </div>
+
+        {/* Safe-area come contenuto reale della card (non offset esterno):
+            solo qui, alla fine, cosi' il calcolo chiuso/ridotto/esteso
+            resta sempre "fetta dall'alto = fetta visibile", senza gap. */}
+        <div className={SURFACE} style={{ height: "env(safe-area-inset-bottom)" }} />
       </div>
     </div>
   );

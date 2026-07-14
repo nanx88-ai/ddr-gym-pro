@@ -4,7 +4,8 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { formatCurrency, formatDate, formatTime } from "@/lib/format";
-import { btnPrimary, card, td, th } from "@/lib/ui";
+import { btnPrimary, td, th } from "@/lib/ui";
+import { useToast } from "@/components/Toast";
 
 type Tab = "anagrafica" | "abbonamenti" | "prenotazioni" | "fatture" | "scadenze" | "residenza";
 
@@ -60,13 +61,21 @@ interface ClientDetail {
   }>;
 }
 
+const sectionCard =
+  "border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900";
+const fieldInput =
+  "w-full min-h-11 border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:border-yellow-400 dark:focus:ring-yellow-400";
+const fieldLabel = "mb-1 block text-xs font-semibold uppercase text-neutral-500";
+
 export default function ClientDetailPage() {
   const params = useParams();
   const id = params.id as string;
+  const toast = useToast();
 
   const [client, setClient] = useState<ClientDetail | null>(null);
   const [tab, setTab] = useState<Tab>("anagrafica");
   const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState<string | null>(null);
 
   useEffect(() => {
     fetch(`/api/admin/clients/${id}`)
@@ -77,6 +86,31 @@ export default function ClientDetailPage() {
       .catch(() => console.error("Errore caricamento cliente"))
       .finally(() => setLoading(false));
   }, [id]);
+
+  async function saveField(field: string, value: string | null) {
+    if (!client) return;
+    setSaving(field);
+    try {
+      const res = await fetch(`/api/admin/clients/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ [field]: value }),
+      });
+      const json = await res.json();
+      if (!res.ok) {
+        toast.error(json.error ?? "Errore salvataggio");
+        return;
+      }
+      // La PATCH ritorna solo i campi scalari (Prisma update() non include
+      // le relazioni): fondo nello stato esistente per non perdere
+      // abbonamenti/prenotazioni/fatture/scadenze gia' caricate.
+      setClient((prev) => (prev ? { ...prev, ...json.client } : json.client));
+    } catch {
+      toast.error("Errore di rete durante il salvataggio");
+    } finally {
+      setSaving(null);
+    }
+  }
 
   if (loading) {
     return (
@@ -90,7 +124,7 @@ export default function ClientDetailPage() {
     return (
       <div className="space-y-4 p-4 sm:p-6">
         <Link href="/admin/clients" className={btnPrimary}>
-          ← Torna ai clienti
+          ← Indietro
         </Link>
         <p className="text-neutral-500">Cliente non trovato</p>
       </div>
@@ -126,6 +160,37 @@ export default function ClientDetailPage() {
     };
     return colors[status] || "text-neutral-500";
   };
+
+  /** Campo di testo editabile inline: mostra un <input>, salva al blur solo se il valore e' cambiato. */
+  function TextField({
+    field,
+    label,
+    value,
+    type = "text",
+    colSpan,
+  }: {
+    field: string;
+    label: string;
+    value: string | null;
+    type?: string;
+    colSpan?: boolean;
+  }) {
+    return (
+      <div className={colSpan ? "sm:col-span-2" : undefined}>
+        <label className={fieldLabel}>{label}</label>
+        <input
+          type={type}
+          defaultValue={value ?? ""}
+          disabled={saving === field}
+          onBlur={(e) => {
+            const v = e.target.value.trim() || null;
+            if (v !== value) saveField(field, v);
+          }}
+          className={fieldInput}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 p-4 sm:p-6">
@@ -164,46 +229,60 @@ export default function ClientDetailPage() {
         </div>
       </div>
 
-      <div className={card}>
+      <div className={`${sectionCard} p-4 sm:p-5`}>
         {tab === "anagrafica" && (
           <div className="grid gap-4 sm:grid-cols-2">
+            <TextField field="firstName" label="Nome" value={client.firstName} />
+            <TextField field="lastName" label="Cognome" value={client.lastName} />
+            <TextField field="email" label="Email" value={client.email} type="email" />
+            <TextField field="phone" label="Telefono" value={client.phone} type="tel" />
             <div>
-              <label className="text-xs font-semibold uppercase text-neutral-500">Nome</label>
-              <p className="mt-1 text-neutral-900 dark:text-white">{client.firstName}</p>
+              <label className={fieldLabel}>Sesso</label>
+              <select
+                defaultValue={client.sex ?? ""}
+                onChange={(e) => saveField("sex", e.target.value || null)}
+                className={fieldInput}
+              >
+                <option value="">—</option>
+                <option value="M">Maschio</option>
+                <option value="F">Femmina</option>
+                <option value="OTHER">Altro</option>
+              </select>
             </div>
             <div>
-              <label className="text-xs font-semibold uppercase text-neutral-500">Cognome</label>
-              <p className="mt-1 text-neutral-900 dark:text-white">{client.lastName}</p>
+              <label className={fieldLabel}>Data di nascita</label>
+              <input
+                type="date"
+                defaultValue={client.dateOfBirth ? client.dateOfBirth.slice(0, 10) : ""}
+                onBlur={(e) => {
+                  const v = e.target.value ? `${e.target.value}T00:00:00.000Z` : null;
+                  saveField("dateOfBirth", v);
+                }}
+                className={fieldInput}
+              />
             </div>
             <div>
-              <label className="text-xs font-semibold uppercase text-neutral-500">Email</label>
-              <p className="mt-1 text-neutral-900 dark:text-white">{client.email}</p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase text-neutral-500">Telefono</label>
-              <p className="mt-1 text-neutral-900 dark:text-white">{client.phone || "—"}</p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase text-neutral-500">Sesso</label>
-              <p className="mt-1 text-neutral-900 dark:text-white">
-                {client.sex === "M" ? "Maschio" : client.sex === "F" ? "Femmina" : client.sex || "—"}
-              </p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase text-neutral-500">Data di nascita</label>
-              <p className="mt-1 text-neutral-900 dark:text-white">
-                {client.dateOfBirth ? formatDate(client.dateOfBirth) : "—"}
-              </p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase text-neutral-500">Status</label>
-              <p className="mt-1 text-neutral-900 dark:text-white">
-                {client.status === "ACTIVE" ? "Attivo" : "Sospeso"}
-              </p>
+              <label className={fieldLabel}>Status</label>
+              <select
+                defaultValue={client.status}
+                onChange={(e) => saveField("status", e.target.value)}
+                className={fieldInput}
+              >
+                <option value="ACTIVE">Attivo</option>
+                <option value="PAUSED">Sospeso</option>
+              </select>
             </div>
             <div className="sm:col-span-2">
-              <label className="text-xs font-semibold uppercase text-neutral-500">Note</label>
-              <p className="mt-1 whitespace-pre-line text-neutral-900 dark:text-white">{client.notes || "—"}</p>
+              <label className={fieldLabel}>Note</label>
+              <textarea
+                defaultValue={client.notes ?? ""}
+                rows={3}
+                onBlur={(e) => {
+                  const v = e.target.value.trim() || null;
+                  if (v !== client.notes) saveField("notes", v);
+                }}
+                className={fieldInput}
+              />
             </div>
           </div>
         )}
@@ -242,32 +321,54 @@ export default function ClientDetailPage() {
             {client.bookings.length === 0 ? (
               <p className="text-sm text-neutral-500">Nessuna prenotazione</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-neutral-200 dark:border-neutral-800">
-                      <th className={th}>Servizio</th>
-                      <th className={th}>Data/Ora</th>
-                      <th className={th}>Status</th>
-                      <th className={th}>Presenza</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {client.bookings.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime()).map((booking) => (
-                      <tr key={booking.id} className="border-b border-neutral-100 dark:border-neutral-800">
-                        <td className={td}>{booking.appointmentType.name}</td>
-                        <td className={td}>
-                          <div className="whitespace-nowrap">
-                            {formatDate(booking.startTime)} {formatTime(booking.startTime)}
-                          </div>
-                        </td>
-                        <td className={`${td} ${getBookingStatusColor(booking.status)}`}>{booking.status}</td>
-                        <td className={td}>{booking.attended === true ? "✓" : booking.attended === false ? "✗" : "—"}</td>
-                      </tr>
+              <>
+                {/* Mobile: schede */}
+                <div className="space-y-2 sm:hidden">
+                  {client.bookings
+                    .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+                    .map((booking) => (
+                      <div key={booking.id} className={`${sectionCard} space-y-1 px-4 py-3`}>
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-neutral-900 dark:text-white">{booking.appointmentType.name}</span>
+                          <span className={`text-xs font-medium ${getBookingStatusColor(booking.status)}`}>{booking.status}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm text-neutral-500 dark:text-neutral-400">
+                          <span>{formatDate(booking.startTime)} {formatTime(booking.startTime)}</span>
+                          <span>{booking.attended === true ? "✓ Presente" : booking.attended === false ? "✗ Assente" : "—"}</span>
+                        </div>
+                      </div>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                </div>
+                {/* Desktop: tabella */}
+                <div className="hidden overflow-x-auto sm:block">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-neutral-200 dark:border-neutral-800">
+                        <th className={th}>Servizio</th>
+                        <th className={th}>Data/Ora</th>
+                        <th className={th}>Status</th>
+                        <th className={th}>Presenza</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {client.bookings
+                        .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
+                        .map((booking) => (
+                          <tr key={booking.id} className="border-b border-neutral-100 dark:border-neutral-800">
+                            <td className={td}>{booking.appointmentType.name}</td>
+                            <td className={td}>
+                              <div className="whitespace-nowrap">
+                                {formatDate(booking.startTime)} {formatTime(booking.startTime)}
+                              </div>
+                            </td>
+                            <td className={`${td} ${getBookingStatusColor(booking.status)}`}>{booking.status}</td>
+                            <td className={td}>{booking.attended === true ? "✓" : booking.attended === false ? "✗" : "—"}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         )}
@@ -277,28 +378,58 @@ export default function ClientDetailPage() {
             {client.invoices.length === 0 ? (
               <p className="text-sm text-neutral-500">Nessuna fattura</p>
             ) : (
-              <div className="overflow-x-auto">
-                <table className="w-full text-sm">
-                  <thead>
-                    <tr className="border-b border-neutral-200 dark:border-neutral-800">
-                      <th className={th}>Numero</th>
-                      <th className={th}>Data</th>
-                      <th className={th}>Importo</th>
-                      <th className={th}>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {client.invoices.sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime()).map((invoice) => (
-                      <tr key={invoice.id} className="border-b border-neutral-100 dark:border-neutral-800">
-                        <td className={td}>{invoice.number}</td>
-                        <td className={td}>{formatDate(invoice.issueDate)}</td>
-                        <td className={td}>{formatCurrency(invoice.total)}</td>
-                        <td className={td}>{invoice.status}</td>
-                      </tr>
+              <>
+                {/* Mobile: schede */}
+                <div className="space-y-2 sm:hidden">
+                  {client.invoices
+                    .sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime())
+                    .map((invoice) => (
+                      <Link
+                        key={invoice.id}
+                        href={`/admin/invoices/${invoice.id}`}
+                        className={`${sectionCard} block space-y-1 px-4 py-3`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span className="font-semibold text-neutral-900 dark:text-white">{invoice.number}</span>
+                          <span className="text-sm font-semibold text-neutral-900 dark:text-white">{formatCurrency(invoice.total)}</span>
+                        </div>
+                        <div className="flex items-center justify-between text-sm text-neutral-500 dark:text-neutral-400">
+                          <span>{formatDate(invoice.issueDate)}</span>
+                          <span>{invoice.status}</span>
+                        </div>
+                      </Link>
                     ))}
-                  </tbody>
-                </table>
-              </div>
+                </div>
+                {/* Desktop: tabella */}
+                <div className="hidden overflow-x-auto sm:block">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="border-b border-neutral-200 dark:border-neutral-800">
+                        <th className={th}>Numero</th>
+                        <th className={th}>Data</th>
+                        <th className={th}>Importo</th>
+                        <th className={th}>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {client.invoices
+                        .sort((a, b) => new Date(b.issueDate).getTime() - new Date(a.issueDate).getTime())
+                        .map((invoice) => (
+                          <tr key={invoice.id} className="border-b border-neutral-100 dark:border-neutral-800">
+                            <td className={td}>
+                              <Link href={`/admin/invoices/${invoice.id}`} className="hover:text-yellow-600 hover:underline dark:hover:text-yellow-400">
+                                {invoice.number}
+                              </Link>
+                            </td>
+                            <td className={td}>{formatDate(invoice.issueDate)}</td>
+                            <td className={td}>{formatCurrency(invoice.total)}</td>
+                            <td className={td}>{invoice.status}</td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
             )}
           </div>
         )}
@@ -328,53 +459,30 @@ export default function ClientDetailPage() {
         {tab === "residenza" && (
           <div className="grid gap-4 sm:grid-cols-2">
             <div>
-              <label className="text-xs font-semibold uppercase text-neutral-500">Tipo cliente</label>
-              <p className="mt-1 text-neutral-900 dark:text-white">{client.clientKind === "AZIENDA" ? "Azienda" : "Privato"}</p>
+              <label className={fieldLabel}>Tipo cliente</label>
+              <select
+                defaultValue={client.clientKind ?? "PRIVATO"}
+                onChange={(e) => saveField("clientKind", e.target.value)}
+                className={fieldInput}
+              >
+                <option value="PRIVATO">Privato</option>
+                <option value="AZIENDA">Azienda</option>
+              </select>
             </div>
             {client.clientKind === "AZIENDA" && (
-              <div>
-                <label className="text-xs font-semibold uppercase text-neutral-500">Ragione sociale</label>
-                <p className="mt-1 text-neutral-900 dark:text-white">{client.businessName || "—"}</p>
-              </div>
+              <TextField field="businessName" label="Ragione sociale" value={client.businessName} />
             )}
-            <div>
-              <label className="text-xs font-semibold uppercase text-neutral-500">Codice fiscale</label>
-              <p className="mt-1 text-neutral-900 dark:text-white">{client.fiscalCode || "—"}</p>
-            </div>
+            <TextField field="fiscalCode" label="Codice fiscale" value={client.fiscalCode} />
             {client.clientKind === "AZIENDA" && (
-              <div>
-                <label className="text-xs font-semibold uppercase text-neutral-500">Partita IVA</label>
-                <p className="mt-1 text-neutral-900 dark:text-white">{client.vatNumber || "—"}</p>
-              </div>
+              <TextField field="vatNumber" label="Partita IVA" value={client.vatNumber} />
             )}
-            <div>
-              <label className="text-xs font-semibold uppercase text-neutral-500">Indirizzo</label>
-              <p className="mt-1 text-neutral-900 dark:text-white">{client.address || "—"}</p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase text-neutral-500">CAP</label>
-              <p className="mt-1 text-neutral-900 dark:text-white">{client.zipCode || "—"}</p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase text-neutral-500">Città</label>
-              <p className="mt-1 text-neutral-900 dark:text-white">{client.city || "—"}</p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase text-neutral-500">Provincia</label>
-              <p className="mt-1 text-neutral-900 dark:text-white">{client.province || "—"}</p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase text-neutral-500">Paese</label>
-              <p className="mt-1 text-neutral-900 dark:text-white">{client.country}</p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase text-neutral-500">PEC</label>
-              <p className="mt-1 text-neutral-900 dark:text-white">{client.pec || "—"}</p>
-            </div>
-            <div>
-              <label className="text-xs font-semibold uppercase text-neutral-500">Codice SDI</label>
-              <p className="mt-1 text-neutral-900 dark:text-white">{client.sdiCode || "—"}</p>
-            </div>
+            <TextField field="address" label="Indirizzo" value={client.address} />
+            <TextField field="zipCode" label="CAP" value={client.zipCode} />
+            <TextField field="city" label="Città" value={client.city} />
+            <TextField field="province" label="Provincia" value={client.province} />
+            <TextField field="country" label="Paese" value={client.country} />
+            <TextField field="pec" label="PEC" value={client.pec} type="email" />
+            <TextField field="sdiCode" label="Codice SDI" value={client.sdiCode} />
           </div>
         )}
       </div>
