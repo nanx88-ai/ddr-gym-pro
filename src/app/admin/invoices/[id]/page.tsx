@@ -124,11 +124,8 @@ export default function AdminInvoiceDetailPage({
 
   return (
     <div className="max-w-3xl">
-      <Link
-        href="/admin/invoices"
-        className="mb-3 inline-block text-sm text-neutral-500 dark:text-neutral-400 hover:underline print:hidden"
-      >
-        &larr; Torna alle fatture
+      <Link href="/admin/invoices" className={`${btnPrimary} mb-3 inline-block print:hidden`}>
+        ← Indietro
       </Link>
 
       <div className="mb-4 flex items-center justify-between print:hidden">

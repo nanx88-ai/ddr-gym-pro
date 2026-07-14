@@ -890,7 +890,7 @@ export default function HomePage() {
                 onClick={() => setStep((s) => s - 1)}
                 className={publicBtnSecondary}
               >
-                Indietro
+                ← Indietro
               </button>
             )}
             {step === 3 && (

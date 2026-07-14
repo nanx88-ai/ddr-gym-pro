@@ -41,7 +41,7 @@ function LoginForm() {
         onClick={() => router.push("/")}
         className="mb-4 text-sm text-neutral-500 hover:underline dark:text-neutral-400"
       >
-        &larr; Torna alla prenotazione
+        ← Indietro
       </button>
       <h1 className="mb-6 text-xl font-bold text-neutral-900 dark:text-white">
         Accesso staff <span className="text-yellow-400">.</span>
