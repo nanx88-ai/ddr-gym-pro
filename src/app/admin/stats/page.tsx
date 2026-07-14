@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { card, input, pageSubtitle, pageTitle, toggleActive, toggleInactive } from "@/lib/ui";
 
 interface ActiveDay {
@@ -10,6 +11,7 @@ interface ActiveDay {
 }
 
 interface TopClient {
+  id: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -247,9 +249,12 @@ export default function AdminStatsPage() {
               <div key={c.email} className="flex items-center gap-3">
                 <span className="w-5 shrink-0 text-xs text-neutral-400 dark:text-neutral-500">{i + 1}</span>
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm text-neutral-800 dark:text-neutral-200">
+                  <Link
+                    href={`/admin/clients/${c.id}`}
+                    className="block truncate text-sm text-neutral-800 hover:text-yellow-600 dark:text-neutral-200 dark:hover:text-yellow-400"
+                  >
                     {c.firstName} {c.lastName}
-                  </div>
+                  </Link>
                   <div className="h-1.5 bg-neutral-100 dark:bg-neutral-800">
                     <div className="h-1.5 bg-yellow-400" style={{ width: `${(c.count / maxClientCount) * 100}%` }} />
                   </div>

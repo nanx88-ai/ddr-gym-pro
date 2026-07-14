@@ -79,11 +79,11 @@ export async function GET(request: NextRequest) {
     .sort((a, b) => b.count - a.count);
 
   // --- Clienti con piu' prenotazioni (gia' esistente) ---
-  const byClient = new Map<string, { firstName: string; lastName: string; email: string; count: number }>();
+  const byClient = new Map<string, { id: string; firstName: string; lastName: string; email: string; count: number }>();
   for (const b of activeBookings) {
     const existing = byClient.get(b.clientId);
     if (existing) existing.count++;
-    else byClient.set(b.clientId, { firstName: b.client.firstName, lastName: b.client.lastName, email: b.client.email, count: 1 });
+    else byClient.set(b.clientId, { id: b.clientId, firstName: b.client.firstName, lastName: b.client.lastName, email: b.client.email, count: 1 });
   }
   const topClients = [...byClient.values()].sort((a, b) => b.count - a.count).slice(0, 10);
 

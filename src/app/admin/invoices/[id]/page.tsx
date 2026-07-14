@@ -47,6 +47,7 @@ interface InvoiceDetail {
   lineItems: LineItem[];
   submissions: Submission[];
   client: {
+    id: string;
     firstName: string;
     lastName: string;
     email: string;
@@ -141,6 +142,12 @@ export default function AdminInvoiceDetailPage({
               {STATUS_LABELS[invoice.status] ?? invoice.status}
             </span>
           </p>
+          <Link
+            href={`/admin/clients/${client.id}`}
+            className="mt-1 inline-block text-sm text-yellow-600 hover:underline dark:text-yellow-400"
+          >
+            {clientDisplayName} →
+          </Link>
         </div>
         <button onClick={() => window.print()} className={btnNeutral}>
           Stampa / Salva PDF
