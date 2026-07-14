@@ -124,7 +124,7 @@ export default function AdminInvoicesPage() {
             <tbody>
               {sortedInvoices.map((inv) => (
                 <tr key={inv.id} className={trBorder}>
-                  <td className={td}>
+                  <td className={`${td} whitespace-nowrap`}>
                     <div className="flex items-center gap-2">
                       <StatusDot status={inv.status} />
                       <Link
@@ -143,12 +143,12 @@ export default function AdminInvoicesPage() {
                       {inv.client.firstName} {inv.client.lastName}
                     </Link>
                   </td>
-                  <td className={td}>
+                  <td className={`${td} whitespace-nowrap`}>
                     {new Date(inv.periodStart).toLocaleDateString("it-IT")}{" "}
                     &ndash;{""}
                     {new Date(inv.periodEnd).toLocaleDateString("it-IT")}
                   </td>
-                  <td className={td}>{formatCurrency(inv.total)}</td>
+                  <td className={`${td} whitespace-nowrap`}>{formatCurrency(inv.total)}</td>
                 </tr>
               ))}
             </tbody>

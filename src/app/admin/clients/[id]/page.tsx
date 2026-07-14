@@ -161,22 +161,24 @@ export default function ClientDetailPage() {
     return colors[status] || "text-neutral-500";
   };
 
-  /** Campo di testo editabile inline: mostra un <input>, salva al blur solo se il valore e' cambiato. */
+  /** Campo di testo editabile inline: mostra un <input>, salva al blur solo se il valore e' cambiato.
+   * span controlla quante colonne occupa nella griglia a 4 colonne (sm:grid-cols-4) - cosi' un
+   * campo corto come CAP o Provincia non si allarga quanto un indirizzo intero. */
   function TextField({
     field,
     label,
     value,
     type = "text",
-    colSpan,
+    span = 2,
   }: {
     field: string;
     label: string;
     value: string | null;
     type?: string;
-    colSpan?: boolean;
+    span?: 1 | 2 | 4;
   }) {
     return (
-      <div className={colSpan ? "sm:col-span-2" : undefined}>
+      <div className={span === 4 ? "sm:col-span-4" : span === 1 ? "sm:col-span-1" : "sm:col-span-2"}>
         <label className={fieldLabel}>{label}</label>
         <input
           type={type}
@@ -220,7 +222,7 @@ export default function ClientDetailPage() {
             >
               {t.label}
               {t.count !== undefined && (
-                <span className="ml-2 inline-block rounded-full bg-neutral-200 px-2 py-0.5 text-xs dark:bg-neutral-800">
+                <span className="ml-2 inline-block bg-neutral-200 px-2 py-0.5 text-xs dark:bg-neutral-800">
                   {t.count}
                 </span>
               )}
@@ -231,12 +233,12 @@ export default function ClientDetailPage() {
 
       <div className={`${sectionCard} p-4 sm:p-5`}>
         {tab === "anagrafica" && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <TextField field="firstName" label="Nome" value={client.firstName} />
-            <TextField field="lastName" label="Cognome" value={client.lastName} />
-            <TextField field="email" label="Email" value={client.email} type="email" />
-            <TextField field="phone" label="Telefono" value={client.phone} type="tel" />
-            <div>
+          <div className="grid gap-4 sm:grid-cols-4">
+            <TextField field="firstName" label="Nome" value={client.firstName} span={2} />
+            <TextField field="lastName" label="Cognome" value={client.lastName} span={2} />
+            <TextField field="email" label="Email" value={client.email} type="email" span={2} />
+            <TextField field="phone" label="Telefono" value={client.phone} type="tel" span={2} />
+            <div className="sm:col-span-1">
               <label className={fieldLabel}>Sesso</label>
               <select
                 defaultValue={client.sex ?? ""}
@@ -249,7 +251,7 @@ export default function ClientDetailPage() {
                 <option value="OTHER">Altro</option>
               </select>
             </div>
-            <div>
+            <div className="sm:col-span-2">
               <label className={fieldLabel}>Data di nascita</label>
               <input
                 type="date"
@@ -261,7 +263,7 @@ export default function ClientDetailPage() {
                 className={fieldInput}
               />
             </div>
-            <div>
+            <div className="sm:col-span-1">
               <label className={fieldLabel}>Status</label>
               <select
                 defaultValue={client.status}
@@ -272,7 +274,7 @@ export default function ClientDetailPage() {
                 <option value="PAUSED">Sospeso</option>
               </select>
             </div>
-            <div className="sm:col-span-2">
+            <div className="sm:col-span-4">
               <label className={fieldLabel}>Note</label>
               <textarea
                 defaultValue={client.notes ?? ""}
@@ -457,8 +459,8 @@ export default function ClientDetailPage() {
         )}
 
         {tab === "residenza" && (
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div>
+          <div className="grid gap-4 sm:grid-cols-4">
+            <div className="sm:col-span-2">
               <label className={fieldLabel}>Tipo cliente</label>
               <select
                 defaultValue={client.clientKind ?? "PRIVATO"}
@@ -470,19 +472,19 @@ export default function ClientDetailPage() {
               </select>
             </div>
             {client.clientKind === "AZIENDA" && (
-              <TextField field="businessName" label="Ragione sociale" value={client.businessName} />
+              <TextField field="businessName" label="Ragione sociale" value={client.businessName} span={2} />
             )}
-            <TextField field="fiscalCode" label="Codice fiscale" value={client.fiscalCode} />
+            <TextField field="fiscalCode" label="Codice fiscale" value={client.fiscalCode} span={2} />
             {client.clientKind === "AZIENDA" && (
-              <TextField field="vatNumber" label="Partita IVA" value={client.vatNumber} />
+              <TextField field="vatNumber" label="Partita IVA" value={client.vatNumber} span={2} />
             )}
-            <TextField field="address" label="Indirizzo" value={client.address} />
-            <TextField field="zipCode" label="CAP" value={client.zipCode} />
-            <TextField field="city" label="Città" value={client.city} />
-            <TextField field="province" label="Provincia" value={client.province} />
-            <TextField field="country" label="Paese" value={client.country} />
-            <TextField field="pec" label="PEC" value={client.pec} type="email" />
-            <TextField field="sdiCode" label="Codice SDI" value={client.sdiCode} />
+            <TextField field="address" label="Indirizzo" value={client.address} span={4} />
+            <TextField field="zipCode" label="CAP" value={client.zipCode} span={1} />
+            <TextField field="city" label="Città" value={client.city} span={2} />
+            <TextField field="province" label="Provincia" value={client.province} span={1} />
+            <TextField field="country" label="Paese" value={client.country} span={1} />
+            <TextField field="pec" label="PEC" value={client.pec} type="email" span={2} />
+            <TextField field="sdiCode" label="Codice SDI" value={client.sdiCode} span={1} />
           </div>
         )}
       </div>

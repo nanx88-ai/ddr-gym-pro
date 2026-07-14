@@ -389,9 +389,9 @@ export default function AdminClientsPage() {
                     </div>
                   </td>
                   <td className={td}>{c.email}</td>
-                  <td className={td}>{c.phone ?? "-"}</td>
-                  <td className={td}>{c._count.bookings}</td>
-                  <td className={td} onClick={(e) => e.stopPropagation()}>
+                  <td className={`${td} whitespace-nowrap`}>{c.phone ?? "-"}</td>
+                  <td className={`${td} whitespace-nowrap`}>{c._count.bookings}</td>
+                  <td className={`${td} whitespace-nowrap`} onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-end gap-1.5">
                       <IconButton icon="chevronRight" label="Apri" onClick={() => router.push(`/admin/clients/${c.id}`)} />
                       <ActionsMenu actions={clientActions(c)} />
@@ -474,8 +474,8 @@ export default function AdminClientsPage() {
                           {c.firstName} {c.lastName}
                         </td>
                         <td className={td}>{c.email}</td>
-                        <td className={td}>{c._count.bookings}</td>
-                        <td className={td} onClick={(e) => e.stopPropagation()}>
+                        <td className={`${td} whitespace-nowrap`}>{c._count.bookings}</td>
+                        <td className={`${td} whitespace-nowrap`} onClick={(e) => e.stopPropagation()}>
                           <div className="flex justify-end gap-1.5">
                             <IconButton icon="chevronRight" label="Apri" onClick={() => router.push(`/admin/clients/${c.id}`)} />
                             <ActionsMenu actions={clientActions(c)} />
