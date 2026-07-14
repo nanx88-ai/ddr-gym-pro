@@ -399,16 +399,33 @@ export default function HomePage() {
           <div className="mx-auto w-full max-w-2xl">
             <AnnouncementBanner />
 
-            <h1 className="text-xl font-semibold tracking-tight text-neutral-900 dark:text-white sm:text-2xl">
+            <h1 className="text-2xl font-bold tracking-[-0.02em] text-neutral-900 dark:text-white sm:text-3xl">
               Prenota un Servizio
             </h1>
 
             <div className="mt-4 space-y-3">
-              {types.map((t) => (
+              {loadingTypes && types.length === 0 && !loadError && (
+                <>
+                  {[0, 1, 2].map((i) => (
+                    <div
+                      key={i}
+                      className={`${publicCard} flex animate-pulse items-center justify-between p-4`}
+                      style={{ animationDelay: `${i * 100}ms` }}
+                    >
+                      <div className="w-full">
+                        <div className="h-4 w-2/5 rounded-sm bg-neutral-200 dark:bg-neutral-800" />
+                        <div className="mt-2 h-3 w-1/4 rounded-sm bg-neutral-100 dark:bg-neutral-800/60" />
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
+              {types.map((t, i) => (
                 <button
                   key={t.id}
                   onClick={() => selectService(t.id)}
-                  className={`${publicCard} flex w-full items-center justify-between p-4 text-left transition-colors hover:border-yellow-400`}
+                  style={{ animationDelay: `${i * 60}ms` }}
+                  className={`${publicCard} card-enter flex w-full items-center justify-between p-4 text-left shadow-[0_1px_2px_rgba(0,0,0,0.04)] transition-all duration-200 hover:border-yellow-400 hover:shadow-[0_4px_16px_-4px_rgba(234,179,8,0.25)] active:scale-[0.98]`}
                 >
                   <div>
                     <div className="font-semibold text-neutral-900 dark:text-white">
@@ -419,7 +436,7 @@ export default function HomePage() {
                       {t.requiresApproval && " · su approvazione"}
                     </div>
                   </div>
-                  <span className="text-neutral-300 dark:text-neutral-600">
+                  <span className="text-neutral-300 transition-transform duration-200 group-hover:translate-x-0.5 dark:text-neutral-600">
                     &rarr;
                   </span>
                 </button>

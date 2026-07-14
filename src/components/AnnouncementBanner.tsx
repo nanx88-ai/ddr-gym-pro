@@ -28,7 +28,7 @@ export function AnnouncementBanner() {
   return (
     <div
       role="status"
-      className="mb-4 flex gap-3 border border-yellow-300 border-l-4 border-l-yellow-400 bg-yellow-50 p-3.5 dark:border-yellow-700/60 dark:border-l-yellow-400 dark:bg-yellow-950/30 sm:p-4"
+      className="mb-4 flex gap-3 border border-yellow-300 bg-yellow-50 p-3.5 dark:border-yellow-700/60 dark:bg-yellow-950/30 sm:p-4"
     >
       <svg
         viewBox="0 0 24 24"

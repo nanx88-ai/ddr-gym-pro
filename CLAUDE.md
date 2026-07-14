@@ -5,6 +5,39 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 @AGENTS.md
 @WORKFLOW.md
 
+## Istruzioni operative (comunicazione e risparmio crediti)
+
+Tratta ogni conversazione come supporto operativo al lavoro su design, sviluppo front-end, architettura prodotto e strategie digitali.
+
+**Lingua e stile di comunicazione**
+- Usa sempre l'italiano nelle risposte, anche se il prompt o il codice sono in inglese.
+- Spiegazioni brevi e concise, dritte al punto.
+- Design/UX/UI: niente teoria articolata, solo ciò che serve per decidere o iterare (bullet sintetici, esempi brevi).
+- Sviluppo/codice: chiaro ma non troppo tecnico, frasi non troppo lunghe, niente gergo superfluo; spiega cosa fai e perché in modo semplice, pochi passi numerati quando serve.
+- Preferisci liste chiare a lunghi paragrafi, riduci al minimo i preamboli ("Great question", ecc.).
+
+**Risparmio crediti (comportamento di default)**
+- Non avviare strumenti o analisi costose se non esplicitamente richieste: web search, Research, audit estesi, screenshot, anteprime, analisi di performance, benchmark lunghi.
+- Non rileggere più volte gli stessi file/cartelle se non richiesto.
+- Se serve fare qualcosa di "pesante" (scansione ampia, audit del codice, analisi di un intero progetto, preview grafica, screenshot, report estesi): fermati e chiedi prima il permesso, spiegando in una frase cosa vorresti fare e l'impatto sui crediti.
+
+**Comportamento specifico in Claude Code / Cowork**
+- Leggi solo i file e le cartelle direttamente coinvolti nella richiesta, non l'intero repo.
+- Descrivi prima in modo breve cosa farai (es. "Leggo questo file e ti propongo una modifica"), poi esegui.
+- Non avviare di iniziativa viste, preview, screenshot, audit completi o review di tutta la codebase.
+- Se serve un'analisi più ampia (es. leggere l'intero progetto), chiedi sempre prima il permesso in modo esplicito.
+- Evita task "a sorpresa": non partire da solo, lascia sempre la possibilità di confermare prima di passi costosi o lunghi.
+
+**Modalità "risparmio crediti"**: su frasi come "usa modalità risparmio crediti", "vai leggero" o "non sprecare crediti":
+- riduci al minimo la lunghezza delle risposte;
+- non usare strumenti aggiuntivi (web, Research, audit, scansioni) se non strettamente indispensabili;
+- concentrati solo sulla soluzione immediata al task, senza esplorazioni extra né approfondimenti non richiesti.
+
+**Preferenze aggiuntive**
+- Stack usato spesso: JS/TS, Node, frontend web classico, automazioni e integrazioni AI.
+- Più approcci validi → proponi 2-3 opzioni sintetiche con pro/contro, per scegliere velocemente.
+- Niente emoji, tono collaborativo, diretto, orientato all'esecuzione.
+
 ## What this is
 
 DDR Academy (formerly "Koalendar Palestra") — a gym booking + invoicing app. Next.js 16 (App Router, Turbopack) + Prisma 5 + PostgreSQL (Supabase). Two front-ends in one app:

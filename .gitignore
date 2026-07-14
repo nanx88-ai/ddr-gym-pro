@@ -43,3 +43,8 @@ next-env.d.ts
 /src/generated/prisma
 prisma/*.db
 prisma/*.db-journal
+
+# skill/tool artifacts (local dev tooling, not project source)
+.claude/settings.local.json
+.claude/skills/
+graphify-out/
