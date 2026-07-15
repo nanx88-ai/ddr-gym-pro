@@ -353,6 +353,30 @@ export default function AdminBookingsPage() {
               onClick: () => updateStatus(b.id, "CANCELLED"),
               hidden: !canCancel,
             },
+            {
+              key: "mark-present",
+              icon: "activate",
+              label: "Segna come presente",
+              onClick: () => markAttendance(b.id, true),
+              hidden: !canMarkAttendance,
+              disabled: b.attended === true,
+            },
+            {
+              key: "mark-absent",
+              icon: "deactivate",
+              label: "Segna come assente",
+              onClick: () => markAttendance(b.id, false),
+              hidden: !canMarkAttendance,
+              disabled: b.attended === false,
+            },
+            {
+              key: "mark-unset",
+              icon: "clear",
+              label: "Rimuovi stato presenza",
+              onClick: () => markAttendance(b.id, null),
+              hidden: !canMarkAttendance,
+              disabled: b.attended === null,
+            },
           ]}
         />
       </div>

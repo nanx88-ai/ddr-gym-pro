@@ -24,7 +24,8 @@ export type ActionIconKey =
   | "viewDay"
   | "viewWeek"
   | "viewMonth"
-  | "moreVertical";
+  | "moreVertical"
+  | "clear";
 
 const PATHS: Record<ActionIconKey, React.ReactNode> = {
   expand: (
@@ -114,6 +115,7 @@ const PATHS: Record<ActionIconKey, React.ReactNode> = {
       <circle cx="12" cy="19" r="1.6" fill="currentColor" stroke="none" />
     </>
   ),
+  clear: <circle cx="12" cy="12" r="7" strokeDasharray="3 3" />,
 };
 
 function ActionSvg({ icon }: { icon: ActionIconKey }) {
@@ -231,6 +233,8 @@ export interface MenuAction {
   tone?: Tone;
   onClick: () => void;
   hidden?: boolean;
+  /** Voce visibile ma non cliccabile (desaturata): es. "segna come presente" quando e' gia' presente. */
+  disabled?: boolean;
 }
 
 /**
@@ -314,12 +318,18 @@ export function ActionsMenu({ actions, label = "Azioni" }: { actions: MenuAction
               <button
                 key={a.key}
                 type="button"
+                disabled={a.disabled}
                 onClick={() => {
+                  if (a.disabled) return;
                   setOpen(false);
                   a.onClick();
                 }}
-                className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm font-medium hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
-                  a.tone === "danger" ? "text-red-600 dark:text-red-400" : "text-neutral-800 dark:text-neutral-100"
+                className={`flex w-full items-center gap-2.5 px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+                  a.disabled
+                    ? "cursor-not-allowed text-neutral-400 dark:text-neutral-600"
+                    : `hover:bg-neutral-100 dark:hover:bg-neutral-800 ${
+                        a.tone === "danger" ? "text-red-600 dark:text-red-400" : "text-neutral-800 dark:text-neutral-100"
+                      }`
                 }`}
               >
                 <ActionSvg icon={a.icon} />

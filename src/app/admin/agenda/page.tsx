@@ -485,44 +485,76 @@ function DayList({
               </div>
             </div>
             <div className="flex items-center gap-2">
-              {["APPROVED", "RESCHEDULED"].includes(b.status) && new Date(b.startTime).getTime() <= Date.now() && (
-                <AttendanceToggle attended={b.attended} onChange={(attended) => onMarkAttendance(b.id, attended)} />
-              )}
-              <ActionsMenu
-                actions={[
-                  {
-                    key: "approve",
-                    icon: "activate",
-                    label: "Approva",
-                    tone: "positive",
-                    onClick: () => onUpdateStatus(b.id, "APPROVED"),
-                    hidden: b.status !== "PENDING_APPROVAL",
-                  },
-                  {
-                    key: "reject",
-                    icon: "deactivate",
-                    label: "Rifiuta",
-                    tone: "danger",
-                    onClick: () => onUpdateStatus(b.id, "REJECTED"),
-                    hidden: b.status !== "PENDING_APPROVAL",
-                  },
-                  {
-                    key: "edit",
-                    icon: "edit",
-                    label: "Modifica data/ora",
-                    onClick: () => onEdit(b),
-                    hidden: !["PENDING_APPROVAL", "APPROVED", "RESCHEDULED"].includes(b.status),
-                  },
-                  {
-                    key: "cancel",
-                    icon: "remove",
-                    label: "Annulla",
-                    tone: "danger",
-                    onClick: () => onUpdateStatus(b.id, "CANCELLED"),
-                    hidden: !(["APPROVED", "RESCHEDULED"].includes(b.status) && b.attended === null),
-                  },
-                ]}
-              />
+              {(() => {
+                const canMarkAttendance =
+                  ["APPROVED", "RESCHEDULED"].includes(b.status) && new Date(b.startTime).getTime() <= Date.now();
+                return (
+                  <>
+                    {canMarkAttendance && (
+                      <AttendanceToggle attended={b.attended} onChange={(attended) => onMarkAttendance(b.id, attended)} />
+                    )}
+                    <ActionsMenu
+                      actions={[
+                        {
+                          key: "approve",
+                          icon: "activate",
+                          label: "Approva",
+                          tone: "positive",
+                          onClick: () => onUpdateStatus(b.id, "APPROVED"),
+                          hidden: b.status !== "PENDING_APPROVAL",
+                        },
+                        {
+                          key: "reject",
+                          icon: "deactivate",
+                          label: "Rifiuta",
+                          tone: "danger",
+                          onClick: () => onUpdateStatus(b.id, "REJECTED"),
+                          hidden: b.status !== "PENDING_APPROVAL",
+                        },
+                        {
+                          key: "edit",
+                          icon: "edit",
+                          label: "Modifica data/ora",
+                          onClick: () => onEdit(b),
+                          hidden: !["PENDING_APPROVAL", "APPROVED", "RESCHEDULED"].includes(b.status),
+                        },
+                        {
+                          key: "cancel",
+                          icon: "remove",
+                          label: "Annulla",
+                          tone: "danger",
+                          onClick: () => onUpdateStatus(b.id, "CANCELLED"),
+                          hidden: !(["APPROVED", "RESCHEDULED"].includes(b.status) && b.attended === null),
+                        },
+                        {
+                          key: "mark-present",
+                          icon: "activate",
+                          label: "Segna come presente",
+                          onClick: () => onMarkAttendance(b.id, true),
+                          hidden: !canMarkAttendance,
+                          disabled: b.attended === true,
+                        },
+                        {
+                          key: "mark-absent",
+                          icon: "deactivate",
+                          label: "Segna come assente",
+                          onClick: () => onMarkAttendance(b.id, false),
+                          hidden: !canMarkAttendance,
+                          disabled: b.attended === false,
+                        },
+                        {
+                          key: "mark-unset",
+                          icon: "clear",
+                          label: "Rimuovi stato presenza",
+                          onClick: () => onMarkAttendance(b.id, null),
+                          hidden: !canMarkAttendance,
+                          disabled: b.attended === null,
+                        },
+                      ]}
+                    />
+                  </>
+                );
+              })()}
             </div>
           </div>
         ))}
