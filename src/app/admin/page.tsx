@@ -238,7 +238,11 @@ export default function AdminBookingsPage() {
       body: JSON.stringify({ attended }),
     });
     toast.success(
-      attended === false ? "Assenza segnata." : "Presenza aggiornata.",
+      attended === true
+        ? "Segnato come presente."
+        : attended === false
+          ? "Segnato come assente."
+          : "Segnato come n.d.",
     );
     load();
   }

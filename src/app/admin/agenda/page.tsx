@@ -219,13 +219,19 @@ export default function AdminAgendaPage() {
     );
   }
 
-  async function markAttendance(id: string, attended: boolean) {
+  async function markAttendance(id: string, attended: boolean | null) {
     await fetch(`/api/admin/bookings/${id}/attendance`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ attended }),
     });
-    toast.success(attended ? "Presenza aggiornata." : "Assenza segnata.");
+    toast.success(
+      attended === true
+        ? "Segnato come presente."
+        : attended === false
+          ? "Segnato come assente."
+          : "Segnato come n.d.",
+    );
     setBookings((prev) =>
       prev.map((b) => (b.id === id ? { ...b, attended } : b)),
     );
@@ -238,64 +244,16 @@ export default function AdminAgendaPage() {
         Vista d&apos;insieme delle prenotazioni per giorno, settimana o mese.
       </p>
 
-      <div className="mb-3 flex flex-wrap items-center gap-3">
-        <div className="flex border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900">
-          {(
-            [
-              { v: "day", icon: "viewDay", label: "Giorno" },
-              { v: "week", icon: "viewWeek", label: "Settimana" },
-              { v: "month", icon: "viewMonth", label: "Mese" },
-            ] as const
-          ).map(({ v, icon, label: viewLabel }) => (
-            <button
-              key={v}
-              onClick={() => setView(v)}
-              title={viewLabel}
-              aria-label={viewLabel}
-              className={`flex h-11 w-11 items-center justify-center border-2 transition-colors ${
-                view === v
-                  ? toggleActive
-                  : "border-transparent text-neutral-600 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-800"
-              }`}
-            >
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
-                {icon === "viewDay" && (
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    d="M4 5.5h16M4 5.5v13a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-13M8 10h8M8 14h8"
-                  />
-                )}
-                {icon === "viewWeek" && (
-                  <>
-                    <rect x="3.5" y="4.5" width="4" height="15" />
-                    <rect x="10" y="4.5" width="4" height="15" />
-                    <rect x="16.5" y="4.5" width="4" height="15" />
-                  </>
-                )}
-                {icon === "viewMonth" && (
-                  <>
-                    <rect x="3.5" y="3.5" width="17" height="17" />
-                    <path strokeLinecap="round" d="M3.5 9h17M3.5 14.5h17M9 3.5v17M14.5 3.5v17" />
-                  </>
-                )}
-              </svg>
-            </button>
-          ))}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <IconButton icon="chevronLeft" label="Periodo precedente" onClick={() => step(-1)} />
-          <span className="min-w-[9rem] text-center text-sm font-semibold capitalize text-neutral-900 dark:text-white sm:min-w-[13rem]">
-            {view === "month"
-              ? format(selectedDate, "MMMM yyyy", { locale: it })
-              : view === "week"
-                ? `${format(range.start, "d MMM", { locale: it })} - ${format(range.end, "d MMM yyyy", { locale: it })}`
-                : format(selectedDate, "EEEE d MMMM yyyy", { locale: it })}
-          </span>
-          <IconButton icon="chevronRight" label="Periodo successivo" onClick={() => step(1)} />
-          <IconButton icon="today" label="Vai a oggi" onClick={() => setSelectedDate(new Date())} />
-        </div>
+      <div className="mb-3 flex items-center gap-2">
+        <IconButton icon="chevronLeft" label="Periodo precedente" onClick={() => step(-1)} />
+        <span className="min-w-[9rem] flex-1 text-center text-sm font-semibold capitalize text-neutral-900 dark:text-white sm:min-w-[13rem] sm:flex-none">
+          {view === "month"
+            ? format(selectedDate, "MMMM", { locale: it })
+            : view === "week"
+              ? `${format(range.start, "d MMM", { locale: it })} - ${format(range.end, "d MMM", { locale: it })}`
+              : format(selectedDate, "EEEE d MMMM", { locale: it })}
+        </span>
+        <IconButton icon="chevronRight" label="Periodo successivo" onClick={() => step(1)} />
 
         <button
           type="button"
@@ -328,6 +286,50 @@ export default function AdminAgendaPage() {
         <div
           className={`${card} mb-4 grid grid-cols-1 gap-2 p-3 sm:grid-cols-3`}
         >
+          <div className="flex border border-neutral-200 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-900 sm:col-span-3">
+            {(
+              [
+                { v: "day", icon: "viewDay", label: "Giorno" },
+                { v: "week", icon: "viewWeek", label: "Settimana" },
+                { v: "month", icon: "viewMonth", label: "Mese" },
+              ] as const
+            ).map(({ v, icon, label: viewLabel }) => (
+              <button
+                key={v}
+                onClick={() => setView(v)}
+                className={`flex h-11 flex-1 items-center justify-center gap-2 border-2 text-sm font-medium transition-colors ${
+                  view === v
+                    ? toggleActive
+                    : "border-transparent text-neutral-600 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-800"
+                }`}
+              >
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+                  {icon === "viewDay" && (
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      d="M4 5.5h16M4 5.5v13a1 1 0 0 0 1 1h14a1 1 0 0 0 1-1v-13M8 10h8M8 14h8"
+                    />
+                  )}
+                  {icon === "viewWeek" && (
+                    <>
+                      <rect x="3.5" y="4.5" width="4" height="15" />
+                      <rect x="10" y="4.5" width="4" height="15" />
+                      <rect x="16.5" y="4.5" width="4" height="15" />
+                    </>
+                  )}
+                  {icon === "viewMonth" && (
+                    <>
+                      <rect x="3.5" y="3.5" width="17" height="17" />
+                      <path strokeLinecap="round" d="M3.5 9h17M3.5 14.5h17M9 3.5v17M14.5 3.5v17" />
+                    </>
+                  )}
+                </svg>
+                {viewLabel}
+              </button>
+            ))}
+          </div>
+
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
@@ -440,7 +442,7 @@ function DayList({
 }: {
   bookings: Booking[];
   onUpdateStatus: (id: string, s: string) => void;
-  onMarkAttendance: (id: string, attended: boolean) => void;
+  onMarkAttendance: (id: string, attended: boolean | null) => void;
   onEdit: (b: Booking) => void;
 }) {
   if (bookings.length === 0) {

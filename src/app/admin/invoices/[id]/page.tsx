@@ -124,11 +124,7 @@ export default function AdminInvoiceDetailPage({
 
   return (
     <div className="max-w-3xl">
-      <Link href="/admin/invoices" className={`${btnPrimary} mb-3 inline-block print:hidden`}>
-        ← Indietro
-      </Link>
-
-      <div className="mb-4 flex items-center justify-between print:hidden">
+      <div className="mb-4 flex items-start justify-between print:hidden">
         <div>
           <h1 className={pageTitle}>Fattura {invoice.number}</h1>
           <p className={pageSubtitle}>
@@ -146,9 +142,9 @@ export default function AdminInvoiceDetailPage({
             {clientDisplayName} →
           </Link>
         </div>
-        <button onClick={() => window.print()} className={btnNeutral}>
-          Stampa / Salva PDF
-        </button>
+        <Link href="/admin/invoices" className={`${btnPrimary} shrink-0`}>
+          ← Indietro
+        </Link>
       </div>
 
       {/* Documento stampabile */}
@@ -323,6 +319,12 @@ export default function AdminInvoiceDetailPage({
           )}
         </div>
       </section>
+
+      <div className="mt-6 flex justify-end print:hidden">
+        <button onClick={() => window.print()} className={btnNeutral}>
+          Stampa / Salva PDF
+        </button>
+      </div>
     </div>
   );
 }
