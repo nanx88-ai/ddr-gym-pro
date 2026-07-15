@@ -80,6 +80,12 @@ model Reminder {
   createdAt        DateTime  @default(now())
 }
 
+// Voce unica "Servizi": prima erano 3 sezioni scollegate (Calendari/Servizi,
+// Tariffe pubbliche, Listino di fatturazione). Un servizio ha sia i dati
+// tecnici di prenotazione (durata, capienza, approvazione) sia il costo e i
+// dati di fatturazione (IVA/natura), piu' due switch indipendenti per
+// decidere dove compare in vetrina: nell'elenco servizi prenotabili sul sito
+// pubblico e/o nel tariffario "Guarda le tariffe".
 model AppointmentType {
   id               String   @id @default(cuid())
   name             String   @unique
@@ -89,10 +95,36 @@ model AppointmentType {
   active           Boolean  @default(true)
   createdAt        DateTime @default(now())
 
+  // Vetrina pubblica (ex Tariffe): sottotitolo e quantita' libera testuale.
+  subtitle  String?
+  quantity  String?
+  sortOrder Int     @default(0)
+
+  // Costo e fatturazione (ex Listino): prezzo unitario, IVA o natura di
+  // esenzione (codici FatturaPA N1..N7). Una fattura pesca da qui via
+  // BillingProfile.
+  description String?
+  unitPrice   Float    @default(0)
+  priceUnit   String   @default("PER_SESSION") // "PER_SESSION" (a seduta) | "PACKAGE" (a pacchetto, vedi quantity)
+  vatRate     Float    @default(22)
+  vatNature   String?
+
+  // Visibilita' indipendente nelle due vetrine pubbliche.
+  showInServiceList Boolean @default(true)
+  showInTariffs     Boolean @default(true)
+
+  // "ONE_TIME" (ingresso singolo, prenotato data per data dal wizard Nuova
+  // prenotazione) | "SUBSCRIPTION" (venduto ad abbonamento: il wizard Nuova
+  // prenotazione rimanda alla sezione Abbonamenti invece di far scegliere
+  // data/ora singola).
+  bookingKind String @default("ONE_TIME")
+
   bookings           Booking[]
   scheduleBands      ScheduleBand[]
   scheduleExceptions ScheduleException[]
   slotOverrides      SlotOverride[]
+  subscriptions      Subscription[]
+  billingProfiles    BillingProfile[]
 }
 
 // Orario settimanale ricorrente per tipo di appuntamento, come lista libera
@@ -166,6 +198,12 @@ model Booking {
   createdAt         DateTime      @default(now())
   updatedAt         DateTime      @updatedAt
 
+  // Se creata dal wizard "Nuovo abbonamento" (una tra le tante sedute
+  // generate per la ricorrenza scelta): permette di risalire a quale
+  // abbonamento appartiene ogni singola presenza.
+  subscriptionId    String?
+  subscription      Subscription? @relation(fields: [subscriptionId], references: [id])
+
   // Presenza effettiva, distinta dallo stato di approvazione: una
   // prenotazione APPROVED puo' comunque risultare "non presentato". Base per
   // la fatturazione "in base agli accessi effettivi".
@@ -229,35 +267,20 @@ model AdminUser {
   createdAt    DateTime @default(now())
 }
 
-// Listino: voci di prezzo con aliquota IVA o natura di esenzione (codici
-// FatturaPA: N1..N7). Una fattura pesca le sue righe da qui.
-model PriceListItem {
-  id          String   @id @default(cuid())
-  name        String
-  description String?
-  unitPrice   Float // euro, IVA esclusa
-  vatRate     Float    @default(22) // percentuale, es. 22, 10, 4, 0
-  vatNature   String? // "N1".."N7" quando vatRate = 0 (esente/non imponibile/ecc.)
-  active      Boolean  @default(true)
-  createdAt   DateTime @default(now())
-
-  billingProfiles BillingProfile[]
-}
-
-// Regola di fatturazione per cliente: quale voce di listino usare e con
-// quale criterio di conteggio. PER_ACCESS = "fattura mensile in base agli
+// Regola di fatturazione per cliente: quale servizio usare (per prezzo/IVA) e
+// con quale criterio di conteggio. PER_ACCESS = "fattura mensile in base agli
 // accessi effettivi" (richiesto esplicitamente); FLAT = importo fisso per
 // periodo indipendentemente dagli accessi.
 model BillingProfile {
-  id              String        @id @default(cuid())
-  clientId        String        @unique
-  client          Client        @relation(fields: [clientId], references: [id])
-  priceListItemId String
-  priceListItem   PriceListItem @relation(fields: [priceListItemId], references: [id])
-  billingType     String        @default("PER_ACCESS") // "PER_ACCESS" | "FLAT"
-  active          Boolean       @default(true)
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id                String          @id @default(cuid())
+  clientId          String          @unique
+  client            Client          @relation(fields: [clientId], references: [id])
+  appointmentTypeId String
+  appointmentType   AppointmentType @relation(fields: [appointmentTypeId], references: [id])
+  billingType       String          @default("PER_ACCESS") // "PER_ACCESS" | "FLAT"
+  active            Boolean         @default(true)
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
 }
 
 // Documento di fatturazione generato per un cliente su un periodo. Le righe
@@ -354,45 +377,29 @@ model EmailBroadcast {
   createdAt   DateTime @default(now())
 }
 
-// Voce del tariffario pubblico ("Guarda le tariffe" sul sito di
-// prenotazione): vetrina prezzi, separata dal Listino (PriceListItem) che
-// invece e' il layer di fatturazione con IVA. quantity e' testo libero
-// (es. "10 ingressi", "3 mesi") e puo' restare vuoto.
-model Tariff {
-  id        String   @id @default(cuid())
-  title     String
-  subtitle  String?
-  quantity  String?
-  price     Float
-  active    Boolean  @default(true)
-  sortOrder Int      @default(0)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  subscriptions Subscription[]
-}
-
-// Abbonamento sottoscritto da un cliente per una voce del tariffario:
-// l'admin imposta inizio/scadenza e se si rinnova in automatico. Il cron
-// giornaliero manda il promemoria a notifyDaysBefore giorni dalla scadenza
-// (email admin + cliente, push admin) e, se autoRenew, alla scadenza sposta
-// endDate avanti di renewMonths mesi. notifiedForEnd memorizza per quale
-// scadenza il promemoria e' gia' partito: dopo un rinnovo endDate cambia e
-// il ciclo successivo riparte da solo.
+// Abbonamento sottoscritto da un cliente per un servizio (ex tariffario,
+// ora unificato in AppointmentType): l'admin imposta inizio/scadenza e se si
+// rinnova in automatico. Il cron giornaliero manda il promemoria a
+// notifyDaysBefore giorni dalla scadenza (email admin + cliente, push admin)
+// e, se autoRenew, alla scadenza sposta endDate avanti di renewMonths mesi.
+// notifiedForEnd memorizza per quale scadenza il promemoria e' gia' partito:
+// dopo un rinnovo endDate cambia e il ciclo successivo riparte da solo.
 model Subscription {
-  id               String    @id @default(cuid())
-  clientId         String
-  client           Client    @relation(fields: [clientId], references: [id])
-  tariffId         String
-  tariff           Tariff    @relation(fields: [tariffId], references: [id])
-  startDate        DateTime
-  endDate          DateTime
-  autoRenew        Boolean   @default(false)
-  renewMonths      Int       @default(1) // durata del rinnovo automatico, in mesi
-  notifyDaysBefore Int       @default(7)
-  notifiedForEnd   DateTime?
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                String          @id @default(cuid())
+  clientId          String
+  client            Client          @relation(fields: [clientId], references: [id])
+  appointmentTypeId String
+  appointmentType   AppointmentType @relation(fields: [appointmentTypeId], references: [id])
+  startDate         DateTime
+  endDate           DateTime
+  autoRenew         Boolean         @default(false)
+  renewMonths       Int             @default(1) // durata del rinnovo automatico, in mesi
+  notifyDaysBefore  Int             @default(7)
+  notifiedForEnd    DateTime?
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+
+  bookings          Booking[]
 
   @@index([clientId])
   @@index([endDate])

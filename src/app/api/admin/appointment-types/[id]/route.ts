@@ -8,9 +8,20 @@ const bodySchema = z.object({
   capacity: z.number().int().min(1).max(500).optional(),
   requiresApproval: z.boolean().optional(),
   active: z.boolean().optional(),
+  subtitle: z.string().nullable().optional(),
+  quantity: z.string().nullable().optional(),
+  description: z.string().nullable().optional(),
+  unitPrice: z.number().min(0).optional(),
+  priceUnit: z.enum(["PER_SESSION", "PACKAGE"]).optional(),
+  vatRate: z.number().min(0).max(100).optional(),
+  vatNature: z.string().nullable().optional(),
+  sortOrder: z.number().int().optional(),
+  showInServiceList: z.boolean().optional(),
+  showInTariffs: z.boolean().optional(),
+  bookingKind: z.enum(["ONE_TIME", "SUBSCRIPTION"]).optional(),
 });
 
-/** Modifica un calendario/servizio (nome, durata slot, capienza predefinita, approvazione, attivo/disattivo). */
+/** Modifica un servizio (dati tecnici, vetrina prezzi, fatturazione, attivo/disattivo). */
 export async function PATCH(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const json = await request.json().catch(() => null);

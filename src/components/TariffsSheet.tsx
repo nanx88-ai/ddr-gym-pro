@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { publicCard } from "@/lib/public-ui";
 import { formatCurrency } from "@/lib/format";
+import { SkeletonLines } from "@/components/Skeleton";
 
 interface Tariff {
   id: string;
@@ -100,9 +101,7 @@ export function TariffsSheet() {
               className="overflow-y-auto px-5 py-2"
               style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 1rem)" }}
             >
-              {tariffs === null && (
-                <p className="py-6 text-center text-sm text-neutral-500 dark:text-neutral-400">Caricamento...</p>
-              )}
+              {tariffs === null && <SkeletonLines count={4} className="py-3" />}
               {tariffs !== null && tariffs.length === 0 && (
                 <p className="py-6 text-center text-sm text-neutral-500 dark:text-neutral-400">
                   Nessuna tariffa disponibile al momento.

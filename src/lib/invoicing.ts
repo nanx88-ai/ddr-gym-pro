@@ -25,13 +25,13 @@ async function nextInvoiceNumber(year: number) {
 export async function generateInvoiceForClient(clientId: string, periodStart: Date, periodEnd: Date) {
   const client = await prisma.client.findUniqueOrThrow({
     where: { id: clientId },
-    include: { billingProfile: { include: { priceListItem: true } } },
+    include: { billingProfile: { include: { appointmentType: true } } },
   });
 
   if (!client.billingProfile || !client.billingProfile.active) {
     throw new InvoicingError("Il cliente non ha un profilo di fatturazione attivo.");
   }
-  const { priceListItem, billingType } = client.billingProfile;
+  const { appointmentType, billingType } = client.billingProfile;
 
   type Line = {
     description: string;
@@ -57,21 +57,21 @@ export async function generateInvoiceForClient(clientId: string, periodStart: Da
     lines = attendedBookings.map((b) => ({
       description: `Accesso del ${format(b.startTime, "dd/MM/yyyy")} - ${b.appointmentType.name}`,
       quantity: 1,
-      unitPrice: priceListItem.unitPrice,
-      vatRate: priceListItem.vatRate,
-      vatNature: priceListItem.vatNature,
-      amount: priceListItem.unitPrice,
+      unitPrice: appointmentType.unitPrice,
+      vatRate: appointmentType.vatRate,
+      vatNature: appointmentType.vatNature,
+      amount: appointmentType.unitPrice,
       bookingId: b.id,
     }));
   } else {
     lines = [
       {
-        description: `${priceListItem.name} - ${format(periodStart, "MM/yyyy")}`,
+        description: `${appointmentType.name} - ${format(periodStart, "MM/yyyy")}`,
         quantity: 1,
-        unitPrice: priceListItem.unitPrice,
-        vatRate: priceListItem.vatRate,
-        vatNature: priceListItem.vatNature,
-        amount: priceListItem.unitPrice,
+        unitPrice: appointmentType.unitPrice,
+        vatRate: appointmentType.vatRate,
+        vatNature: appointmentType.vatNature,
+        amount: appointmentType.unitPrice,
         bookingId: null,
       },
     ];

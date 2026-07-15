@@ -4,12 +4,12 @@ import { prisma } from "@/lib/db";
 
 const bodySchema = z.object({
   clientId: z.string().min(1),
-  priceListItemId: z.string().min(1),
+  appointmentTypeId: z.string().min(1),
   billingType: z.enum(["PER_ACCESS", "FLAT"]),
   active: z.boolean().default(true),
 });
 
-/** Crea/aggiorna il profilo di fatturazione di un cliente (regola di conteggio + voce di listino). */
+/** Crea/aggiorna il profilo di fatturazione di un cliente (regola di conteggio + servizio). */
 export async function POST(request: NextRequest) {
   const json = await request.json().catch(() => null);
   const parsed = bodySchema.safeParse(json);

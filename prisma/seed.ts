@@ -87,23 +87,16 @@ async function main() {
     create: { firstName: "Giulia", lastName: "Bianchi", email: "giulia.bianchi@example.com", status: "PAUSED" },
   });
 
-  // Listino ed esempio di profilo di fatturazione "per accessi effettivi"
-  // (richiesto esplicitamente dall'utente).
-  const priceItem = await prisma.priceListItem.upsert({
-    where: { id: "seed-price-ingresso-singolo" },
-    update: { name: "Ingresso singolo", unitPrice: 15, vatRate: 22, vatNature: null },
-    create: {
-      id: "seed-price-ingresso-singolo",
-      name: "Ingresso singolo",
-      description: "Prezzo per singolo accesso in palestra",
-      unitPrice: 15,
-      vatRate: 22,
-    },
+  // Prezzo/IVA sul servizio ed esempio di profilo di fatturazione "per
+  // accessi effettivi" (richiesto esplicitamente dall'utente).
+  await prisma.appointmentType.update({
+    where: { id: appointmentType.id },
+    data: { description: "Prezzo per singolo accesso in palestra", unitPrice: 15, vatRate: 22 },
   });
   await prisma.billingProfile.upsert({
     where: { clientId: client1.id },
-    update: { priceListItemId: priceItem.id, billingType: "PER_ACCESS", active: true },
-    create: { clientId: client1.id, priceListItemId: priceItem.id, billingType: "PER_ACCESS", active: true },
+    update: { appointmentTypeId: appointmentType.id, billingType: "PER_ACCESS", active: true },
+    create: { clientId: client1.id, appointmentTypeId: appointmentType.id, billingType: "PER_ACCESS", active: true },
   });
 
   const tomorrow = addDays(startOfDay(new Date()), 1);

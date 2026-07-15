@@ -10,7 +10,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
   const client = await prisma.client.findUnique({
     where: { id },
     include: {
-      billingProfile: { include: { priceListItem: true } },
+      billingProfile: { include: { appointmentType: true } },
       bookings: {
         orderBy: { startTime: "desc" },
         include: { appointmentType: true },
@@ -19,7 +19,7 @@ export async function GET(_request: NextRequest, { params }: { params: Promise<{
       reminders: { orderBy: { dueDate: "asc" } },
       subscriptions: {
         orderBy: { endDate: "desc" },
-        include: { tariff: true },
+        include: { appointmentType: true },
       },
     },
   });

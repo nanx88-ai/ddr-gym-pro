@@ -19,7 +19,7 @@ export async function GET(request: NextRequest) {
   const date = dateParam ? parseISO(dateParam) : new Date();
 
   try {
-    const appointmentTypes = await prisma.appointmentType.findMany({ where: { active: true } });
+    const appointmentTypes = await prisma.appointmentType.findMany({ where: { active: true, showInServiceList: true } });
     if (appointmentTypes.length === 0) {
       return NextResponse.json({ date: formatISO(date, { representation: "date" }), appointmentTypes: [] });
     }
