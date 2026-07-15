@@ -5,10 +5,7 @@ export type IconKey =
   | "reschedule"
   | "schedule"
   | "types"
-  | "new"
   | "clients"
-  | "priceList"
-  | "tariffs"
   | "subscriptions"
   | "communications"
   | "invoices"
@@ -28,36 +25,27 @@ export interface NavGroup {
 
 export const NAV_GROUPS: NavGroup[] = [
   {
-    // Primo gruppo (più frequenti): prenotazioni, planning, creazione
+    // Primo gruppo (più frequenti): prenotazioni, planning, comunicazioni.
+    // "Nuova prenotazione" non e' piu' una voce a se': e' un'azione dentro Prenotazioni.
     items: [
       { href: "/admin", label: "Prenotazioni", icon: "bookings" },
       { href: "/admin/agenda", label: "Agenda", icon: "agenda" },
       { href: "/admin/schedule", label: "Planning", icon: "schedule" },
-    ],
-  },
-  {
-    // Secondo gruppo: operazioni frequenti
-    items: [
-      { href: "/admin/bookings/new", label: "Appuntamento", icon: "new" },
       { href: "/admin/communications", label: "Comunicazioni", icon: "communications" },
-      { href: "/admin/clients", label: "Clienti", icon: "clients" },
     ],
   },
   {
-    // Terzo gruppo: gestione e storico
+    // Secondo gruppo: anagrafica e gestione economica del cliente
     items: [
+      { href: "/admin/clients", label: "Clienti", icon: "clients" },
       { href: "/admin/subscriptions", label: "Abbonamenti", icon: "subscriptions" },
       { href: "/admin/invoices", label: "Fatture", icon: "invoices" },
-      { href: "/admin/tariffs", label: "Tariffe", icon: "tariffs" },
+      { href: "/admin/appointment-types", label: "Servizi", icon: "types" },
     ],
   },
   {
-    // Quarto gruppo: configurazione (meno frequente)
-    items: [
-      { href: "/admin/price-list", label: "Listino", icon: "priceList" },
-      { href: "/admin/stats", label: "Statistiche", icon: "stats" },
-      { href: "/admin/appointment-types", label: "Servizi", icon: "types" },
-    ],
+    // Quarto gruppo: statistiche da sole
+    items: [{ href: "/admin/stats", label: "Statistiche", icon: "stats" }],
   },
   {
     items: [{ href: "/admin/settings", label: "Impostazioni", icon: "settings" }],
@@ -99,12 +87,6 @@ export const ICON_PATHS: Record<IconKey, React.ReactNode> = {
       <rect x="13.5" y="13.5" width="7" height="7" rx="1.2" />
     </>
   ),
-  new: (
-    <>
-      <circle cx="12" cy="12" r="8.5" />
-      <path strokeLinecap="round" d="M12 8.5v7M8.5 12h7" />
-    </>
-  ),
   clients: (
     <>
       <circle cx="9" cy="8" r="3" />
@@ -113,16 +95,6 @@ export const ICON_PATHS: Record<IconKey, React.ReactNode> = {
         strokeLinejoin="round"
         d="M3.5 20a5.5 5.5 0 0 1 11 0M16 9a2.5 2.5 0 1 0 0-5M18.5 20a4.5 4.5 0 0 0-4-4.46"
       />
-    </>
-  ),
-  priceList: (
-    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3.5 20.5 12 12 20.5 3.5 12 12 3.5Z M9 9h.01" />
-  ),
-  tariffs: (
-    // Cartellino prezzo
-    <>
-      <path strokeLinecap="round" strokeLinejoin="round" d="M3.5 12.5v-8a1 1 0 0 1 1-1h8L20.5 11a1 1 0 0 1 0 1.4l-7.6 7.6a1 1 0 0 1-1.4 0l-8-7.5Z" />
-      <path strokeLinecap="round" d="M8 8h.01" />
     </>
   ),
   subscriptions: (

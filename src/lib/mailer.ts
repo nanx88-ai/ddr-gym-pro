@@ -121,3 +121,66 @@ export async function sendBookingConfirmationEmail(booking: BookingForEmail) {
 
   return { sent: true as const };
 }
+
+/**
+ * Riepilogo via email di una o piu' prenotazioni create manualmente
+ * dall'admin (wizard "Nuova prenotazione"): una copia al cliente, una per
+ * ogni admin. A differenza di sendBookingConfirmationEmail (che accompagna
+ * l'approvazione di una singola prenotazione pubblica con allegato .ics),
+ * qui l'elenco puo' contenere piu' date/orari (ricorrenze) e serve solo come
+ * promemoria testuale, senza allegato calendario. Se l'SMTP non e'
+ * configurato non blocca la creazione, salta solo l'invio (loggato).
+ */
+export async function sendAdminCreatedBookingSummaryEmail(params: {
+  client: { firstName: string; lastName: string; email: string };
+  appointmentTypeName: string;
+  notes?: string | null;
+  occurrences: { startTime: Date; endTime: Date }[];
+}) {
+  const smtp = await getSmtpConfig();
+  if (!smtp) {
+    console.warn("[mailer] Nessuna integrazione SMTP attiva: riepilogo prenotazione non inviato.");
+    return { sent: false, reason: "smtp_not_configured" as const };
+  }
+
+  const { client, appointmentTypeName, notes, occurrences } = params;
+  const admins = await prisma.adminUser.findMany({ select: { email: true } });
+
+  const whenList = occurrences.map((o) => `- ${formatDateTime(o.startTime.toISOString())}`).join("\n");
+  const multi = occurrences.length > 1;
+
+  const clientText = [
+    `Ciao ${client.firstName},`,
+    "",
+    `La tua prenotazione e' stata registrata dallo staff.`,
+    "",
+    `Servizio: ${appointmentTypeName}`,
+    multi ? `Date:\n${whenList}` : `Quando: ${whenList.replace(/^- /, "")}`,
+    notes ? `Note: ${notes}` : "",
+    "",
+    "A presto!",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const adminText = [
+    `Nuova prenotazione registrata da un admin.`,
+    "",
+    `Cliente: ${client.firstName} ${client.lastName} (${client.email})`,
+    `Servizio: ${appointmentTypeName}`,
+    multi ? `Date:\n${whenList}` : `Quando: ${whenList.replace(/^- /, "")}`,
+    notes ? `Note: ${notes}` : "",
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  const transporter = await createTransporter(smtp);
+  const subject = `Prenotazione registrata: ${appointmentTypeName}`;
+
+  await transporter.sendMail({ from: smtp.from || smtp.user, to: client.email, subject, text: clientText });
+  for (const admin of admins) {
+    await transporter.sendMail({ from: smtp.from || smtp.user, to: admin.email, subject, text: adminText });
+  }
+
+  return { sent: true as const };
+}

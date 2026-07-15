@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { card, input, pageSubtitle, pageTitle, toggleActive, toggleInactive } from "@/lib/ui";
+import { Skeleton } from "@/components/Skeleton";
 
 interface ActiveDay {
   dayOfWeek: number;
@@ -115,6 +116,7 @@ export default function AdminStatsPage() {
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
   const [activePreset, setActivePreset] = useState("all");
+  const [filtersOpen, setFiltersOpen] = useState(false);
 
   function applyPreset(preset: string) {
     setActivePreset(preset);
@@ -163,7 +165,16 @@ export default function AdminStatsPage() {
     return () => clearInterval(interval);
   }, [dateFrom, dateTo]);
 
-  if (!stats) return <p className="text-sm text-neutral-500">Caricamento...</p>;
+  if (!stats)
+    return (
+      <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
+        {Array.from({ length: 6 }).map((_, i) => (
+          <div key={i} className={`${card} p-4`}>
+            <Skeleton className="h-48 w-full" />
+          </div>
+        ))}
+      </div>
+    );
 
   const PILLS = [
     { key: "all", label: "Perpetuo" },
@@ -189,47 +200,74 @@ export default function AdminStatsPage() {
         Basate su {stats.totalBookings} prenotazion{stats.totalBookings === 1 ? "e" : "i"} confermate, in attesa o riprogrammate.
       </p>
 
-      <div className="mb-6 flex flex-wrap items-end gap-3">
-        <label className="block">
-          <span className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">Da</span>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => {
-              setDateFrom(e.target.value);
-              setActivePreset("custom");
-            }}
-            className={`${input} w-40 min-w-0`}
-          />
-        </label>
-        <label className="block">
-          <span className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">A</span>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => {
-              setDateTo(e.target.value);
-              setActivePreset("custom");
-            }}
-            className={`${input} w-40 min-w-0`}
-          />
-        </label>
-
-        <div className="flex flex-wrap gap-1.5">
-          {PILLS.map((p) => (
-            <button
-              key={p.key}
-              type="button"
-              onClick={() => applyPreset(p.key)}
-              className={`min-h-11 border-2 px-3 py-1.5 text-xs font-medium transition-colors ${
-                activePreset === p.key ? toggleActive : toggleInactive
-              }`}
-            >
-              {p.label}
-            </button>
-          ))}
-        </div>
+      <div className="mb-6 flex items-center">
+        <button
+          type="button"
+          onClick={() => setFiltersOpen((o) => !o)}
+          className="flex min-h-11 shrink-0 items-center gap-1.5 border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+        >
+          Filtri
+          {activePreset !== "all" && (
+            <span className="flex h-4 min-w-4 items-center justify-center bg-yellow-400 px-1 text-[10px] font-semibold text-neutral-900">
+              1
+            </span>
+          )}
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            className={`h-3.5 w-3.5 transition-transform ${filtersOpen ? "rotate-180" : ""}`}
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+          </svg>
+        </button>
       </div>
+
+      {filtersOpen && (
+        <div className={`${card} mb-6 space-y-3 p-3`}>
+          <div className="flex flex-wrap gap-1.5">
+            {PILLS.map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                onClick={() => applyPreset(p.key)}
+                className={`min-h-11 border-2 px-3 py-1.5 text-xs font-medium transition-colors ${
+                  activePreset === p.key ? toggleActive : toggleInactive
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+          <div className="flex flex-wrap items-end gap-3 border-t border-neutral-100 pt-3 dark:border-neutral-800">
+            <label className="block">
+              <span className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">Da</span>
+              <input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => {
+                  setDateFrom(e.target.value);
+                  setActivePreset("custom");
+                }}
+                className={`${input} w-40 min-w-0`}
+              />
+            </label>
+            <label className="block">
+              <span className="mb-1 block text-xs text-neutral-500 dark:text-neutral-400">A</span>
+              <input
+                type="date"
+                value={dateTo}
+                onChange={(e) => {
+                  setDateTo(e.target.value);
+                  setActivePreset("custom");
+                }}
+                className={`${input} w-40 min-w-0`}
+              />
+            </label>
+          </div>
+        </div>
+      )}
 
       <div className="grid gap-4 lg:grid-cols-2 2xl:grid-cols-3">
         <StatCard title="Giorni piu' attivi">

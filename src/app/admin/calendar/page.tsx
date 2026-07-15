@@ -26,6 +26,7 @@ import {
   toggleActive,
 } from "@/lib/ui";
 import { IconButton } from "@/components/IconAction";
+import { Skeleton } from "@/components/Skeleton";
 
 interface AppointmentType {
   id: string;
@@ -294,7 +295,13 @@ function DayView({
   }
 
   if (loading)
-    return <p className="text-sm text-neutral-500">Caricamento...</p>;
+    return (
+      <div className="space-y-2">
+        {Array.from({ length: 5 }).map((_, i) => (
+          <Skeleton key={i} className="h-14 w-full" />
+        ))}
+      </div>
+    );
   if (!detail) return null;
 
   if (!detail.isOpen) {
@@ -420,7 +427,13 @@ function WeekView({
   }, [appointmentTypeId, date]);
 
   if (loading)
-    return <p className="text-sm text-neutral-500">Caricamento...</p>;
+    return (
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
+        {Array.from({ length: 7 }).map((_, i) => (
+          <Skeleton key={i} className="h-40 w-full" />
+        ))}
+      </div>
+    );
 
   return (
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
@@ -502,7 +515,13 @@ function MonthView({
   }, [appointmentTypeId, date]);
 
   if (loading)
-    return <p className="text-sm text-neutral-500">Caricamento...</p>;
+    return (
+      <div className="grid grid-cols-7 gap-1.5">
+        {Array.from({ length: 35 }).map((_, i) => (
+          <Skeleton key={i} className="aspect-square w-full" />
+        ))}
+      </div>
+    );
 
   const byDate = new Map(days.map((d) => [d.date, d]));
   const gridStart = startOfWeek(startOfMonth(date), { weekStartsOn: 1 });

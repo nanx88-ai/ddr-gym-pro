@@ -151,8 +151,12 @@ function AdminLayoutInner({ children }: { children: React.ReactNode }) {
         style={{ paddingTop: "env(safe-area-inset-top)" }}
       >
         <div className="flex items-center justify-between px-3 py-3 sm:px-4">
-          <Link href="/admin" className="font-semibold text-neutral-900 dark:text-white">
-            DDR <span className="text-yellow-500 dark:text-yellow-400">Academy</span>
+          <Link href="/admin" className="flex items-center font-semibold text-neutral-900 dark:text-white">
+            <span className="sm:hidden">
+              DDR <span className="text-yellow-500 dark:text-yellow-400">Academy</span>
+            </span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-ddr.png" alt="DDR Academy" className="hidden h-9 w-auto sm:block" />
           </Link>
           <div className="flex items-center gap-1 sm:gap-2">
             <NotificationBell />

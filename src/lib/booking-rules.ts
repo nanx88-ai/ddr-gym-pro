@@ -112,6 +112,8 @@ interface CreateBookingInput {
    * occorrenza (altrimenti prenotare 10 martedi' di fila manda 10 push).
    */
   skipAdminPush?: boolean;
+  /** Collega la prenotazione all'abbonamento che l'ha generata (wizard "Nuovo abbonamento"), per poterle ritrovare insieme. */
+  subscriptionId?: string;
 }
 
 /**
@@ -172,6 +174,7 @@ export async function createCustomBooking(input: CreateBookingInput) {
       source: input.source ?? "custom",
       notes: input.notes,
       status: initialStatus,
+      subscriptionId: input.subscriptionId,
     },
     include: { client: true, appointmentType: true },
   });

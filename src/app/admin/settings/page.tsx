@@ -3,7 +3,6 @@
 import { useEffect, useState } from "react";
 import {
   btnNeutral,
-  btnPositive,
   btnPrimary,
   card,
   errorBox,
@@ -17,6 +16,15 @@ import PushNotificationsToggle from "@/components/PushNotificationsToggle";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { ActionsMenu, IconButton } from "@/components/IconAction";
+import { toggleActive as toggleActiveStyle, toggleInactiveGhost } from "@/lib/ui";
+
+type SettingsCategory = "generale" | "integrazioni" | "dati";
+
+const CATEGORIES: { key: SettingsCategory; label: string; hint: string }[] = [
+  { key: "generale", label: "Generali", hint: "Tema e notifiche push" },
+  { key: "integrazioni", label: "Integrazioni", hint: "Calendario e API esterne" },
+  { key: "dati", label: "Dati e backup", hint: "Esportazione e backup" },
+];
 
 /**
  * Sync calendario admin (Google/Apple) via feed ICS sottoscrivibile, senza
@@ -155,6 +163,7 @@ export default function AdminSettingsPage() {
   const [integrations, setIntegrations] = useState<Integration[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [category, setCategory] = useState<SettingsCategory>("generale");
 
   const [name, setName] = useState("");
   const [type, setType] = useState("smtp");
@@ -229,7 +238,7 @@ export default function AdminSettingsPage() {
   const selectedType = TYPE_OPTIONS.find((t) => t.value === type);
 
   return (
-    <div className="max-w-5xl">
+    <div className="max-w-6xl">
       <h1 className={pageTitle}>Impostazioni</h1>
       <p className={pageSubtitle}>
         Aspetto, integrazioni API, esportazione dati e backup.
@@ -237,37 +246,57 @@ export default function AdminSettingsPage() {
 
       {error && <div className={errorBox}>{error}</div>}
 
-      <h2 className="mb-2 mt-2 text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
-        Generali
-      </h2>
-      <div className="mb-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
-        <section className={`${card} p-4`}>
-          <h3 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
-            Aspetto
-          </h3>
-          <div className="flex items-center gap-3">
-            <span className="text-sm text-neutral-600 dark:text-neutral-300">
-              Tema dell&apos;interfaccia admin
-            </span>
-            <ThemeToggle />
-          </div>
-        </section>
+      <div className="mt-4">
+        {/* Categorie: barra a pillole, solo su mobile — su desktop c'e' gia' il menu laterale, qui si scorre tutto */}
+        <nav className="flex gap-1.5 overflow-x-auto pb-1 lg:hidden">
+          {CATEGORIES.map((c) => (
+            <button
+              key={c.key}
+              type="button"
+              onClick={() => setCategory(c.key)}
+              className={`shrink-0 border-2 px-3 py-2.5 text-left text-sm font-medium transition-colors ${
+                category === c.key ? toggleActiveStyle : `border-transparent ${toggleInactiveGhost}`
+              }`}
+            >
+              {c.label}
+            </button>
+          ))}
+        </nav>
 
-        <section className={`${card} p-4`}>
-          <h3 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">Notifiche push</h3>
-          <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
-            Notifiche native su questo dispositivo (anche a PWA chiusa/in background). Vanno attivate separatamente
-            su ogni telefono/computer da cui gestisci l&apos;admin.
-          </p>
-          <PushNotificationsToggle />
-        </section>
-      </div>
+        <div className="mt-4 space-y-8 lg:mt-0">
+          <section className={category === "generale" ? "" : "hidden lg:block"}>
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+              Generali
+            </h2>
+            <div className="grid grid-cols-1 gap-6 xl:grid-cols-2">
+              <section className={`${card} p-4`}>
+                <h3 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
+                  Aspetto
+                </h3>
+                <div className="flex items-center gap-3">
+                  <span className="text-sm text-neutral-600 dark:text-neutral-300">
+                    Tema dell&apos;interfaccia admin
+                  </span>
+                  <ThemeToggle />
+                </div>
+              </section>
 
-      <h2 className="mb-2 text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
-        Dati e integrazioni
-      </h2>
+              <section className={`${card} p-4`}>
+                <h3 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">Notifiche push</h3>
+                <p className="mb-3 text-xs text-neutral-500 dark:text-neutral-400">
+                  Notifiche native su questo dispositivo (anche a PWA chiusa/in background). Vanno attivate separatamente
+                  su ogni telefono/computer da cui gestisci l&apos;admin.
+                </p>
+                <PushNotificationsToggle />
+              </section>
+            </div>
+          </section>
 
-      <CalendarSyncSection />
+          <section className={category === "integrazioni" ? "" : "hidden lg:block"}>
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+              Integrazioni
+            </h2>
+            <CalendarSyncSection />
 
       <section className={`${card} mb-6 p-4`}>
         <h3 className="mb-1 text-sm font-semibold text-neutral-900 dark:text-white">
@@ -349,7 +378,7 @@ export default function AdminSettingsPage() {
             </div>
           </div>
 
-          <button type="submit" disabled={creating} className={btnPositive}>
+          <button type="submit" disabled={creating} className={btnPrimary}>
             {creating ? "Salvataggio..." : "Salva integrazione"}
           </button>
         </form>
@@ -396,7 +425,12 @@ export default function AdminSettingsPage() {
           )}
         </div>
       </section>
+          </section>
 
+          <section className={category === "dati" ? "" : "hidden lg:block"}>
+            <h2 className="mb-3 text-xs font-semibold uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+              Dati e backup
+            </h2>
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <section className={`${card} p-4`}>
           <h3 className="mb-3 text-sm font-semibold text-neutral-900 dark:text-white">
@@ -430,6 +464,9 @@ export default function AdminSettingsPage() {
             Scarica backup
           </a>
         </section>
+      </div>
+          </section>
+        </div>
       </div>
     </div>
   );

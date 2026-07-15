@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { formatDateTime } from "@/lib/format";
 import {
-  btnPositive,
   btnPrimary,
   card,
   input,
@@ -259,7 +258,7 @@ export default function AdminCommunicationsPage() {
               <Checkbox checked={annPublish} onChange={(e) => setAnnPublish(e.target.checked)} />
               <span className="text-sm text-neutral-700 dark:text-neutral-200">Pubblica subito</span>
             </label>
-            <button type="submit" disabled={annSaving} className={btnPositive}>
+            <button type="submit" disabled={annSaving} className={btnPrimary}>
               {annSaving ? "Salvataggio..." : annPublish ? "Pubblica" : "Salva"}
             </button>
           </div>

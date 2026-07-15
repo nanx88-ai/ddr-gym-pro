@@ -26,6 +26,7 @@ import AttendanceToggle from "@/components/AttendanceToggle";
 import { ActionsMenu, IconButton } from "@/components/IconAction";
 import EditBookingModal from "@/components/EditBookingModal";
 import { StatusDot } from "@/components/StatusDot";
+import { SkeletonCards } from "@/components/Skeleton";
 
 interface AppointmentType {
   id: string;
@@ -396,7 +397,7 @@ export default function AdminAgendaPage() {
         </div>
       )}
 
-      {loading && <p className="text-sm text-neutral-500">Caricamento...</p>}
+      {loading && <SkeletonCards />}
 
       {!loading && view === "day" && (
         <DayList

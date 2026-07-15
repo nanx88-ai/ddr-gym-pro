@@ -6,6 +6,7 @@ import { formatDateTime } from "@/lib/format";
 import {
   btnDanger,
   btnPositive,
+  btnPrimary,
   card,
   input,
   pageSubtitle,
@@ -25,6 +26,7 @@ import { Checkbox } from "@/components/Checkbox";
 import { StatusDot } from "@/components/StatusDot";
 import { SortableTh } from "@/components/SortableTh";
 import { SortDirToggle } from "@/components/SortDirToggle";
+import { SkeletonCards } from "@/components/Skeleton";
 
 interface RescheduleRequest {
   id: string;
@@ -385,12 +387,19 @@ export default function AdminBookingsPage() {
 
   return (
     <div>
-      <h1 className={pageTitle}>Prenotazioni</h1>
-      <p className={pageSubtitle}>
-        Approva, rifiuta o annulla le richieste ricevute.
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className={pageTitle}>Prenotazioni</h1>
+          <p className={pageSubtitle}>
+            Approva, rifiuta o annulla le richieste ricevute.
+          </p>
+        </div>
+        <Link href="/admin/bookings/new" className={`${btnPrimary} shrink-0 whitespace-nowrap`}>
+          + Nuova prenotazione
+        </Link>
+      </div>
 
-      <div className="mb-3 flex flex-wrap items-center gap-2">
+      <div className="mt-6 mb-3 flex flex-wrap items-center gap-2">
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
@@ -509,7 +518,7 @@ export default function AdminBookingsPage() {
         </div>
       )}
 
-      {loading && <p className="text-sm text-neutral-500">Caricamento...</p>}
+      {loading && <SkeletonCards />}
 
       {!loading && visibleBookings.length === 0 && (
         <p

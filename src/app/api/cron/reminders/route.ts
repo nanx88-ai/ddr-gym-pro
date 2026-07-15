@@ -95,7 +95,7 @@ async function processSubscriptions(today: Date, adminEmails: string[]) {
 
   let notified = 0;
   const upcoming = await prisma.subscription.findMany({
-    include: { client: true, tariff: true },
+    include: { client: true, appointmentType: true },
   });
   for (const sub of upcoming) {
     if (sub.notifiedForEnd && sub.notifiedForEnd.getTime() === sub.endDate.getTime()) continue;
@@ -108,11 +108,11 @@ async function processSubscriptions(today: Date, adminEmails: string[]) {
     const giorni = `${daysLeft} giorn${daysLeft === 1 ? "o" : "i"}`;
 
     const adminSubject = sub.autoRenew
-      ? `Rinnovo automatico tra ${giorni}: ${clientName} - ${sub.tariff.title}`
-      : `Abbonamento in scadenza tra ${giorni}: ${clientName} - ${sub.tariff.title}`;
+      ? `Rinnovo automatico tra ${giorni}: ${clientName} - ${sub.appointmentType.name}`
+      : `Abbonamento in scadenza tra ${giorni}: ${clientName} - ${sub.appointmentType.name}`;
     const adminText = [
       `Cliente: ${clientName}`,
-      `Abbonamento: ${sub.tariff.title}`,
+      `Abbonamento: ${sub.appointmentType.name}`,
       sub.autoRenew ? `Si rinnova automaticamente il ${when} (durata rinnovo: ${sub.renewMonths} mesi).` : `Scade il ${when} e NON si rinnova automaticamente.`,
     ].join("\n");
 
@@ -127,15 +127,15 @@ async function processSubscriptions(today: Date, adminEmails: string[]) {
 
     if (sub.client.email) {
       const clientSubject = sub.autoRenew
-        ? `Il tuo abbonamento ${sub.tariff.title} si rinnova il ${when}`
-        : `Il tuo abbonamento ${sub.tariff.title} scade il ${when}`;
+        ? `Il tuo abbonamento ${sub.appointmentType.name} si rinnova il ${when}`
+        : `Il tuo abbonamento ${sub.appointmentType.name} scade il ${when}`;
       await sendPlainEmail(
         sub.client.email,
         clientSubject,
         `Ciao ${sub.client.firstName},\n\n${
           sub.autoRenew
-            ? `il tuo abbonamento "${sub.tariff.title}" si rinnovera' automaticamente il ${when}.`
-            : `il tuo abbonamento "${sub.tariff.title}" scadra' il ${when}. Contattaci per rinnovarlo.`
+            ? `il tuo abbonamento "${sub.appointmentType.name}" si rinnovera' automaticamente il ${when}.`
+            : `il tuo abbonamento "${sub.appointmentType.name}" scadra' il ${when}. Contattaci per rinnovarlo.`
         }\n\nA presto!`
       );
     }

@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { BookingRuleError, createCustomBooking } from "@/lib/booking-rules";
+import { sendAdminCreatedBookingSummaryEmail } from "@/lib/mailer";
 
 export async function GET(request: NextRequest) {
   const status = request.nextUrl.searchParams.get("status");
@@ -24,14 +25,25 @@ const itemSchema = z.object({
   recurrenceGroupId: z.string().optional(),
 });
 
-const bodySchema = z.object({
-  clientEmail: z.string().trim().toLowerCase().email("Email non valida"),
-  clientFirstName: z.string().min(1),
-  clientLastName: z.string().min(1),
-  appointmentTypeId: z.string().min(1),
-  notes: z.string().optional(),
-  items: z.array(itemSchema).min(1).max(60),
-});
+const bodySchema = z
+  .object({
+    // Cliente esistente: solo l'id. Cliente nuovo: nome/cognome/email
+    // obbligatori, telefono/data di nascita/sesso facoltativi (il resto dei
+    // dati anagrafici si completa in seguito dalla scheda cliente).
+    clientId: z.string().min(1).optional(),
+    clientEmail: z.string().trim().toLowerCase().email("Email non valida").optional(),
+    clientFirstName: z.string().min(1).optional(),
+    clientLastName: z.string().min(1).optional(),
+    clientPhone: z.string().optional(),
+    clientDateOfBirth: z.string().optional(),
+    clientSex: z.enum(["M", "F", "OTHER"]).optional(),
+    appointmentTypeId: z.string().min(1),
+    notes: z.string().optional(),
+    items: z.array(itemSchema).min(1).max(60),
+  })
+  .refine((d) => d.clientId || (d.clientEmail && d.clientFirstName && d.clientLastName), {
+    message: "Serve un cliente esistente oppure nome, cognome ed email per crearne uno nuovo.",
+  });
 
 /**
  * Creazione manuale di appuntamenti dal pannello admin (Prompt Master 3.3 /
@@ -49,15 +61,26 @@ export async function POST(request: NextRequest) {
 
   const data = parsed.data;
 
-  const client = await prisma.client.upsert({
-    where: { email: data.clientEmail },
-    update: { firstName: data.clientFirstName, lastName: data.clientLastName },
-    create: {
-      email: data.clientEmail,
-      firstName: data.clientFirstName,
-      lastName: data.clientLastName,
-    },
-  });
+  let client;
+  if (data.clientId) {
+    client = await prisma.client.findUnique({ where: { id: data.clientId } });
+    if (!client) {
+      return NextResponse.json({ error: "Cliente non trovato" }, { status: 404 });
+    }
+  } else {
+    client = await prisma.client.upsert({
+      where: { email: data.clientEmail! },
+      update: { firstName: data.clientFirstName!, lastName: data.clientLastName! },
+      create: {
+        email: data.clientEmail!,
+        firstName: data.clientFirstName!,
+        lastName: data.clientLastName!,
+        phone: data.clientPhone || undefined,
+        dateOfBirth: data.clientDateOfBirth ? new Date(data.clientDateOfBirth) : undefined,
+        sex: data.clientSex,
+      },
+    });
+  }
 
   const bookings = [];
   const errors: { index: number; startTime: string; error: string; code?: string }[] = [];
@@ -88,6 +111,19 @@ export async function POST(request: NextRequest) {
 
   if (bookings.length === 0) {
     return NextResponse.json({ error: "Nessun appuntamento creato", errors }, { status: 409 });
+  }
+
+  // Riepilogo via email (cliente + admin): non blocca la risposta se l'invio
+  // fallisce (es. SMTP non ancora configurato) - solo loggato dal mailer.
+  try {
+    await sendAdminCreatedBookingSummaryEmail({
+      client: { firstName: client.firstName, lastName: client.lastName, email: client.email },
+      appointmentTypeName: bookings[0].appointmentType.name,
+      notes: data.notes,
+      occurrences: bookings.map((b) => ({ startTime: b.startTime, endTime: b.endTime })),
+    });
+  } catch (err) {
+    console.error("[api/admin/bookings] invio riepilogo email fallito:", err);
   }
 
   return NextResponse.json({ bookings, errors });

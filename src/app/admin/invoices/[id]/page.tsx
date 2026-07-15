@@ -12,6 +12,7 @@ import {
   pageTitle,
 } from "@/lib/ui";
 import { INVOICE_PROVIDER_OPTIONS } from "@/lib/invoicing-provider-options";
+import { SkeletonLines } from "@/components/Skeleton";
 
 interface LineItem {
   id: string;
@@ -112,7 +113,11 @@ export default function AdminInvoiceDetailPage({
   }
 
   if (loading)
-    return <p className="text-sm text-neutral-500">Caricamento...</p>;
+    return (
+      <div className={`${card} mx-auto max-w-2xl p-6`}>
+        <SkeletonLines count={6} />
+      </div>
+    );
   if (!invoice)
     return <p className="text-sm text-neutral-500">Fattura non trovata.</p>;
 

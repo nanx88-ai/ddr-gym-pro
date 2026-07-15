@@ -6,6 +6,7 @@ import { useParams } from "next/navigation";
 import { formatCurrency, formatDate, formatTime } from "@/lib/format";
 import { btnPrimary, td, th } from "@/lib/ui";
 import { useToast } from "@/components/Toast";
+import { Skeleton, SkeletonLines } from "@/components/Skeleton";
 
 type Tab = "anagrafica" | "abbonamenti" | "prenotazioni" | "fatture" | "scadenze" | "residenza";
 
@@ -32,7 +33,7 @@ interface ClientDetail {
   sdiCode: string | null;
   subscriptions: Array<{
     id: string;
-    tariff: { id: string; title: string; price: number };
+    appointmentType: { id: string; name: string; unitPrice: number };
     startDate: string;
     endDate: string;
     autoRenew: boolean;
@@ -114,8 +115,9 @@ export default function ClientDetailPage() {
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <p className="text-sm text-neutral-500">Caricamento...</p>
+      <div className="space-y-4">
+        <Skeleton className="h-8 w-64" />
+        <SkeletonLines count={5} />
       </div>
     );
   }
@@ -299,7 +301,7 @@ export default function ClientDetailPage() {
                 return (
                   <div key={sub.id} className="flex flex-col justify-between border-b border-neutral-200 pb-4 last:border-0 dark:border-neutral-800 sm:flex-row sm:items-start">
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-neutral-900 dark:text-white">{sub.tariff.title}</p>
+                      <p className="font-medium text-neutral-900 dark:text-white">{sub.appointmentType.name}</p>
                       <p className="mt-1 text-sm text-neutral-600 dark:text-neutral-400">
                         Dal {formatDate(sub.startDate)} al {formatDate(sub.endDate)}
                       </p>
@@ -309,7 +311,7 @@ export default function ClientDetailPage() {
                     </div>
                     <div className="mt-3 text-right sm:mt-0 sm:ml-4">
                       <p className={`text-sm font-semibold ${status.color}`}>{status.label}</p>
-                      <p className="mt-1 text-lg font-bold text-neutral-900 dark:text-white">{formatCurrency(sub.tariff.price)}</p>
+                      <p className="mt-1 text-lg font-bold text-neutral-900 dark:text-white">{formatCurrency(sub.appointmentType.unitPrice)}</p>
                     </div>
                   </div>
                 );

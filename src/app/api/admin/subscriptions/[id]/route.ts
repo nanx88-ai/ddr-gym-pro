@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 
 const bodySchema = z.object({
-  tariffId: z.string().min(1).optional(),
+  appointmentTypeId: z.string().min(1).optional(),
   startDate: z.string().min(1).optional(),
   endDate: z.string().min(1).optional(),
   autoRenew: z.boolean().optional(),
@@ -34,7 +34,7 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
     data,
     include: {
       client: { select: { id: true, firstName: true, lastName: true, email: true } },
-      tariff: { select: { id: true, title: true, price: true } },
+      appointmentType: { select: { id: true, name: true, unitPrice: true } },
     },
   });
   return NextResponse.json({ item });
