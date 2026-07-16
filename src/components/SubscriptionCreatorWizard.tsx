@@ -405,7 +405,7 @@ export function SubscriptionCreatorWizard({
           </label>
 
           <div className="flex flex-wrap items-center gap-2">
-            <label className="flex items-center gap-2">
+            <label className="flex min-h-11 items-center gap-2">
               <Checkbox checked={autoRenew} onChange={(e) => setAutoRenew(e.target.checked)} />
               <span className="text-sm text-neutral-700 dark:text-neutral-200">Rinnovo automatico</span>
             </label>

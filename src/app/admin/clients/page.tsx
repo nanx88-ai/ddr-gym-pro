@@ -2,14 +2,16 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { card, input, pageSubtitle, pageTitle, tableHeadBg, tableWrap, td, th, trBorder } from "@/lib/ui";
+import { btnNeutral, btnPrimary, card, errorBox, input, pageSubtitle, pageTitle, tableHeadBg, tableWrap, td, th, trBorder } from "@/lib/ui";
 import { Checkbox } from "@/components/Checkbox";
 import { useToast } from "@/components/Toast";
 import { useConfirm } from "@/components/ConfirmDialog";
-import { ActionsMenu, IconButton } from "@/components/IconAction";
+import { ActionsMenu } from "@/components/IconAction";
 import { StatusDot } from "@/components/StatusDot";
 import { SortableTh, type SortDir } from "@/components/SortableTh";
 import { SortDirToggle } from "@/components/SortDirToggle";
+import { NewClientFields, emptyNewClient, newClientIsValid } from "@/components/NewClientFields";
+import { SkeletonCards } from "@/components/Skeleton";
 
 interface Client {
   id: string;
@@ -45,6 +47,10 @@ export default function AdminClientsPage() {
   const [sortDir, setSortDir] = useState<SortDir>("asc");
   const [sortActive, setSortActive] = useState(false);
   const [types, setTypes] = useState<{ id: string; name: string }[]>([]);
+  const [creatorOpen, setCreatorOpen] = useState(false);
+  const [newClient, setNewClient] = useState(emptyNewClient());
+  const [creating, setCreating] = useState(false);
+  const [createError, setCreateError] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/appointment-types?all=1")
@@ -184,6 +190,36 @@ export default function AdminClientsPage() {
     load();
   }
 
+  async function handleCreateClient(e: React.FormEvent) {
+    e.preventDefault();
+    setCreateError(null);
+    if (!newClientIsValid(newClient)) {
+      setCreateError("Nome, cognome ed email sono obbligatori.");
+      return;
+    }
+    setCreating(true);
+    const res = await fetch("/api/admin/clients", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        firstName: newClient.firstName,
+        lastName: newClient.lastName,
+        email: newClient.email,
+        phone: newClient.phone || undefined,
+        dateOfBirth: newClient.dateOfBirth || undefined,
+        sex: newClient.sex || undefined,
+      }),
+    });
+    const json = await res.json();
+    setCreating(false);
+    if (!res.ok) {
+      setCreateError(json.error ?? "Errore durante la creazione.");
+      return;
+    }
+    toast.success("Cliente creato.");
+    router.push(`/admin/clients/${json.client.id}`);
+  }
+
   function clientActions(c: Client) {
     return [
       {
@@ -225,12 +261,59 @@ export default function AdminClientsPage() {
 
   return (
     <div>
-      <h1 className={pageTitle}>Anagrafica clienti</h1>
-      <p className={pageSubtitle}>
-        Gap custom rispetto a Koalendar: qui gestiamo stato attivo/in pausa/archiviato e dati aggiuntivi non presenti
-        nella sezione Contatti nativa.
-      </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h1 className={pageTitle}>Anagrafica clienti</h1>
+          <p className={pageSubtitle}>
+            Gap custom rispetto a Koalendar: qui gestiamo stato attivo/in pausa/archiviato e dati aggiuntivi non presenti
+            nella sezione Contatti nativa.
+          </p>
+        </div>
+        {!creatorOpen && (
+          <button
+            type="button"
+            onClick={() => {
+              setNewClient(emptyNewClient());
+              setCreateError(null);
+              setCreatorOpen(true);
+            }}
+            className={`${btnPrimary} shrink-0 whitespace-nowrap`}
+          >
+            + Nuovo cliente
+          </button>
+        )}
+      </div>
 
+      {creatorOpen && (
+        <form onSubmit={handleCreateClient} className={`${card} mt-6 mb-6 p-4`}>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-neutral-900 dark:text-white">Nuovo cliente</h2>
+            <button
+              type="button"
+              onClick={() => setCreatorOpen(false)}
+              className="text-sm text-neutral-500 hover:text-neutral-800 dark:hover:text-neutral-200"
+            >
+              Chiudi
+            </button>
+          </div>
+
+          {createError && <div className={`mb-4 ${errorBox}`}>{createError}</div>}
+
+          <NewClientFields value={newClient} onChange={setNewClient} />
+
+          <div className="mt-6 flex justify-end gap-3 border-t border-neutral-100 pt-4 dark:border-neutral-800">
+            <button type="button" onClick={() => setCreatorOpen(false)} className={btnNeutral}>
+              Annulla
+            </button>
+            <button type="submit" disabled={creating} className={btnPrimary}>
+              {creating ? "Creazione..." : "Crea cliente"}
+            </button>
+          </div>
+        </form>
+      )}
+
+      {!creatorOpen && (
+      <>
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <input
           value={search}
@@ -325,6 +408,8 @@ export default function AdminClientsPage() {
         </div>
       )}
 
+      {loading && <SkeletonCards />}
+
       {!loading && visibleClients.length === 0 && (
         <p className={`${card} px-4 py-8 text-center text-sm text-neutral-500 dark:text-neutral-400`}>
           Nessun cliente trovato.
@@ -339,11 +424,11 @@ export default function AdminClientsPage() {
             <div key={c.id} className={`${card} space-y-1 px-4 py-3.5`}>
               <div className="flex items-center gap-2">
                 <StatusDot status={c.status} />
-                <span className="flex-1 truncate text-[15px] font-bold text-neutral-900 dark:text-white">
+                <span className="flex-1 truncate text-base font-bold text-neutral-900 dark:text-white">
                   {c.firstName} {c.lastName}
                 </span>
               </div>
-              <div className="text-[13px] text-neutral-600 dark:text-neutral-300">{c.email}</div>
+              <div className="text-sm text-neutral-600 dark:text-neutral-300">{c.email}</div>
               <div className="text-xs text-neutral-500 dark:text-neutral-500">
                 {c.phone ?? "Nessun telefono"} · {c._count.bookings} prenotazion{c._count.bookings === 1 ? "e" : "i"}
               </div>
@@ -392,8 +477,7 @@ export default function AdminClientsPage() {
                   <td className={`${td} whitespace-nowrap`}>{c.phone ?? "-"}</td>
                   <td className={`${td} whitespace-nowrap`}>{c._count.bookings}</td>
                   <td className={`${td} whitespace-nowrap`} onClick={(e) => e.stopPropagation()}>
-                    <div className="flex justify-end gap-1.5">
-                      <IconButton icon="chevronRight" label="Apri" onClick={() => router.push(`/admin/clients/${c.id}`)} />
+                    <div className="flex justify-end">
                       <ActionsMenu actions={clientActions(c)} />
                     </div>
                   </td>
@@ -434,10 +518,10 @@ export default function AdminClientsPage() {
               <div className="mt-3 space-y-2 sm:hidden">
                 {archivedClients.map((c) => (
                   <div key={c.id} className={`${card} space-y-1 px-4 py-3.5 opacity-75`}>
-                    <span className="block truncate text-[15px] font-bold text-neutral-900 dark:text-white">
+                    <span className="block truncate text-base font-bold text-neutral-900 dark:text-white">
                       {c.firstName} {c.lastName}
                     </span>
-                    <div className="text-[13px] text-neutral-600 dark:text-neutral-300">{c.email}</div>
+                    <div className="text-sm text-neutral-600 dark:text-neutral-300">{c.email}</div>
                     <div className="flex items-center justify-between pt-1">
                       <button
                         type="button"
@@ -476,8 +560,7 @@ export default function AdminClientsPage() {
                         <td className={td}>{c.email}</td>
                         <td className={`${td} whitespace-nowrap`}>{c._count.bookings}</td>
                         <td className={`${td} whitespace-nowrap`} onClick={(e) => e.stopPropagation()}>
-                          <div className="flex justify-end gap-1.5">
-                            <IconButton icon="chevronRight" label="Apri" onClick={() => router.push(`/admin/clients/${c.id}`)} />
+                          <div className="flex justify-end">
                             <ActionsMenu actions={clientActions(c)} />
                           </div>
                         </td>
@@ -489,6 +572,8 @@ export default function AdminClientsPage() {
             </>
           )}
         </div>
+      )}
+      </>
       )}
     </div>
   );

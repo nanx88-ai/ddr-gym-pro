@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { formatCurrency, formatDate } from "@/lib/format";
 import {
   btnNeutral,
@@ -13,12 +14,15 @@ import {
   pageTitle,
   tableWrap,
   td,
+  th,
   trBorder,
 } from "@/lib/ui";
 import { useToast } from "@/components/Toast";
 import { StatusDot } from "@/components/StatusDot";
 import { SortableTh, type SortDir } from "@/components/SortableTh";
+import { SortDirToggle } from "@/components/SortDirToggle";
 import { SkeletonCards, SkeletonLines } from "@/components/Skeleton";
+import { ActionsMenu } from "@/components/IconAction";
 
 interface Invoice {
   id: string;
@@ -44,11 +48,13 @@ interface BillableClient {
 }
 
 export default function AdminInvoicesPage() {
+  const router = useRouter();
   const toast = useToast();
   const [invoices, setInvoices] = useState<Invoice[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState<"number" | "client" | "period" | "total">("period");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [sortActive, setSortActive] = useState(false);
 
   const [search, setSearch] = useState("");
   const [filtersOpen, setFiltersOpen] = useState(false);
@@ -69,6 +75,7 @@ export default function AdminInvoicesPage() {
   const [genError, setGenError] = useState<string | null>(null);
 
   function handleSort(key: "number" | "client" | "period" | "total") {
+    setSortActive(true);
     if (sortBy === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
@@ -181,6 +188,17 @@ export default function AdminInvoicesPage() {
     toast.success("Fattura generata.");
     closeCreator();
     loadInvoices();
+  }
+
+  function invoiceActions(inv: Invoice) {
+    return [
+      {
+        key: "open",
+        icon: "chevronRight" as const,
+        label: "Apri",
+        onClick: () => router.push(`/admin/invoices/${inv.id}`),
+      },
+    ];
   }
 
   return (
@@ -340,6 +358,29 @@ export default function AdminInvoicesPage() {
             <span className={label}>Totale max &euro;</span>
             <input type="number" min={0} value={maxTotal} onChange={(e) => setMaxTotal(e.target.value)} className={input} />
           </label>
+
+          {/* Da mobile non ci sono intestazioni di colonna cliccabili: stesso
+              ordinamento delle colonne desktop via select + bottone direzione. */}
+          <div className="flex gap-2 sm:col-span-2 sm:hidden">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as "number" | "client" | "period" | "total")}
+              className={`${input} w-full flex-1`}
+            >
+              <option value="period">Ordina per periodo</option>
+              <option value="number">Ordina per numero</option>
+              <option value="client">Ordina per cliente</option>
+              <option value="total">Ordina per totale</option>
+            </select>
+            <SortDirToggle
+              active={sortActive}
+              dir={sortDir}
+              onChange={({ active, dir }) => {
+                setSortActive(active);
+                setSortDir(dir);
+              }}
+            />
+          </div>
         </div>
       )}
 
@@ -351,11 +392,13 @@ export default function AdminInvoicesPage() {
         </p>
       )}
 
-      {/* Mobile: schede */}
+      {/* Mobile: schede - niente click sull'intera scheda (rischio di apertura
+          accidentale durante lo scroll), apertura solo via bottone dedicato,
+          come Anagrafica clienti. */}
       {!creatorOpen && sortedInvoices.length > 0 && (
         <div className="space-y-3 sm:hidden">
           {sortedInvoices.map((inv) => (
-            <Link key={inv.id} href={`/admin/invoices/${inv.id}`} className={`${card} block p-4`}>
+            <div key={inv.id} className={`${card} p-4`}>
               <div className="flex items-center gap-2">
                 <StatusDot status={inv.status} />
                 <span className="font-medium text-neutral-900 dark:text-white">{inv.number}</span>
@@ -369,7 +412,16 @@ export default function AdminInvoicesPage() {
                 </span>
                 <span className="font-medium text-neutral-900 dark:text-white">{formatCurrency(inv.total)}</span>
               </div>
-            </Link>
+              <div className="mt-3 flex items-center justify-between border-t border-neutral-100 pt-3 dark:border-neutral-800">
+                <Link
+                  href={`/admin/invoices/${inv.id}`}
+                  className="text-sm font-medium text-yellow-600 hover:underline dark:text-yellow-400"
+                >
+                  Apri
+                </Link>
+                <ActionsMenu actions={invoiceActions(inv)} />
+              </div>
+            </div>
           ))}
         </div>
       )}
@@ -384,23 +436,23 @@ export default function AdminInvoicesPage() {
                 <SortableTh label="Cliente" sortKey="client" active={sortBy === "client"} dir={sortDir} onSort={handleSort} />
                 <SortableTh label="Periodo" sortKey="period" active={sortBy === "period"} dir={sortDir} onSort={handleSort} />
                 <SortableTh label="Totale" sortKey="total" active={sortBy === "total"} dir={sortDir} onSort={handleSort} />
+                <th className={`${th} whitespace-nowrap`}>Azioni</th>
               </tr>
             </thead>
             <tbody>
               {sortedInvoices.map((inv) => (
-                <tr key={inv.id} className={trBorder}>
-                  <td className={`${td} whitespace-nowrap`}>
+                <tr
+                  key={inv.id}
+                  onClick={() => router.push(`/admin/invoices/${inv.id}`)}
+                  className={`${trBorder} cursor-pointer hover:bg-neutral-50 dark:hover:bg-neutral-900/40`}
+                >
+                  <td className={`${td} whitespace-nowrap font-medium text-neutral-900 dark:text-white`}>
                     <div className="flex items-center gap-2">
                       <StatusDot status={inv.status} />
-                      <Link
-                        href={`/admin/invoices/${inv.id}`}
-                        className="font-medium text-neutral-900 dark:text-white hover:text-yellow-400 hover:underline"
-                      >
-                        {inv.number}
-                      </Link>
+                      {inv.number}
                     </div>
                   </td>
-                  <td className={td}>
+                  <td className={td} onClick={(e) => e.stopPropagation()}>
                     <Link
                       href={`/admin/clients/${inv.client.id}`}
                       className="hover:text-yellow-600 hover:underline dark:hover:text-yellow-400"
@@ -412,6 +464,11 @@ export default function AdminInvoicesPage() {
                     {formatDate(inv.periodStart)} &ndash; {formatDate(inv.periodEnd)}
                   </td>
                   <td className={`${td} whitespace-nowrap`}>{formatCurrency(inv.total)}</td>
+                  <td className={`${td} whitespace-nowrap`} onClick={(e) => e.stopPropagation()}>
+                    <div className="flex justify-end">
+                      <ActionsMenu actions={invoiceActions(inv)} />
+                    </div>
+                  </td>
                 </tr>
               ))}
             </tbody>

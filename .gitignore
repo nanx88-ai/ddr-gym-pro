@@ -48,3 +48,6 @@ prisma/*.db-journal
 .claude/settings.local.json
 .claude/skills/
 graphify-out/
+
+# impeccable skill local state (critique history, live-mode session cache)
+.impeccable/

@@ -18,6 +18,7 @@ import {
 import { it } from "date-fns/locale";
 import { toIsoDate } from "@/lib/recurrence";
 import { toggleActive } from "@/lib/ui";
+import { SkeletonGrid } from "@/components/Skeleton";
 
 const WEEKDAY_HEADERS = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 
@@ -28,6 +29,11 @@ interface MonthCalendarProps {
   fullDates?: Set<string>;
   /** Chiamato quando l'utente cambia mese, cosi'il chiamante puo'ricaricare`fullDates`. */
   onMonthChange?: (monthIso: string) => void;
+  /** Finche' `fullDates` per il mese corrente non e' ancora arrivato dal
+   * server, i giorni restano non selezionabili: altrimenti l'utente puo'
+   * scegliere una data prima che il controllo di disponibilita' sia arrivato,
+   * per poi scoprire solo al passo successivo che era chiusa o piena. */
+  loading?: boolean;
 }
 
 /**
@@ -41,6 +47,7 @@ export default function MonthCalendar({
   onSelect,
   fullDates,
   onMonthChange,
+  loading = false,
 }: MonthCalendarProps) {
   const [month, setMonth] = useState(() =>
     startOfMonth(selected ? new Date(selected) : new Date()),
@@ -88,42 +95,56 @@ export default function MonthCalendar({
         ))}
       </div>
 
-      <div className="grid flex-1 grid-cols-7 gap-1.5">
-        {weeks.map((week) =>
-          week.map((day) => {
-            const iso = toIsoDate(day);
-            const inMonth = isSameMonth(day, month);
-            const isPast = isBefore(day, today);
-            const isFull = !isPast && fullDates?.has(iso);
-            const isSelected = selected === iso;
-            const isToday = isSameDay(day, today);
-            const disabled = isPast || !inMonth || isFull;
-            return (
-              <button
-                key={iso}
-                type="button"
-                disabled={disabled}
-                onClick={() => onSelect(iso)}
-                className={`flex min-h-11 flex-col items-center justify-center text-base font-medium transition-colors sm:text-sm ${
-                  !inMonth
-                    ? "invisible"
-                    : isPast
-                      ? "cursor-not-allowed text-neutral-300 dark:text-neutral-700"
-                      : isFull
-                        ? "cursor-not-allowed text-neutral-300 opacity-50 grayscale dark:text-neutral-600"
-                        : isSelected
-                          ? `border bg-transparent ${toggleActive}`
-                          : isToday
-                            ? "border border-yellow-400 text-neutral-900 hover:bg-yellow-50 dark:text-white dark:hover:bg-yellow-400/10"
-                            : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800"
-                }`}
-              >
-                {day.getDate()}
-              </button>
-            );
-          }),
-        )}
-      </div>
+      {loading ? (
+        <>
+          {/* Il vero calendario resta nascosto finche' non sappiamo quali
+              giorni sono chiusi/pieni per questo servizio: mostrarlo subito
+              con tutte le date "spente" sembra un calendario completamente
+              pieno al primo sguardo, il contrario di quello che e' (stiamo
+              solo verificando). */}
+          <p className="mb-3 text-center text-sm text-neutral-500 dark:text-neutral-400">
+            Verifica disponibilita&apos; in corso...
+          </p>
+          <SkeletonGrid gridClassName="grid-cols-7" count={35} className="flex-1 auto-rows-min" />
+        </>
+      ) : (
+        <div className="grid flex-1 grid-cols-7 gap-1.5">
+          {weeks.map((week) =>
+            week.map((day) => {
+              const iso = toIsoDate(day);
+              const inMonth = isSameMonth(day, month);
+              const isPast = isBefore(day, today);
+              const isFull = !isPast && fullDates?.has(iso);
+              const isSelected = selected === iso;
+              const isToday = isSameDay(day, today);
+              const disabled = isPast || !inMonth || isFull;
+              return (
+                <button
+                  key={iso}
+                  type="button"
+                  disabled={disabled}
+                  onClick={() => onSelect(iso)}
+                  className={`flex min-h-11 flex-col items-center justify-center text-base font-medium transition-colors sm:text-sm ${
+                    !inMonth
+                      ? "invisible"
+                      : isPast
+                        ? "cursor-not-allowed text-neutral-300 dark:text-neutral-700"
+                        : isFull
+                          ? "cursor-not-allowed text-neutral-300 opacity-50 grayscale dark:text-neutral-600"
+                          : isSelected
+                            ? `border bg-transparent ${toggleActive}`
+                            : isToday
+                              ? "border border-yellow-400 text-neutral-900 hover:bg-yellow-50 dark:text-white dark:hover:bg-yellow-400/10"
+                              : "text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800"
+                  }`}
+                >
+                  {day.getDate()}
+                </button>
+              );
+            }),
+          )}
+        </div>
+      )}
     </div>
   );
 }

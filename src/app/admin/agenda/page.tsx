@@ -45,7 +45,7 @@ interface Booking {
   appointmentType: { name: string };
 }
 
-type ViewMode = "day" | "week" | "month";
+type ViewMode = "day" | "week" | "workweek" | "month";
 
 // Rifiutate e annullate non compaiono mai in agenda (l'agenda mostra chi
 // viene/verra'): niente da filtrare per quegli stati qui.
@@ -108,6 +108,10 @@ export default function AdminAgendaPage() {
         start: startOfWeek(selectedDate, { weekStartsOn: 1 }),
         end: endOfWeek(selectedDate, { weekStartsOn: 1 }),
       };
+    if (view === "workweek") {
+      const start = startOfWeek(selectedDate, { weekStartsOn: 1 });
+      return { start, end: endOfDay(addDays(start, 4)) };
+    }
     return {
       start: startOfWeek(startOfMonth(selectedDate), { weekStartsOn: 1 }),
       end: endOfWeek(endOfMonth(selectedDate), { weekStartsOn: 1 }),
@@ -187,7 +191,7 @@ export default function AdminAgendaPage() {
 
   function step(direction: 1 | -1) {
     if (view === "day") setSelectedDate((d) => addDays(d, direction));
-    else if (view === "week") setSelectedDate((d) => addWeeks(d, direction));
+    else if (view === "week" || view === "workweek") setSelectedDate((d) => addWeeks(d, direction));
     else setSelectedDate((d) => addMonths(d, direction));
   }
 
@@ -242,7 +246,7 @@ export default function AdminAgendaPage() {
     <div>
       <h1 className={pageTitle}>Agenda</h1>
       <p className={pageSubtitle}>
-        Vista d&apos;insieme delle prenotazioni per giorno, settimana o mese.
+        Vista d&apos;insieme delle prenotazioni per giorno, settimana (intera o solo lavorativa) o mese.
       </p>
 
       <div className="mb-3 flex items-center gap-2">
@@ -250,7 +254,7 @@ export default function AdminAgendaPage() {
         <span className="min-w-[9rem] flex-1 text-center text-sm font-semibold capitalize text-neutral-900 dark:text-white sm:min-w-[13rem] sm:flex-none">
           {view === "month"
             ? format(selectedDate, "MMMM", { locale: it })
-            : view === "week"
+            : view === "week" || view === "workweek"
               ? `${format(range.start, "d MMM", { locale: it })} - ${format(range.end, "d MMM", { locale: it })}`
               : format(selectedDate, "EEEE d MMMM", { locale: it })}
         </span>
@@ -292,19 +296,20 @@ export default function AdminAgendaPage() {
               [
                 { v: "day", icon: "viewDay", label: "Giorno" },
                 { v: "week", icon: "viewWeek", label: "Settimana" },
+                { v: "workweek", icon: "viewWorkweek", label: "Lavorativa" },
                 { v: "month", icon: "viewMonth", label: "Mese" },
               ] as const
             ).map(({ v, icon, label: viewLabel }) => (
               <button
                 key={v}
                 onClick={() => setView(v)}
-                className={`flex h-11 flex-1 items-center justify-center gap-2 border-2 text-sm font-medium transition-colors ${
+                className={`flex h-11 flex-1 items-center justify-center gap-1.5 border-2 text-xs font-medium transition-colors sm:gap-2 sm:text-sm ${
                   view === v
                     ? toggleActive
                     : "border-transparent text-neutral-600 hover:bg-neutral-200 dark:text-neutral-300 dark:hover:bg-neutral-800"
                 }`}
               >
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" className="h-5 w-5 shrink-0">
                   {icon === "viewDay" && (
                     <path
                       strokeLinecap="round"
@@ -319,6 +324,14 @@ export default function AdminAgendaPage() {
                       <rect x="16.5" y="4.5" width="4" height="15" />
                     </>
                   )}
+                  {icon === "viewWorkweek" && (
+                    <>
+                      <rect x="3" y="4.5" width="3.2" height="15" />
+                      <rect x="8.4" y="4.5" width="3.2" height="15" />
+                      <rect x="13.8" y="4.5" width="3.2" height="15" />
+                      <rect x="19.2" y="4.5" width="1.8" height="15" opacity="0.4" />
+                    </>
+                  )}
                   {icon === "viewMonth" && (
                     <>
                       <rect x="3.5" y="3.5" width="17" height="17" />
@@ -326,7 +339,7 @@ export default function AdminAgendaPage() {
                     </>
                   )}
                 </svg>
-                {viewLabel}
+                <span className="truncate">{viewLabel}</span>
               </button>
             ))}
           </div>
@@ -414,6 +427,16 @@ export default function AdminAgendaPage() {
           byDay={byDay}
           onDayClick={goToDay}
           onUpdateStatus={updateStatus}
+        />
+      )}
+
+      {!loading && view === "workweek" && (
+        <WeekGrid
+          rangeStart={range.start}
+          byDay={byDay}
+          onDayClick={goToDay}
+          onUpdateStatus={updateStatus}
+          daysCount={5}
         />
       )}
 
@@ -567,19 +590,25 @@ function WeekGrid({
   rangeStart,
   byDay,
   onDayClick,
+  daysCount = 7,
 }: {
   rangeStart: Date;
   byDay: Map<string, Booking[]>;
   onDayClick: (d: Date) => void;
   onUpdateStatus: (id: string, s: string) => void;
+  /** 7 = settimana intera (domenica ridotta, non si lavora mai), 5 = settimana lavorativa lun-ven. */
+  daysCount?: 5 | 7;
 }) {
   const days = eachDayOfInterval({
     start: rangeStart,
-    end: addDays(rangeStart, 6),
+    end: addDays(rangeStart, daysCount - 1),
   });
+  // Domenica non e' mai lavorativa: colonna molto piu' stretta delle altre 6,
+  // cosi' i giorni feriali hanno piu' spazio per organizzare i contenuti.
+  const gridColsClass = daysCount === 7 ? "sm:grid-cols-[repeat(6,1fr)_0.4fr]" : "sm:grid-cols-5";
 
   return (
-    <div className="grid grid-cols-1 gap-2 sm:grid-cols-7">
+    <div className={`grid grid-cols-1 gap-2 ${gridColsClass}`}>
       {days.map((d) => {
         const key = dateKey(d);
         const items = (byDay.get(key) ?? [])
@@ -595,9 +624,9 @@ function WeekGrid({
                   : "text-neutral-500 dark:text-neutral-400"
               }`}
             >
-              <span>{format(d, "EEE d", { locale: it })}</span>
+              <span className="truncate">{format(d, "EEE d", { locale: it })}</span>
               {items.length > 0 && (
-                <span className="bg-neutral-200 px-1.5 text-[10px] font-semibold text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200">
+                <span className="shrink-0 bg-neutral-200 px-1.5 text-[10px] font-semibold text-neutral-700 dark:bg-neutral-700 dark:text-neutral-200">
                   {items.length}
                 </span>
               )}
@@ -649,14 +678,18 @@ function MonthGrid({
   const days = eachDayOfInterval({ start: gridStart, end: gridEnd });
   const WEEKDAY_HEADERS = ["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"];
 
+  // Domenica non e' mai lavorativa: colonna molto piu' stretta delle altre 6,
+  // cosi' i giorni feriali hanno piu' spazio per organizzare i contenuti.
+  const monthGridCols = "grid-cols-[repeat(6,1fr)_0.4fr]";
+
   return (
     <div>
-      <div className="grid grid-cols-7 gap-1 pb-1 text-center text-xs font-medium uppercase text-neutral-400 dark:text-neutral-500 sm:text-[11px]">
+      <div className={`grid ${monthGridCols} gap-1 pb-1 text-center text-xs font-medium uppercase text-neutral-400 dark:text-neutral-500 sm:text-[11px]`}>
         {WEEKDAY_HEADERS.map((w) => (
-          <div key={w}>{w}</div>
+          <div key={w} className="truncate">{w}</div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-1.5">
+      <div className={`grid ${monthGridCols} gap-1.5`}>
         {days.map((d) => {
           const key = dateKey(d);
           const items = byDay.get(key) ?? [];

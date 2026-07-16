@@ -8,6 +8,7 @@ import {
   errorBox,
   input,
   label,
+  linkDanger,
   pageSubtitle,
   pageTitle,
 } from "@/lib/ui";
@@ -53,7 +54,7 @@ function CalendarSyncSection() {
   async function regenerate() {
     if (
       !(await confirm(
-        "Rigenerare il link? Quello vecchio smettera'di funzionare e dovrai risottoscriverti.",
+        "Rigenerare il link? Quello vecchio smettera' di funzionare e dovrai risottoscriverti.",
       ))
     )
       return;
@@ -107,7 +108,7 @@ function CalendarSyncSection() {
               type="button"
               onClick={regenerate}
               disabled={regenerating}
-              className="text-red-500 hover:underline disabled:opacity-50"
+              className={`${linkDanger} disabled:opacity-50`}
             >
               Rigenera link (invalida quello vecchio)
             </button>
@@ -229,7 +230,7 @@ export default function AdminSettingsPage() {
   }
 
   async function remove(id: string, name: string) {
-    if (!(await confirm(`Eliminare l'integrazione"${name}"?`))) return;
+    if (!(await confirm(`Eliminare l'integrazione "${name}"?`))) return;
     await fetch(`/api/admin/integrations/${id}`, { method: "DELETE" });
     toast.success("Integrazione eliminata.");
     load();

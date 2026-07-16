@@ -18,6 +18,11 @@ const DAY_ORDER = [1, 2, 3, 4, 5, 6, 0];
 const DAY_NAMES = ["Domenica", "Lunedi'", "Martedi'", "Mercoledi'", "Giovedi'", "Venerdi'", "Sabato"];
 const DAY_SHORT = ["Dom", "Lun", "Mar", "Mer", "Gio", "Ven", "Sab"];
 
+/** Sabato (6) e domenica (0): raramente lavorativi, colonna ridotta nella vista desktop. */
+function isWeekendDay(dayOfWeek: number) {
+  return dayOfWeek === 0 || dayOfWeek === 6;
+}
+
 /** Bottone quadrato compatto per azioni dentro le colonne/righe fascia (piu' piccolo dei 44px standard, qui il contesto e' denso). */
 function AddSlotButton({ onClick, label }: { onClick: () => void; label: string }) {
   return (
@@ -135,8 +140,11 @@ export function WeeklyScheduleEditor({ appointmentTypeId }: { appointmentTypeId:
     return (
       <>
         <div className="hidden gap-4 md:flex">
-          {Array.from({ length: 7 }).map((_, i) => (
-            <Skeleton key={i} className="h-40 min-w-[130px] flex-1" />
+          {DAY_ORDER.map((dayOfWeek) => (
+            <Skeleton
+              key={dayOfWeek}
+              className={`h-40 ${isWeekendDay(dayOfWeek) ? "min-w-[70px] flex-[0.4]" : "min-w-[130px] flex-1"}`}
+            />
           ))}
         </div>
         <Skeleton className="h-40 w-full md:hidden" />
@@ -152,14 +160,17 @@ export function WeeklyScheduleEditor({ appointmentTypeId }: { appointmentTypeId:
         </div>
       )}
 
-      {/* Desktop/tablet: tutti i 7 giorni affiancati in colonne */}
+      {/* Desktop/tablet: tutti i 7 giorni affiancati in colonne. Sabato e
+          domenica sono molto piu' stretti (raramente lavorativi), cosi'
+          i giorni feriali hanno piu' spazio per organizzare le fasce. */}
       <div className="hidden gap-4 overflow-x-auto md:flex">
         {DAY_ORDER.map((dayOfWeek) => {
           const dayBands = bands.filter((b) => b.dayOfWeek === dayOfWeek).sort((a, b) => a.startTime.localeCompare(b.startTime));
+          const weekend = isWeekendDay(dayOfWeek);
           return (
-            <div key={dayOfWeek} className="min-w-[130px] flex-1">
+            <div key={dayOfWeek} className={weekend ? "min-w-[70px] flex-[0.4]" : "min-w-[130px] flex-1"}>
               <div className="flex items-center justify-between border-b border-neutral-200 pb-2 dark:border-neutral-800">
-                <span className="text-sm font-semibold text-neutral-900 dark:text-white">{DAY_NAMES[dayOfWeek]}</span>
+                <span className="truncate text-sm font-semibold text-neutral-900 dark:text-white">{DAY_NAMES[dayOfWeek]}</span>
                 <AddSlotButton label="Aggiungi fascia" onClick={() => openAddBand(dayOfWeek)} />
               </div>
               <div className="mt-3 flex flex-col gap-2">

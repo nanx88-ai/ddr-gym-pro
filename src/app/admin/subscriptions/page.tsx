@@ -22,7 +22,9 @@ import { ActionsMenu } from "@/components/IconAction";
 import { StatusDot } from "@/components/StatusDot";
 import { Checkbox } from "@/components/Checkbox";
 import { SortableTh, type SortDir } from "@/components/SortableTh";
+import { SortDirToggle } from "@/components/SortDirToggle";
 import { SubscriptionCreatorWizard } from "@/components/SubscriptionCreatorWizard";
+import { SkeletonCards } from "@/components/Skeleton";
 
 interface Subscription {
   id: string;
@@ -125,8 +127,10 @@ export default function AdminSubscriptionsPage() {
 
   const [sortBy, setSortBy] = useState<"client" | "service" | "end">("end");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [sortActive, setSortActive] = useState(false);
 
   function handleSort(key: "client" | "service" | "end") {
+    setSortActive(true);
     if (sortBy === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
@@ -446,8 +450,32 @@ export default function AdminSubscriptionsPage() {
               ))}
             </select>
           </label>
+
+          {/* Da mobile non ci sono intestazioni di colonna cliccabili: stesso
+              ordinamento delle colonne desktop via select + bottone direzione. */}
+          <div className="flex gap-2 sm:hidden">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as "client" | "service" | "end")}
+              className={`${input} w-full flex-1`}
+            >
+              <option value="end">Ordina per scadenza</option>
+              <option value="client">Ordina per cliente</option>
+              <option value="service">Ordina per servizio</option>
+            </select>
+            <SortDirToggle
+              active={sortActive}
+              dir={sortDir}
+              onChange={({ active, dir }) => {
+                setSortActive(active);
+                setSortDir(dir);
+              }}
+            />
+          </div>
         </div>
       )}
+
+      {loading && !editorOpen && <SkeletonCards />}
 
       {!loading && items.length === 0 && !editorOpen && (
         <p className={`${card} px-4 py-8 text-center text-sm text-neutral-500 dark:text-neutral-400`}>

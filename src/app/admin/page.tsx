@@ -538,7 +538,7 @@ export default function AdminBookingsPage() {
                 <Link
                   href={`/admin/clients/${b.client.id}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="flex-1 truncate text-[15px] font-bold text-neutral-900 hover:text-yellow-600 dark:text-white dark:hover:text-yellow-400"
+                  className="flex-1 truncate text-base font-bold text-neutral-900 hover:text-yellow-600 dark:text-white dark:hover:text-yellow-400"
                 >
                   {b.client.firstName} {b.client.lastName}
                 </Link>
@@ -546,7 +546,7 @@ export default function AdminBookingsPage() {
                   <span className="shrink-0 text-xs font-medium text-yellow-600 dark:text-yellow-400">In pausa</span>
                 )}
               </div>
-              <div className="text-[13px] text-neutral-600 dark:text-neutral-300">
+              <div className="text-sm text-neutral-600 dark:text-neutral-300">
                 {b.appointmentType.name}
               </div>
               <div className="flex items-center justify-between">

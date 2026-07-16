@@ -27,6 +27,7 @@ import {
 } from "@/lib/ui";
 import { IconButton } from "@/components/IconAction";
 import { Skeleton } from "@/components/Skeleton";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 interface AppointmentType {
   id: string;
@@ -69,7 +70,7 @@ interface MonthDaySummary {
   bookingsCount: number;
 }
 
-type ViewMode = "day" | "week" | "month";
+type ViewMode = "day" | "week" | "workweek" | "month";
 
 function dateKey(d: Date) {
   return format(d, "yyyy-MM-dd");
@@ -104,7 +105,7 @@ function CalendarPageContent() {
 
   function step(direction: 1 | -1) {
     if (view === "day") setSelectedDate((d) => addDays(d, direction));
-    else if (view === "week") setSelectedDate((d) => addDays(d, direction * 7));
+    else if (view === "week" || view === "workweek") setSelectedDate((d) => addDays(d, direction * 7));
     else setSelectedDate((d) => addMonths(d, direction));
   }
 
@@ -139,6 +140,7 @@ function CalendarPageContent() {
             [
               { v: "day", icon: "viewDay", label: "Giorno" },
               { v: "week", icon: "viewWeek", label: "Settimana" },
+              { v: "workweek", icon: "viewWorkweek", label: "Settimana lavorativa" },
               { v: "month", icon: "viewMonth", label: "Mese" },
             ] as const
           ).map(({ v, icon, label: viewLabel }) => (
@@ -166,6 +168,14 @@ function CalendarPageContent() {
                     <rect x="3.5" y="4.5" width="4" height="15" />
                     <rect x="10" y="4.5" width="4" height="15" />
                     <rect x="16.5" y="4.5" width="4" height="15" />
+                  </>
+                )}
+                {icon === "viewWorkweek" && (
+                  <>
+                    <rect x="3" y="4.5" width="3.2" height="15" />
+                    <rect x="8.4" y="4.5" width="3.2" height="15" />
+                    <rect x="13.8" y="4.5" width="3.2" height="15" />
+                    <rect x="19.2" y="4.5" width="1.8" height="15" opacity="0.4" />
                   </>
                 )}
                 {icon === "viewMonth" && (
@@ -207,6 +217,14 @@ function CalendarPageContent() {
           onSelectDay={goToDay}
         />
       )}
+      {appointmentTypeId && view === "workweek" && (
+        <WeekView
+          appointmentTypeId={appointmentTypeId}
+          date={selectedDate}
+          onSelectDay={goToDay}
+          daysCount={5}
+        />
+      )}
       {appointmentTypeId && view === "month" && (
         <MonthView
           appointmentTypeId={appointmentTypeId}
@@ -225,6 +243,7 @@ function DayView({
   appointmentTypeId: string;
   date: Date;
 }) {
+  const confirm = useConfirm();
   const [detail, setDetail] = useState<DayDetail | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -244,6 +263,9 @@ function DayView({
   }, [load]);
 
   async function toggleDisabled(slot: DaySlot) {
+    if (!slot.isDisabled && !(await confirm(`Disattivare lo slot delle ${slot.time}? Non sara' piu' prenotabile finche' non lo riattivi.`))) {
+      return;
+    }
     setError(null);
     const res = await fetch("/api/admin/slot-overrides", {
       method: "POST",
@@ -398,19 +420,25 @@ function WeekView({
   appointmentTypeId,
   date,
   onSelectDay,
+  daysCount = 7,
 }: {
   appointmentTypeId: string;
   date: Date;
   onSelectDay: (d: Date) => void;
+  /** 7 = settimana intera (domenica ridotta, non si lavora mai), 5 = settimana lavorativa lun-ven. */
+  daysCount?: 5 | 7;
 }) {
   const [days, setDays] = useState<DayDetail[]>([]);
   const [loading, setLoading] = useState(true);
+  // Domenica non e' mai lavorativa: colonna molto piu' stretta delle altre 6,
+  // cosi' i giorni feriali hanno piu' spazio per organizzare i contenuti.
+  const gridColsClass = daysCount === 7 ? "lg:grid-cols-[repeat(6,1fr)_0.4fr]" : "lg:grid-cols-5";
 
   useEffect(() => {
     const weekStart = startOfWeek(date, { weekStartsOn: 1 });
     const weekDays = eachDayOfInterval({
       start: weekStart,
-      end: addDays(weekStart, 6),
+      end: addDays(weekStart, daysCount - 1),
     });
 
     setLoading(true);
@@ -424,19 +452,19 @@ function WeekView({
       setDays(results);
       setLoading(false);
     });
-  }, [appointmentTypeId, date]);
+  }, [appointmentTypeId, date, daysCount]);
 
   if (loading)
     return (
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
-        {Array.from({ length: 7 }).map((_, i) => (
+      <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${gridColsClass}`}>
+        {Array.from({ length: daysCount }).map((_, i) => (
           <Skeleton key={i} className="h-40 w-full" />
         ))}
       </div>
     );
 
   return (
-    <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-7">
+    <div className={`grid grid-cols-1 gap-3 sm:grid-cols-2 ${gridColsClass}`}>
       {days.map((day) => {
         const d = new Date(day.date);
         return (
@@ -447,7 +475,7 @@ function WeekView({
               isToday(d) ? "border-yellow-400" : ""
             }`}
           >
-            <div className="mb-2 text-sm font-medium capitalize text-neutral-900 dark:text-white">
+            <div className="mb-2 truncate text-sm font-medium capitalize text-neutral-900 dark:text-white">
               {format(d, "EEEE d", { locale: it })}
             </div>
             {!day.isOpen ? (
@@ -514,9 +542,13 @@ function MonthView({
       });
   }, [appointmentTypeId, date]);
 
+  // Domenica non e' mai lavorativa: colonna molto piu' stretta delle altre 6,
+  // cosi' i giorni feriali hanno piu' spazio per organizzare i contenuti.
+  const monthGridCols = "grid-cols-[repeat(6,1fr)_0.4fr]";
+
   if (loading)
     return (
-      <div className="grid grid-cols-7 gap-1.5">
+      <div className={`grid ${monthGridCols} gap-1.5`}>
         {Array.from({ length: 35 }).map((_, i) => (
           <Skeleton key={i} className="aspect-square w-full" />
         ))}
@@ -530,12 +562,12 @@ function MonthView({
 
   return (
     <div>
-      <div className="mb-1 grid grid-cols-7 gap-2 text-center text-xs font-medium text-neutral-500">
+      <div className={`mb-1 grid ${monthGridCols} gap-2 text-center text-xs font-medium text-neutral-500`}>
         {["Lun", "Mar", "Mer", "Gio", "Ven", "Sab", "Dom"].map((d) => (
-          <div key={d}>{d}</div>
+          <div key={d} className="truncate">{d}</div>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-2">
+      <div className={`grid ${monthGridCols} gap-2`}>
         {gridDays.map((d) => {
           const summary = byDate.get(dateKey(d));
           const inMonth = isSameMonth(d, date);

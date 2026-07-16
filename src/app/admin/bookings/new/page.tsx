@@ -387,7 +387,7 @@ export default function AdminNewBookingPage() {
             </div>
           )}
 
-          <label className="flex items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
+          <label className="flex min-h-11 items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
             <Checkbox checked={recurring} onChange={(e) => setRecurring(e.target.checked)} />
             Ricorrente (stesso giorno della settimana e ora)
           </label>

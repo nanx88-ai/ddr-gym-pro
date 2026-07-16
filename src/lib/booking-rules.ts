@@ -41,7 +41,7 @@ export async function getSlotOccupancy(appointmentTypeId: string, startTime: Dat
   return summarizeOccupancy(bookings);
 }
 
-function summarizeOccupancy(bookings: { status: string }[]) {
+export function summarizeOccupancy(bookings: { status: string }[]) {
   const confirmed = bookings.filter((b) => b.status === BOOKING_STATUS.APPROVED || b.status === BOOKING_STATUS.RESCHEDULED).length;
   const pending = bookings.filter(
     (b) => b.status === BOOKING_STATUS.PENDING_APPROVAL || b.status === BOOKING_STATUS.RESCHEDULE_REQUESTED

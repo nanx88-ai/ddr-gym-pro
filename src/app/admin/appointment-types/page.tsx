@@ -22,7 +22,9 @@ import { useConfirm } from "@/components/ConfirmDialog";
 import { Checkbox } from "@/components/Checkbox";
 import { StatusDot } from "@/components/StatusDot";
 import { SortableTh, type SortDir } from "@/components/SortableTh";
+import { SortDirToggle } from "@/components/SortDirToggle";
 import { WeeklyScheduleEditor } from "@/components/WeeklyScheduleEditor";
+import { SkeletonCards } from "@/components/Skeleton";
 
 const VAT_NATURES = [
   { value: "", label: "Nessuna (IVA ordinaria)" },
@@ -125,8 +127,15 @@ export default function AdminAppointmentTypesPage() {
 
   const [sortBy, setSortBy] = useState<"name" | "duration" | "capacity" | "price">("name");
   const [sortDir, setSortDir] = useState<SortDir>("asc");
+  const [sortActive, setSortActive] = useState(false);
+
+  const [search, setSearch] = useState("");
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState(""); // "" | "active" | "inactive"
+  const [bookingKindFilter, setBookingKindFilter] = useState(""); // "" | ONE_TIME | SUBSCRIPTION
 
   function handleSort(key: "name" | "duration" | "capacity" | "price") {
+    setSortActive(true);
     if (sortBy === key) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
     } else {
@@ -135,15 +144,31 @@ export default function AdminAppointmentTypesPage() {
     }
   }
 
+  const activeFilterCount = (statusFilter ? 1 : 0) + (bookingKindFilter ? 1 : 0);
+
+  function resetFilters() {
+    setStatusFilter("");
+    setBookingKindFilter("");
+  }
+
   const sortedTypes = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    const filtered = types.filter((t) => {
+      if (q && !t.name.toLowerCase().includes(q)) return false;
+      if (statusFilter === "active" && !t.active) return false;
+      if (statusFilter === "inactive" && t.active) return false;
+      if (bookingKindFilter && t.bookingKind !== bookingKindFilter) return false;
+      return true;
+    });
+
     const dir = sortDir === "asc" ? 1 : -1;
-    return [...types].sort((a, b) => {
+    return [...filtered].sort((a, b) => {
       if (sortBy === "duration") return dir * (a.durationMinutes - b.durationMinutes);
       if (sortBy === "capacity") return dir * (a.capacity - b.capacity);
       if (sortBy === "price") return dir * (a.unitPrice - b.unitPrice);
       return dir * a.name.localeCompare(b.name);
     });
-  }, [types, sortBy, sortDir]);
+  }, [types, search, statusFilter, bookingKindFilter, sortBy, sortDir]);
 
   async function load() {
     setLoading(true);
@@ -283,7 +308,7 @@ export default function AdminAppointmentTypesPage() {
         </div>
         {!editorOpen && (
           <button type="button" onClick={openCreate} className={`${btnPrimary} shrink-0 whitespace-nowrap`}>
-            + Aggiungi servizio
+            + Nuovo servizio
           </button>
         )}
       </div>
@@ -482,14 +507,102 @@ export default function AdminAppointmentTypesPage() {
         </form>
       )}
 
-      {!loading && types.length === 0 && !editorOpen && (
+      {!editorOpen && (
+        <div className="mt-6 mb-3 flex flex-wrap items-center gap-2">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="Cerca per nome..."
+            className={`${input} flex-1 sm:max-w-xs`}
+          />
+          <button
+            type="button"
+            onClick={() => setFiltersOpen((o) => !o)}
+            className="ml-auto flex min-h-11 shrink-0 items-center gap-1.5 border border-neutral-300 bg-neutral-100 px-3 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-200 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-200 dark:hover:bg-neutral-700"
+          >
+            Filtri
+            {activeFilterCount > 0 && (
+              <span className="flex h-4 min-w-4 items-center justify-center bg-yellow-400 px-1 text-[10px] font-semibold text-neutral-900">
+                {activeFilterCount}
+              </span>
+            )}
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              className={`h-3.5 w-3.5 transition-transform ${filtersOpen ? "rotate-180" : ""}`}
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+            </svg>
+          </button>
+        </div>
+      )}
+
+      {!editorOpen && filtersOpen && (
+        <div className={`${card} mb-4 grid grid-cols-1 gap-3 p-3 sm:grid-cols-2`}>
+          <label className="block">
+            <span className={label}>Stato</span>
+            <select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)} className={input}>
+              <option value="">Tutti</option>
+              <option value="active">Attivo</option>
+              <option value="inactive">Disattivato</option>
+            </select>
+          </label>
+          <label className="block">
+            <span className={label}>Tipo prenotazione</span>
+            <select value={bookingKindFilter} onChange={(e) => setBookingKindFilter(e.target.value)} className={input}>
+              <option value="">Tutti</option>
+              <option value="ONE_TIME">Ingresso singolo</option>
+              <option value="SUBSCRIPTION">Abbonamento</option>
+            </select>
+          </label>
+
+          {/* Da mobile non ci sono intestazioni di colonna cliccabili: stesso
+              ordinamento delle colonne desktop via select + bottone direzione. */}
+          <div className="flex gap-2 sm:hidden">
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value as "name" | "duration" | "capacity" | "price")}
+              className={`${input} w-full flex-1`}
+            >
+              <option value="name">Ordina per nome</option>
+              <option value="duration">Ordina per durata</option>
+              <option value="capacity">Ordina per capienza</option>
+              <option value="price">Ordina per prezzo</option>
+            </select>
+            <SortDirToggle
+              active={sortActive}
+              dir={sortDir}
+              onChange={({ active, dir }) => {
+                setSortActive(active);
+                setSortDir(dir);
+              }}
+            />
+          </div>
+
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={resetFilters}
+              className="min-h-11 border border-dashed border-neutral-300 px-3 py-2 text-sm font-medium text-neutral-500 hover:border-red-400 hover:text-red-500 dark:border-neutral-700 dark:text-neutral-400 dark:hover:border-red-500 dark:hover:text-red-400"
+            >
+              Reset filtri
+            </button>
+          )}
+        </div>
+      )}
+
+      {loading && !editorOpen && <SkeletonCards />}
+
+      {!loading && sortedTypes.length === 0 && !editorOpen && (
         <p className={`${card} px-4 py-8 text-center text-sm text-neutral-500 dark:text-neutral-400`}>
-          Nessun servizio configurato.
+          {types.length === 0 ? "Nessun servizio configurato." : "Nessun servizio corrisponde ai filtri."}
         </p>
       )}
 
       {/* Mobile: schede, sola lettura + azioni */}
-      {types.length > 0 && (
+      {sortedTypes.length > 0 && (
         <div className="mt-6 space-y-3 sm:hidden">
           {sortedTypes.map((t) => (
             <div key={t.id} className={`${card} p-4`}>
@@ -527,7 +640,7 @@ export default function AdminAppointmentTypesPage() {
       )}
 
       {/* Desktop/tablet: tabella, sola lettura + azioni */}
-      {types.length > 0 && (
+      {sortedTypes.length > 0 && (
         <div className={`mt-6 hidden sm:block ${tableWrap}`}>
           <table className="w-full text-sm">
             <thead className="border-b border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900/60">

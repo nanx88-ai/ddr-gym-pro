@@ -3,10 +3,11 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
-import { formatCurrency, formatDate, formatTime } from "@/lib/format";
-import { btnPrimary, td, th } from "@/lib/ui";
+import { formatCurrency, formatDate, formatTime, STATUS_LABELS } from "@/lib/format";
+import { btnPrimary, card, input, label as fieldLabelClass, pageSubtitle, pageTitle, td, th } from "@/lib/ui";
 import { useToast } from "@/components/Toast";
 import { Skeleton, SkeletonLines } from "@/components/Skeleton";
+import { StatusDot } from "@/components/StatusDot";
 
 type Tab = "anagrafica" | "abbonamenti" | "prenotazioni" | "fatture" | "scadenze" | "residenza";
 
@@ -61,12 +62,6 @@ interface ClientDetail {
     notifiedAt: string | null;
   }>;
 }
-
-const sectionCard =
-  "border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900";
-const fieldInput =
-  "w-full min-h-11 border border-neutral-300 bg-white px-3 py-2 text-sm text-neutral-900 focus:border-yellow-500 focus:outline-none focus:ring-1 focus:ring-yellow-500 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:focus:border-yellow-400 dark:focus:ring-yellow-400";
-const fieldLabel = "mb-1 block text-xs font-semibold uppercase text-neutral-500";
 
 export default function ClientDetailPage() {
   const params = useParams();
@@ -142,25 +137,17 @@ export default function ClientDetailPage() {
     { id: "residenza", label: "Residenza" },
   ];
 
+  /** Stato derivato dalla scadenza, mappato sulle stesse chiavi colore di
+   * StatusDot usate in /admin/subscriptions (ambra = in scadenza, rosso =
+   * scaduto) cosi' il pallino di stato e' coerente in tutta l'app. */
   const getSubscriptionStatus = (sub: ClientDetail["subscriptions"][0]) => {
     const today = new Date();
     const endDate = new Date(sub.endDate);
     const daysLeft = Math.ceil((endDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
-    if (daysLeft < 0) return { label: "SCADUTO", color: "text-red-600 dark:text-red-400" };
-    if (daysLeft <= 7) return { label: "IN SCADENZA", color: "text-amber-600 dark:text-amber-400" };
-    return { label: "ATTIVO", color: "text-green-600 dark:text-green-400" };
-  };
-
-  const getBookingStatusColor = (status: string) => {
-    const colors: Record<string, string> = {
-      PENDING_APPROVAL: "text-amber-600 dark:text-amber-400",
-      APPROVED: "text-green-600 dark:text-green-400",
-      REJECTED: "text-red-600 dark:text-red-400",
-      CANCELLED: "text-neutral-500 dark:text-neutral-400",
-      RESCHEDULED: "text-blue-600 dark:text-blue-400",
-    };
-    return colors[status] || "text-neutral-500";
+    if (daysLeft < 0) return { label: "Scaduto", dotStatus: "REJECTED" };
+    if (daysLeft <= 7) return { label: "In scadenza", dotStatus: "PENDING_APPROVAL" };
+    return { label: "Attivo", dotStatus: "ACTIVE" };
   };
 
   /** Campo di testo editabile inline: mostra un <input>, salva al blur solo se il valore e' cambiato.
@@ -181,7 +168,7 @@ export default function ClientDetailPage() {
   }) {
     return (
       <div className={span === 4 ? "sm:col-span-4" : span === 1 ? "sm:col-span-1" : "sm:col-span-2"}>
-        <label className={fieldLabel}>{label}</label>
+        <label className={fieldLabelClass}>{label}</label>
         <input
           type={type}
           defaultValue={value ?? ""}
@@ -190,7 +177,7 @@ export default function ClientDetailPage() {
             const v = e.target.value.trim() || null;
             if (v !== value) saveField(field, v);
           }}
-          className={fieldInput}
+          className={input}
         />
       </div>
     );
@@ -200,10 +187,10 @@ export default function ClientDetailPage() {
     <div className="space-y-6 p-4 sm:p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-neutral-900 dark:text-white">
+          <h1 className={pageTitle}>
             {client.firstName} {client.lastName}
           </h1>
-          <p className="mt-1 text-sm text-neutral-500">{client.email}</p>
+          <p className={pageSubtitle}>{client.email}</p>
         </div>
         <Link href="/admin/clients" className={btnPrimary}>
           ← Indietro
@@ -233,7 +220,7 @@ export default function ClientDetailPage() {
         </div>
       </div>
 
-      <div className={`${sectionCard} p-4 sm:p-5`}>
+      <div className={`${card} p-4 sm:p-5`}>
         {tab === "anagrafica" && (
           <div className="grid gap-4 sm:grid-cols-4">
             <TextField field="firstName" label="Nome" value={client.firstName} span={2} />
@@ -241,11 +228,11 @@ export default function ClientDetailPage() {
             <TextField field="email" label="Email" value={client.email} type="email" span={2} />
             <TextField field="phone" label="Telefono" value={client.phone} type="tel" span={2} />
             <div className="sm:col-span-1">
-              <label className={fieldLabel}>Sesso</label>
+              <label className={fieldLabelClass}>Sesso</label>
               <select
                 defaultValue={client.sex ?? ""}
                 onChange={(e) => saveField("sex", e.target.value || null)}
-                className={fieldInput}
+                className={input}
               >
                 <option value="">—</option>
                 <option value="M">Maschio</option>
@@ -254,7 +241,7 @@ export default function ClientDetailPage() {
               </select>
             </div>
             <div className="sm:col-span-2">
-              <label className={fieldLabel}>Data di nascita</label>
+              <label className={fieldLabelClass}>Data di nascita</label>
               <input
                 type="date"
                 defaultValue={client.dateOfBirth ? client.dateOfBirth.slice(0, 10) : ""}
@@ -262,22 +249,22 @@ export default function ClientDetailPage() {
                   const v = e.target.value ? `${e.target.value}T00:00:00.000Z` : null;
                   saveField("dateOfBirth", v);
                 }}
-                className={fieldInput}
+                className={input}
               />
             </div>
             <div className="sm:col-span-1">
-              <label className={fieldLabel}>Status</label>
+              <label className={fieldLabelClass}>Status</label>
               <select
                 defaultValue={client.status}
                 onChange={(e) => saveField("status", e.target.value)}
-                className={fieldInput}
+                className={input}
               >
                 <option value="ACTIVE">Attivo</option>
                 <option value="PAUSED">Sospeso</option>
               </select>
             </div>
             <div className="sm:col-span-4">
-              <label className={fieldLabel}>Note</label>
+              <label className={fieldLabelClass}>Note</label>
               <textarea
                 defaultValue={client.notes ?? ""}
                 rows={3}
@@ -285,7 +272,7 @@ export default function ClientDetailPage() {
                   const v = e.target.value.trim() || null;
                   if (v !== client.notes) saveField("notes", v);
                 }}
-                className={fieldInput}
+                className={input}
               />
             </div>
           </div>
@@ -309,9 +296,12 @@ export default function ClientDetailPage() {
                         {sub.autoRenew ? `Rinnovo: +${sub.renewMonths} mese(i)` : "Nessun rinnovo"}
                       </p>
                     </div>
-                    <div className="mt-3 text-right sm:mt-0 sm:ml-4">
-                      <p className={`text-sm font-semibold ${status.color}`}>{status.label}</p>
-                      <p className="mt-1 text-lg font-bold text-neutral-900 dark:text-white">{formatCurrency(sub.appointmentType.unitPrice)}</p>
+                    <div className="mt-3 flex items-center gap-2 sm:mt-0 sm:ml-4 sm:flex-col sm:items-end">
+                      <div className="flex items-center gap-1.5">
+                        <StatusDot status={status.dotStatus} />
+                        <p className="text-sm font-semibold text-neutral-700 dark:text-neutral-200">{status.label}</p>
+                      </div>
+                      <p className="text-lg font-bold text-neutral-900 dark:text-white sm:mt-1">{formatCurrency(sub.appointmentType.unitPrice)}</p>
                     </div>
                   </div>
                 );
@@ -331,10 +321,13 @@ export default function ClientDetailPage() {
                   {client.bookings
                     .sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime())
                     .map((booking) => (
-                      <div key={booking.id} className={`${sectionCard} space-y-1 px-4 py-3`}>
+                      <div key={booking.id} className={`${card} space-y-1 px-4 py-3`}>
                         <div className="flex items-center justify-between">
                           <span className="font-semibold text-neutral-900 dark:text-white">{booking.appointmentType.name}</span>
-                          <span className={`text-xs font-medium ${getBookingStatusColor(booking.status)}`}>{booking.status}</span>
+                          <span className="flex items-center gap-1.5 text-xs font-medium text-neutral-600 dark:text-neutral-300">
+                            <StatusDot status={booking.status} />
+                            {STATUS_LABELS[booking.status] ?? booking.status}
+                          </span>
                         </div>
                         <div className="flex items-center justify-between text-sm text-neutral-500 dark:text-neutral-400">
                           <span>{formatDate(booking.startTime)} {formatTime(booking.startTime)}</span>
@@ -365,7 +358,12 @@ export default function ClientDetailPage() {
                                 {formatDate(booking.startTime)} {formatTime(booking.startTime)}
                               </div>
                             </td>
-                            <td className={`${td} ${getBookingStatusColor(booking.status)}`}>{booking.status}</td>
+                            <td className={td}>
+                              <span className="flex items-center gap-1.5">
+                                <StatusDot status={booking.status} />
+                                {STATUS_LABELS[booking.status] ?? booking.status}
+                              </span>
+                            </td>
                             <td className={td}>{booking.attended === true ? "✓" : booking.attended === false ? "✗" : "—"}</td>
                           </tr>
                         ))}
@@ -391,7 +389,7 @@ export default function ClientDetailPage() {
                       <Link
                         key={invoice.id}
                         href={`/admin/invoices/${invoice.id}`}
-                        className={`${sectionCard} block space-y-1 px-4 py-3`}
+                        className={`${card} block space-y-1 px-4 py-3`}
                       >
                         <div className="flex items-center justify-between">
                           <span className="font-semibold text-neutral-900 dark:text-white">{invoice.number}</span>
@@ -463,11 +461,11 @@ export default function ClientDetailPage() {
         {tab === "residenza" && (
           <div className="grid gap-4 sm:grid-cols-4">
             <div className="sm:col-span-2">
-              <label className={fieldLabel}>Tipo cliente</label>
+              <label className={fieldLabelClass}>Tipo cliente</label>
               <select
                 defaultValue={client.clientKind ?? "PRIVATO"}
                 onChange={(e) => saveField("clientKind", e.target.value)}
-                className={fieldInput}
+                className={input}
               >
                 <option value="PRIVATO">Privato</option>
                 <option value="AZIENDA">Azienda</option>

@@ -28,6 +28,7 @@ function addYears(iso: string, years: number) {
 }
 import MonthCalendar from "@/components/MonthCalendar";
 import { SegmentedToggle } from "@/components/SegmentedToggle";
+import { SkeletonGrid } from "@/components/Skeleton";
 
 const LOGO_URL =
   "https://uznyeraxjpgaxncytzki.supabase.co/storage/v1/object/public/assets/logo.png";
@@ -125,6 +126,8 @@ export default function HomePage() {
 
   const [date, setDate] = useState<string | null>(null);
   const [monthFullDates, setMonthFullDates] = useState<Set<string>>(new Set());
+  const [monthLoading, setMonthLoading] = useState(true);
+  const [monthError, setMonthError] = useState<string | null>(null);
 
   const [dayAvailability, setDayAvailability] =
     useState<AppointmentTypeAvailability | null>(null);
@@ -188,10 +191,19 @@ export default function HomePage() {
 
   function loadMonth(monthIso: string) {
     if (!selectedTypeId) return;
+    // Finche' non sappiamo quali giorni sono chiusi/pieni per QUESTO
+    // servizio, il calendario resta non cliccabile (vedi MonthCalendar
+    // `loading`): altrimenti l'utente puo' scegliere una data prima che il
+    // controllo sia arrivato e scoprire solo dopo che era chiusa.
+    setMonthLoading(true);
+    setMonthError(null);
     fetch(
       `/api/availability/month?month=${monthIso}&appointmentTypeId=${selectedTypeId}`,
     )
-      .then((res) => res.json())
+      .then((res) => {
+        if (!res.ok) throw new Error();
+        return res.json();
+      })
       .then((json) => {
         const full = new Set<string>(
           (json.days ?? [])
@@ -199,7 +211,9 @@ export default function HomePage() {
             .map((d: { date: string }) => d.date),
         );
         setMonthFullDates(full);
-      });
+      })
+      .catch(() => setMonthError("Impossibile verificare le date disponibili. Riprova."))
+      .finally(() => setMonthLoading(false));
   }
 
   useEffect(() => {
@@ -220,6 +234,9 @@ export default function HomePage() {
     setSelectedTypeId(id);
     setDate(null);
     setPickedSlots([]);
+    setMonthFullDates(new Set());
+    setMonthLoading(true);
+    setMonthError(null);
     setStep(2);
   }
 
@@ -341,17 +358,46 @@ export default function HomePage() {
 
   if (result) {
     const allOk = result.failed === 0;
+    const firstBooked = summaryItems
+      .slice()
+      .sort((a, b) => a.start.getTime() - b.start.getTime())[0];
     return (
       <div className="flex min-h-screen items-center justify-center bg-neutral-50 px-5 dark:bg-neutral-950">
         <div className={`${publicCard} w-full max-w-md p-6 text-center sm:p-8`}>
           <div
-            className={`mx-auto mb-4 flex h-14 w-14 items-center justify-center text-2xl ${
+            className={`success-pop mx-auto mb-4 flex h-14 w-14 items-center justify-center border-2 bg-transparent ${
               allOk
-                ? "bg-emerald-100 dark:bg-emerald-900/30"
-                : "bg-amber-100 dark:bg-amber-900/30"
+                ? "border-emerald-500 text-emerald-600 dark:border-emerald-400 dark:text-emerald-400"
+                : "border-amber-500 text-amber-600 dark:border-amber-400 dark:text-amber-400"
             }`}
           >
-            {allOk ? "✅" : "⚠️"}
+            {allOk ? (
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                className="h-6 w-6"
+                aria-hidden
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            ) : (
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.8"
+                className="h-6 w-6"
+                aria-hidden
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  d="M12 9v4m0 3.5h.01M10.29 3.86l-8.13 14.1A1.5 1.5 0 0 0 3.46 20.2h17.08a1.5 1.5 0 0 0 1.3-2.24l-8.13-14.1a1.5 1.5 0 0 0-2.6 0Z"
+                />
+              </svg>
+            )}
           </div>
           <h1 className="text-xl font-semibold text-neutral-900 dark:text-white">
             Grazie{firstName ? `, ${firstName}` : ""}!
@@ -366,6 +412,29 @@ export default function HomePage() {
               {result.failed} slot non erano piu' disponibili e sono stati saltati.
             </p>
           )}
+
+          {firstBooked && (
+            <div className="mt-5 border border-neutral-200 p-3.5 text-left dark:border-neutral-800">
+              <p className="text-xs font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+                {selectedType?.name}
+              </p>
+              <p className="mt-0.5 text-sm font-semibold capitalize text-neutral-900 dark:text-white">
+                {firstBooked.start.toLocaleString("it-IT", {
+                  weekday: "long",
+                  day: "numeric",
+                  month: "long",
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </p>
+              {summaryItems.length > 1 && (
+                <p className="mt-1 text-xs text-neutral-500 dark:text-neutral-400">
+                  + altri {summaryItems.length - 1} appuntamenti
+                </p>
+              )}
+            </div>
+          )}
+
           <Link
             href="/"
             className={`mt-6 ${publicBtnPrimary}`}
@@ -379,14 +448,26 @@ export default function HomePage() {
   }
 
   if (step === 1) {
+    // L'header logo condivide lo schermo con l'elenco servizi sotto: più
+    // servizi ci sono, meno spazio verticale gli lasciamo, cosi' l'elenco
+    // resta visibile senza scroll invece di essere schiacciato sotto un
+    // logo fisso troppo grande (era clamp(140px, 40vh, 340px) sempre).
+    const heroHeight =
+      types.length === 0
+        ? "clamp(88px, 20vh, 200px)"
+        : types.length <= 2
+          ? "clamp(80px, 16vh, 170px)"
+          : types.length <= 4
+            ? "clamp(72px, 12vh, 140px)"
+            : "clamp(64px, 9vh, 110px)";
     return (
       <div className="flex h-[100dvh] flex-col overflow-hidden bg-neutral-50 dark:bg-neutral-950">
         <button
           type="button"
           onClick={handleLogoTap}
           aria-label="Logo"
-          className="flex shrink-0 items-center justify-center bg-neutral-950 px-8"
-          style={{ height: "clamp(140px, 40vh, 340px)" }}
+          className="flex shrink-0 items-center justify-center bg-neutral-950 px-8 transition-[height] duration-200"
+          style={{ height: heroHeight }}
         >
           <img
             src={LOGO_URL}
@@ -471,12 +552,18 @@ export default function HomePage() {
                 {selectedType.name}
               </span>
             </p>
+            {monthError && (
+              <p className="mb-3 border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/50 dark:bg-red-950/50 dark:text-red-300">
+                {monthError}
+              </p>
+            )}
             <div className={`${publicCard} p-3 sm:p-4`}>
               <MonthCalendar
                 selected={date}
                 onSelect={selectDate}
                 fullDates={monthFullDates}
                 onMonthChange={loadMonth}
+                loading={monthLoading}
               />
             </div>
           </div>
@@ -498,7 +585,9 @@ export default function HomePage() {
             </div>
 
             {loadingAvailability && (
-              <div className={`${publicCard} h-32 animate-pulse`} />
+              <div className={`${publicCard} p-4 sm:p-5`}>
+                <SkeletonGrid gridClassName="grid-cols-3 sm:grid-cols-4" count={8} />
+              </div>
             )}
 
             {!loadingAvailability &&
@@ -515,54 +604,94 @@ export default function HomePage() {
 
             {!loadingAvailability &&
               dayAvailability &&
-              dayAvailability.slots.length > 0 && (
-                <div className={`${publicCard} p-4 sm:p-5`}>
-                  <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
-                    {dayAvailability.slots.map((slot) => {
-                      const isPicked = pickedSlots.some(
-                        (p) => p.key === slot.startTime,
-                      );
-                      return (
-                        <button
-                          key={slot.startTime}
-                          type="button"
-                          disabled={slot.full}
-                          onClick={() => togglePickedSlot(slot)}
-                          className={`border-2 px-2 py-3 text-center transition-colors ${
-                            slot.full
-                              ? "cursor-not-allowed border-neutral-100 bg-neutral-50 text-neutral-300 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-600"
-                              : isPicked
-                                ? `bg-transparent ${toggleActive}`
-                                : "border-neutral-200 bg-white text-neutral-900 hover:border-yellow-400 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:hover:border-yellow-400"
-                          }`}
-                        >
-                          <div className="text-sm font-semibold">
-                            {formatTime(slot.startTime)}
-                          </div>
-                          <div
-                            className={`mt-0.5 text-[11px] ${
-                              slot.full
-                                ? "text-neutral-300 dark:text-neutral-600"
-                                : isPicked
-                                  ? "text-current"
-                                  : slot.pending > 0
-                                    ? "text-amber-600"
-                                    : "text-emerald-600"
-                            }`}
-                          >
-                            {slot.full
-                              ? "Al completo"
-                              : `${slot.spotsLeft} liber${slot.spotsLeft === 1 ? "o" : "i"}`}
-                          </div>
-                        </button>
-                      );
-                    })}
+              dayAvailability.slots.length > 0 && (() => {
+                // Raggruppare per mattina/pomeriggio riduce lo scanning cost
+                // quando un giorno ha molti slot liberi (altrimenti sono un
+                // muro indifferenziato di bottoni).
+                const morning = dayAvailability.slots.filter(
+                  (s) => new Date(s.startTime).getHours() < 14,
+                );
+                const afternoon = dayAvailability.slots.filter(
+                  (s) => new Date(s.startTime).getHours() >= 14,
+                );
+                const groups: { label: string; slots: Slot[] }[] = [
+                  ...(morning.length > 0 ? [{ label: "Mattina", slots: morning }] : []),
+                  ...(afternoon.length > 0 ? [{ label: "Pomeriggio", slots: afternoon }] : []),
+                ];
+                const renderSlot = (slot: Slot) => {
+                  const isPicked = pickedSlots.some(
+                    (p) => p.key === slot.startTime,
+                  );
+                  return (
+                    <button
+                      key={slot.startTime}
+                      type="button"
+                      disabled={slot.full}
+                      onClick={() => togglePickedSlot(slot)}
+                      className={`border-2 px-2 py-3 text-center transition-[color,background-color,border-color,transform] duration-150 active:scale-[0.96] ${
+                        slot.full
+                          ? "cursor-not-allowed border-neutral-100 bg-neutral-50 text-neutral-300 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-600"
+                          : isPicked
+                            ? `bg-transparent ${toggleActive}`
+                            : "border-neutral-200 bg-white text-neutral-900 hover:border-yellow-400 dark:border-neutral-700 dark:bg-neutral-900 dark:text-white dark:hover:border-yellow-400"
+                      }`}
+                    >
+                      <div className="text-sm font-semibold">
+                        {formatTime(slot.startTime)}
+                      </div>
+                      <div
+                        className={`mt-0.5 text-xs ${
+                          slot.full
+                            ? "text-neutral-300 dark:text-neutral-600"
+                            : isPicked
+                              ? "text-current"
+                              : slot.pending > 0
+                                ? "text-amber-600"
+                                : "text-emerald-600"
+                        }`}
+                      >
+                        {slot.full
+                          ? "Al completo"
+                          : `${slot.spotsLeft} liber${slot.spotsLeft === 1 ? "o" : "i"}`}
+                      </div>
+                    </button>
+                  );
+                };
+                return (
+                  <div className={`${publicCard} space-y-4 p-4 sm:p-5`}>
+                    {groups.map((g) => (
+                      <div key={g.label}>
+                        {groups.length > 1 && (
+                          <p className="mb-2 text-xs font-medium uppercase tracking-wide text-neutral-400 dark:text-neutral-500">
+                            {g.label}
+                          </p>
+                        )}
+                        <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
+                          {g.slots.map(renderSlot)}
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                </div>
-              )}
+                );
+              })()}
 
             {consecutiveWarning && !consecutiveConfirmed && (
-              <div className="mt-4 border border-amber-300 bg-amber-50 p-4 text-sm text-neutral-800 dark:border-amber-900/50 dark:bg-amber-900/10 dark:text-neutral-100">
+              <div className="mt-4 flex gap-3 border border-amber-300 bg-amber-50 p-4 text-sm text-neutral-800 dark:border-amber-900/50 dark:bg-amber-900/10 dark:text-neutral-100">
+                <svg
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="1.8"
+                  className="mt-0.5 h-5 w-5 shrink-0 text-amber-600 dark:text-amber-400"
+                  aria-hidden
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    d="M12 9v4m0 3.5h.01M10.29 3.86l-8.13 14.1A1.5 1.5 0 0 0 3.46 20.2h17.08a1.5 1.5 0 0 0 1.3-2.24l-8.13-14.1a1.5 1.5 0 0 0-2.6 0Z"
+                  />
+                </svg>
+                <div className="min-w-0 flex-1">
                 <p>
                   Stai richiedendo la prenotazione di piu&apos; di 2 slot
                   consecutivi. Sei sicuro?
@@ -582,6 +711,7 @@ export default function HomePage() {
                   >
                     No
                   </button>
+                </div>
                 </div>
               </div>
             )}
@@ -607,7 +737,7 @@ export default function HomePage() {
                                 prev.filter((s) => s.key !== p.key),
                               )
                             }
-                            className="text-xs font-medium text-red-500 hover:underline"
+                            className="text-xs font-medium text-neutral-500 hover:text-neutral-800 hover:underline dark:text-neutral-400 dark:hover:text-neutral-200"
                           >
                             Rimuovi
                           </button>
@@ -731,7 +861,22 @@ export default function HomePage() {
                             )}
 
                             {occ.length > 0 && !p.confirmed && (
-                              <div className="border border-yellow-300 bg-yellow-50 p-3 text-xs text-neutral-800 dark:border-yellow-900/50 dark:bg-yellow-900/10 dark:text-neutral-100">
+                              <div className="flex gap-2.5 border border-neutral-200 bg-neutral-50 p-3 text-xs text-neutral-800 dark:border-neutral-700 dark:bg-neutral-800/60 dark:text-neutral-100">
+                                <svg
+                                  viewBox="0 0 24 24"
+                                  fill="none"
+                                  stroke="currentColor"
+                                  strokeWidth="1.8"
+                                  className="mt-0.5 h-4 w-4 shrink-0 text-neutral-500 dark:text-neutral-400"
+                                  aria-hidden
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    d="M7 3v3M17 3v3M4 9h16M5 6h14a1 1 0 0 1 1 1v12a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1Z"
+                                  />
+                                </svg>
+                                <div className="min-w-0 flex-1">
                                 <p>
                                   Stai richiedendo una prenotazione tutti i{" "}
                                   {weekdayFull} fino a {weekdayFull}
@@ -767,6 +912,7 @@ export default function HomePage() {
                                   >
                                     No
                                   </button>
+                                </div>
                                 </div>
                               </div>
                             )}

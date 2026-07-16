@@ -6,6 +6,7 @@ import { btnPrimary, card, input, label, pageSubtitle, pageTitle } from "@/lib/u
 import { IconButton } from "@/components/IconAction";
 import { Checkbox } from "@/components/Checkbox";
 import { WeeklyScheduleEditor } from "@/components/WeeklyScheduleEditor";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 interface AppointmentType {
   id: string;
@@ -21,7 +22,14 @@ interface ScheduleException {
   note: string | null;
 }
 
+interface ConflictBooking {
+  time: string;
+  clientName: string;
+  clientEmail: string;
+}
+
 function SchedulePageContent() {
+  const confirm = useConfirm();
   const searchParams = useSearchParams();
   const [types, setTypes] = useState<AppointmentType[]>([]);
   const [appointmentTypeId, setAppointmentTypeId] = useState("");
@@ -33,6 +41,8 @@ function SchedulePageContent() {
   const [excOpenTime, setExcOpenTime] = useState("09:00");
   const [excCloseTime, setExcCloseTime] = useState("13:00");
   const [excNote, setExcNote] = useState("");
+  const [conflicts, setConflicts] = useState<ConflictBooking[] | null>(null);
+  const [checkingConflicts, setCheckingConflicts] = useState(false);
 
   useEffect(() => {
     fetch("/api/admin/appointment-types?all=1")
@@ -60,6 +70,43 @@ function SchedulePageContent() {
     setExceptions(json.exceptions ?? []);
   }
 
+  // Prima di poter salvare la chiusura/orario ridotto, controlla se ci sono
+  // gia' prenotazioni in quella data che finirebbero fuori dall'orario
+  // consentito: l'admin le vede subito e sa chi avvisare, senza doverlo
+  // scoprire dopo aver gia' salvato l'eccezione.
+  useEffect(() => {
+    if (!excDate || !appointmentTypeId) {
+      setConflicts(null);
+      return;
+    }
+    let cancelled = false;
+    setCheckingConflicts(true);
+    fetch(`/api/admin/calendar/day?appointmentTypeId=${appointmentTypeId}&date=${excDate}`)
+      .then((res) => res.json())
+      .then((json) => {
+        if (cancelled) return;
+        const slots: { time: string; bookings: { clientName: string; clientEmail: string }[] }[] = json.slots ?? [];
+        const found: ConflictBooking[] = [];
+        for (const slot of slots) {
+          if (slot.bookings.length === 0) continue;
+          // Chiuso tutto il giorno: ogni prenotazione e' un conflitto. Orario
+          // ridotto: conflitto solo se lo slot cade fuori dalla nuova fascia.
+          const outsideWindow = excClosed || slot.time < excOpenTime || slot.time >= excCloseTime;
+          if (!outsideWindow) continue;
+          for (const b of slot.bookings) {
+            found.push({ time: slot.time, clientName: b.clientName, clientEmail: b.clientEmail });
+          }
+        }
+        setConflicts(found);
+      })
+      .finally(() => {
+        if (!cancelled) setCheckingConflicts(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [excDate, excClosed, excOpenTime, excCloseTime, appointmentTypeId]);
+
   async function addException(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
@@ -86,10 +133,12 @@ function SchedulePageContent() {
     }
     setExcDate("");
     setExcNote("");
+    setConflicts(null);
     loadExceptions(appointmentTypeId);
   }
 
   async function removeException(id: string) {
+    if (!(await confirm("Rimuovere questa eccezione? L'orario tornera' quello standard per quella data."))) return;
     await fetch(`/api/admin/schedule/exceptions/${id}`, { method: "DELETE" });
     loadExceptions(appointmentTypeId);
   }
@@ -138,7 +187,7 @@ function SchedulePageContent() {
             <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Data</span>
             <input type="date" value={excDate} onChange={(e) => setExcDate(e.target.value)} className={`${input} w-40`} />
           </label>
-          <label className="flex items-center gap-2 pb-2 text-sm text-neutral-700 dark:text-neutral-300">
+          <label className="flex min-h-11 items-center gap-2 text-sm text-neutral-700 dark:text-neutral-300">
             <Checkbox checked={excClosed} onChange={(e) => setExcClosed(e.target.checked)} />
             Giorno chiuso
           </label>
@@ -158,6 +207,29 @@ function SchedulePageContent() {
             <span className="mb-1 block text-xs font-medium text-neutral-500 dark:text-neutral-400">Nota (facoltativo)</span>
             <input value={excNote} onChange={(e) => setExcNote(e.target.value)} placeholder="es. Ferie estive" className={input} />
           </label>
+
+          {excDate && checkingConflicts && (
+            <p className="w-full text-xs text-neutral-500 dark:text-neutral-400">Controllo prenotazioni esistenti...</p>
+          )}
+          {excDate && !checkingConflicts && conflicts && conflicts.length > 0 && (
+            <div className="w-full border border-red-300 bg-red-50 px-3 py-2 text-sm text-red-700 dark:border-red-800 dark:bg-red-950/50 dark:text-red-300">
+              <p className="font-semibold">
+                Attenzione: {conflicts.length} prenotazione{conflicts.length === 1 ? "" : "i"} in questa data{" "}
+                {excClosed ? "verrebbe" : "verrebbero"} spostate fuori dall&apos;orario &mdash; avvisa questi clienti prima di confermare:
+              </p>
+              <ul className="mt-1.5 space-y-0.5">
+                {conflicts.map((c, i) => (
+                  <li key={i}>
+                    <span className="font-medium">{c.time}</span> &middot; {c.clientName} ({c.clientEmail})
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+          {excDate && !checkingConflicts && conflicts && conflicts.length === 0 && (
+            <p className="w-full text-xs text-green-600 dark:text-green-500">Nessuna prenotazione in conflitto in questa data.</p>
+          )}
+
           <button type="submit" className={btnPrimary}>
             Aggiungi
           </button>

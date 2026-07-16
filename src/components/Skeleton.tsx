@@ -55,3 +55,28 @@ export function SkeletonLines({ count = 3, className = "" }: { count?: number; c
     </div>
   );
 }
+
+/**
+ * Griglia di celle skeleton di dimensione uniforme (calendari, griglie di
+ * slot orari): stessa altezza minima 44px dei controlli reali che sostituisce,
+ * cosi' non salta ne' cambia dimensione quando il contenuto vero arriva.
+ * `gridClassName` porta le colonne (anche responsive, es. "grid-cols-3
+ * sm:grid-cols-4") cosi' lo skeleton ricalca esattamente il grid reale.
+ */
+export function SkeletonGrid({
+  gridClassName = "grid-cols-7",
+  count,
+  className = "",
+}: {
+  gridClassName?: string;
+  count: number;
+  className?: string;
+}) {
+  return (
+    <div className={`grid gap-1.5 ${gridClassName} ${className}`}>
+      {Array.from({ length: count }).map((_, i) => (
+        <Skeleton key={i} className="min-h-11" />
+      ))}
+    </div>
+  );
+}
